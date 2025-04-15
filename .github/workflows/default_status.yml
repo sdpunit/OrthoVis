@@ -1,0 +1,32 @@
+name: Set Default Status "Not Started"
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  set-default-status:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set "Not Started" status if no status exists
+        uses: actions/github-script@v6
+        with:
+          script: |
+            // Define the set of status labels
+            const statusLabels = ["Not Started", "Todo", "In Progress", "Done"];
+            // Get all labels currently on the issue
+            const issueLabels = context.payload.issue.labels.map(label => label.name);
+
+            // Check whether any status label is already present
+            const hasStatus = issueLabels.some(label => statusLabels.includes(label));
+
+            // If no status label is found, add "Not Started"
+            if (!hasStatus) {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.issue.number,
+                labels: ["Not Started"]
+              });
+            }
