@@ -21,7 +21,6 @@ body:
         - Ready for Consideration
         - Ready for Refinement
         - Ready for Implementation
-        - Question
     validations:
       required: true
   - type: textarea
@@ -32,3 +31,11 @@ body:
       placeholder: Describe what the issue is and how to reproduce it
     validations:
       required: true
+  - type: dropdown
+      id: status
+      attributes:
+        label: Status
+        options:
+          - Not Started
+      validations:
+        required: true
