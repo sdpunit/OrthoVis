@@ -1,0 +1,32 @@
+name: Backlog Iteam
+description: Write each backlog item as an Issue
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please fill out all sections before submitting.
+  - type: Input
+    id: story-points
+    attributes:
+      label: Story Points
+      description: Estimate the effort
+      placeholder: 1-10
+      required: true
+  - type: dropdown
+    id: type
+    attributes:
+      label: Issue Type
+      options:
+        - Bug
+        - Feature
+        - Improvement
+        - Question
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: A clear description of the issue
+      placeholder: Describe what the issue is and how to reproduce it
+      required: true
