@@ -1,0 +1,41 @@
+name: Update Status to "Todo" for Ready for Implementation
+
+on:
+  issues:
+    types: [labeled, edited]
+
+jobs:
+  update-status:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Update status to "Todo" when state is "Ready for Implementation"
+        uses: actions/github-script@v6
+        with:
+          script: |
+            // Retrieve all labels on the issue
+            const issueLabels = context.payload.issue.labels.map(label => label.name);
+
+            // Check if the issue has been marked with "Ready for Implementation"
+            if (issueLabels.includes("Ready for Implementation")) {
+
+              // Optionally remove the "Not Started" label if it exists
+              if (issueLabels.includes("Not Started")) {
+                await github.rest.issues.removeLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.payload.issue.number,
+                  name: "Not Started"
+                });
+              }
+              
+              // Add the "Todo" status if it's not already set
+              if (!issueLabels.includes("Todo")) {
+                await github.rest.issues.addLabels({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.payload.issue.number,
+                  labels: ["Todo"]
+                });
+              }
+            }
