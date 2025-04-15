@@ -1,6 +1,5 @@
 name: Backlog Iteam
 description: Write each backlog item as an Issue
-labels: ["bug"]
 body:
   - type: markdown
     attributes:
@@ -15,13 +14,13 @@ body:
     validations:
       required: true
   - type: dropdown
-    id: type
+    id: state
     attributes:
-      label: Issue Type
+      label: State
       options:
-        - Bug
-        - Feature
-        - Improvement
+        - Ready for Consideration
+        - Ready for Refinement
+        - Ready for Implementation
         - Question
     validations:
       required: true
