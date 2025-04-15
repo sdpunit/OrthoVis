@@ -32,10 +32,10 @@ body:
     validations:
       required: true
   - type: dropdown
-      id: status
-      attributes:
-        label: Status
-        options:
-          - Not Started
-      validations:
-        required: true
+    id: status
+    attributes:
+      label: Status
+      options:
+        - Not Started
+    validations:
+      required: true
