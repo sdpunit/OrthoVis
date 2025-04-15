@@ -6,12 +6,13 @@ body:
     attributes:
       value: |
         Please fill out all sections before submitting.
-  - type: Input
+  - type: input
     id: story-points
     attributes:
       label: Story Points
       description: Estimate the effort
       placeholder: 1-10
+    validations:
       required: true
   - type: dropdown
     id: type
@@ -22,6 +23,7 @@ body:
         - Feature
         - Improvement
         - Question
+    validations:
       required: true
   - type: textarea
     id: description
@@ -29,4 +31,5 @@ body:
       label: Description
       description: A clear description of the issue
       placeholder: Describe what the issue is and how to reproduce it
+    validations:
       required: true
