@@ -1,5 +1,7 @@
 name: Set Default Status "Not Started"
-
+permissions:
+  issues: write
+  
 on:
   issues:
     types: [opened]
