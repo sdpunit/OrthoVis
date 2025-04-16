@@ -1,15 +1,14 @@
 name: Backlog Item
 description: | 
-  **ATTENTION:** 
-  Please search for already existing issues before creating a new one to prevent duplication.
+  **ATTENTION:** Search for existing issues before creating a new one. PREVENT DUPLICATION.
 body:
   - type: markdown
     attributes:
       value: |
         **Reminder:**
-        - Use labels for this issue
-        - Select an appropriate milestone for this issue
-        - Please fill out all sections before submitting.
+        - Use labels!
+        - Select milestone 
+        - Fill out all the sections
   - type: input
     id: story-points
     attributes:
