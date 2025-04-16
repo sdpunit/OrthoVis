@@ -1,10 +1,15 @@
-name: Backlog Iteam
-description: Write each backlog item as an Issue
+name: Backlog Item
+description: | 
+  **ATTENTION:** 
+  Please search for already existing issues before creating a new one to prevent duplication.
 body:
   - type: markdown
     attributes:
       value: |
-        Please fill out all sections before submitting.
+        **Reminder:**
+        - Use labels for this issue
+        - Select an appropriate milestone for this issue
+        - Please fill out all sections before submitting.
   - type: input
     id: story-points
     attributes:
