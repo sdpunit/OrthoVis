@@ -12,7 +12,9 @@ body:
       description: Estimate the effort
       placeholder: 1-10
     validations:
-      required: true  - type: textarea
+      required: true  
+      
+  - type: textarea
     id: implementation
     attributes:
       label: Implementation Plan
