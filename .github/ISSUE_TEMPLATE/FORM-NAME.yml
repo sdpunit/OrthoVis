@@ -16,7 +16,7 @@ body:
   - type: dropdown
     id: state
     attributes:
-      label: State
+      label: Issue Type
       options:
         - Ready for Consideration
         - Ready for Refinement
