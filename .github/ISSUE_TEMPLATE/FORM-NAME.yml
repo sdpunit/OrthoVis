@@ -22,8 +22,6 @@ body:
       placeholder: |
         - Describe the logic
         - Mention components or files involved
-      value: |
-        <!-- Provide a clear technical approach -->
 
   - type: textarea
     id: acceptance-criteria
@@ -35,8 +33,8 @@ body:
         - [ ] Criteria 2
         - [ ] Criteria 3
       value: |
-        - [ ] The feature must do X
-        - [ ] Edge case Y is handled
-        - [ ] Tested and documented
+        - [ ] 
+        - [ ] 
+        - [ ] 
     validations:
       required: true
