@@ -3,15 +3,9 @@ import sys
 from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QLabel, QHBoxLayout, QVBoxLayout, QPushButton, QTextEdit, QTextBrowser
 from PySide6.QtGui import QPalette, Qt
 
-from ui_testui import Ui_MainWindow
-
-
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-
-        # self.ui = Ui_MainWindow()
-        # self.ui.setupUi(self)
 
         self.setWindowTitle("My App")
         self.setStyleSheet("background-color: #FFFFFF;")
