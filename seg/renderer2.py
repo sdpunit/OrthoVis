@@ -1,18 +1,23 @@
 #!/usr/bin/env python3
 """
-Dual-view CT Slice Viewer with caching, independent slice controls, and global window/level sliders
+2D Axial CT Viewer with Dedicated Mode-Based Mouse Control and Zoom/Window/Level/ Slice Sliders
 
 Features:
- 1. Load CT (DICOM folder or NIfTI file) via `totalseg.load_ct`, cached as .mha for fast reloads.
- 2. Display axial and coronal orthogonal slices side by side.
- 3. Slice navigation per view:
-    - Mouse wheel over each view changes its slice (no zoom).
-    - Draggable slider below each view reflects and controls its slice.
-    - On-screen "Axial: X/N" and "Coronal: X/N" labels.
- 4. Global Window/Level sliders at top adjust contrast/brightness for both views simultaneously.
+ 1. Caches CT volumes (DICOM folder or NIfTI) as .mha for fast reloads.
+ 2. Displays axial (XY) slices in a fixed 2D renderer (vtkImageViewer2).
+ 3. Four adjustable parameters, each with its own slider and exclusive mouse-wheel control:
+    - Slice index (integer steps)
+    - Zoom level (camera parallel scale)
+    - Window width
+    - Level center
+ 4. Click on a slider to select its mode; the mouse wheel then only affects that parameter.
+ 5. Click anywhere else to return to 'view' mode (mouse wheel does nothing).
+ 6. On-screen labels:
+    - "Slice: i/N"
+    - "Mode: <current_mode>"
 
 Usage:
-    python dual_viewer.py <DICOM_dir|NIfTI_file>
+    python renderer2.py <CT_source>
 """
 import sys, os
 import SimpleITK as sitk
@@ -20,32 +25,32 @@ import vtk
 from vtkmodules.util import numpy_support
 from totalseg import load_ct
 
-# Caching directory
+# --- Cache Setup ---
 CACHE_DIR = os.path.expanduser('~/.cache/renderer')
 if not os.path.exists(CACHE_DIR): os.makedirs(CACHE_DIR, exist_ok=True)
 
-def get_cache_path(source: str) -> str:
-    name = os.path.basename(source.rstrip(os.sep)).replace(' ', '_')
+def get_cache_path(src):
+    name = os.path.basename(src.rstrip(os.sep)).replace(' ','_')
     return os.path.join(CACHE_DIR, f"{name}.mha")
 
-def load_cached_ct(source: str) -> sitk.Image:
-    cache = get_cache_path(source)
-    if os.path.exists(cache):
-        print(f"Loading CT from cache: {cache}")
-        return sitk.ReadImage(cache)
-    print(f"Loading CT from source: {source}")
-    img = load_ct(source)
-    print(f"Caching CT to: {cache}")
-    sitk.WriteImage(img, cache)
+def load_cached(src):
+    path = get_cache_path(src)
+    if os.path.exists(path):
+        print(f"Loading CT from cache: {path}")
+        return sitk.ReadImage(path)
+    print(f"Loading CT from source: {src}")
+    img = load_ct(src)
+    print(f"Caching CT to: {path}")
+    sitk.WriteImage(img, path)
     return img
 
-# Convert SITK image to VTK
-def sitk_to_vtk(img: sitk.Image):
-    arr = sitk.GetArrayFromImage(img)  # (z,y,x)
-    z,y,x = arr.shape
+# Convert SITK image to vtkImageData
+def sitk2vtk(img):
+    arr = sitk.GetArrayFromImage(img)  # shape (Z,Y,X)
+    Z,Y,X = arr.shape
     vtk_img = vtk.vtkImageData()
-    vtk_img.SetDimensions(x, y, z)
-    vtk_img.SetExtent(0, x-1, 0, y-1, 0, z-1)
+    vtk_img.SetDimensions(X,Y,Z)
+    vtk_img.SetExtent(0,X-1,0,Y-1,0,Z-1)
     vtk_img.SetSpacing(img.GetSpacing())
     vtk_img.SetOrigin(img.GetOrigin())
     vtk_arr = numpy_support.numpy_to_vtk(arr.ravel('C'), deep=True,
@@ -53,27 +58,13 @@ def sitk_to_vtk(img: sitk.Image):
     vtk_img.GetPointData().SetScalars(vtk_arr)
     return vtk_img, arr
 
-# Slider helper
+# Slider factory
 def make_slider(title, mn, mx, init, p1, p2):
     rep = vtk.vtkSliderRepresentation2D()
     rep.SetTitleText(title)
     rep.SetMinimumValue(mn)
     rep.SetMaximumValue(mx)
     rep.SetValue(init)
-    rep.SetResolution(1)  # integer steps only
-    rep.GetPoint1Coordinate().SetCoordinateSystemToNormalizedDisplay()
-    rep.GetPoint1Coordinate().SetValue(*p1)
-    rep.GetPoint2Coordinate().SetCoordinateSystemToNormalizedDisplay()
-    rep.GetPoint2Coordinate().SetValue(*p2)
-    rep.SetSliderLength(0.02)
-    rep.SetSliderWidth(0.03)
-    rep.SetTubeWidth(0.005)
-    return rep
-    rep = vtk.vtkSliderRepresentation2D()
-    rep.SetTitleText(title)
-    rep.SetMinimumValue(mn)
-    rep.SetMaximumValue(mx)
-    rep.SetValue(init)
     rep.GetPoint1Coordinate().SetCoordinateSystemToNormalizedDisplay()
     rep.GetPoint1Coordinate().SetValue(*p1)
     rep.GetPoint2Coordinate().SetCoordinateSystemToNormalizedDisplay()
@@ -83,72 +74,107 @@ def make_slider(title, mn, mx, init, p1, p2):
     rep.SetTubeWidth(0.005)
     return rep
 
-# Main viewer
-def main(ct_source):
-    # Load and convert
-    sitk_img = load_cached_ct(ct_source)
-    vtk_img, arr = sitk_to_vtk(sitk_img)
-    na, nc = arr.shape[0], arr.shape[1]
+# Main
+def main(ct_src):
+    # Load CT
+    sitk_img = load_cached(ct_src)
+    vtk_img, arr = sitk2vtk(sitk_img)
+    num_slices = arr.shape[0]
     hu_min, hu_max = int(arr.min()), int(arr.max())
-    init_a, init_c = na//2, nc//2
-    init_w = max(1, hu_max - hu_min)
-    init_l = (hu_max + hu_min)/2
+    # Initial values
+    init_slice = num_slices//2
+    init_window = max(1, hu_max - hu_min)
+    init_level  = (hu_max + hu_min)/2
 
-    # Window setup
-    ren_win = vtk.vtkRenderWindow(); ren_win.SetSize(1200,600)
-    ax_ren = vtk.vtkRenderer(); ax_ren.SetViewport(0,0,0.5,1); ren_win.AddRenderer(ax_ren)
-    co_ren = vtk.vtkRenderer(); co_ren.SetViewport(0.5,0,1,1); ren_win.AddRenderer(co_ren)
-    iren = vtk.vtkRenderWindowInteractor(); iren.SetRenderWindow(ren_win)
+    # VTK ImageViewer2
+    viewer = vtk.vtkImageViewer2()
+    viewer.SetInputData(vtk_img)
+    viewer.SetSlice(init_slice)
+    viewer.SetColorWindow(init_window)
+    viewer.SetColorLevel(init_level)
+    ren = viewer.GetRenderer()
+    ren_win = viewer.GetRenderWindow()
+    ren_win.SetSize(600,600)
 
-    # Plane widgets
-    def make_plane(renderer, orient, init_slice):
-        pw = vtk.vtkImagePlaneWidget(); pw.SetInteractor(iren); pw.SetDefaultRenderer(renderer)
-        pw.SetInputData(vtk_img)
-        if orient=='axial': pw.SetPlaneOrientationToZAxes()
-        else: pw.SetPlaneOrientationToYAxes()
-        pw.SetResliceInterpolateToLinear(); pw.RestrictPlaneToVolumeOn(); pw.DisplayTextOn()
-        pw.SetWindowLevel(init_w, init_l); pw.On(); pw.SetSliceIndex(init_slice)
-        pw.UpdatePlacement(); return pw
+    # Initialize camera
+    ren.ResetCamera()
+    cam = ren.GetActiveCamera()
+    init_zoom = cam.GetParallelScale()
 
-    axial_pw   = make_plane(ax_ren, 'axial', init_a)
-    # reset camera to properly view axial slice
-    ax_ren.ResetCamera()
-    coronal_pw = make_plane(co_ren, 'coronal', init_c)
-    # reset camera to properly view coronal slice
-    co_ren.ResetCamera()
+    # Interactor
+    iren = vtk.vtkRenderWindowInteractor()
+    viewer.SetupInteractor(iren)
 
-    # Text actors
-    def make_text(renderer, label):
-        ta=vtk.vtkTextActor(); tp=ta.GetTextProperty(); tp.SetFontSize(20); tp.BoldOn()
-        ta.SetPosition(10,10); renderer.AddActor2D(ta); return ta
-    axial_text   = make_text(ax_ren, 'Axial')
-    coronal_text = make_text(co_ren, 'Coronal')
+    # Mode state
+    current_mode = 'view'
 
-    # Update functions
-    def upd_ax(v): axial_pw.SetSliceIndex(v); axial_text.SetInput(f"Axial: {v+1}/{na}"); ren_win.Render()
-    def upd_co(v): coronal_pw.SetSliceIndex(v); coronal_text.SetInput(f"Coronal: {v+1}/{nc}"); ren_win.Render()
-    upd_ax(init_a); upd_co(init_c)
+    # Labels
+    slice_label = vtk.vtkTextActor()
+    mp = slice_label.GetTextProperty(); mp.SetFontSize(24); mp.BoldOn()
+    slice_label.SetPosition(10,10)
+    ren.AddActor2D(slice_label)
+    slice_label.SetInput(f"Slice: {init_slice+1}/{num_slices}")
+
+    mode_label = vtk.vtkTextActor()
+    mm = mode_label.GetTextProperty(); mm.SetFontSize(18); mm.BoldOn()
+    mode_label.SetPosition(10,50)
+    ren.AddActor2D(mode_label)
+    mode_label.SetInput(f"Mode: {current_mode}")
 
     # Sliders
-    a_rep = make_slider('Axial',0,na-1,init_a,(0.1,0.05),(0.4,0.05)); a_sl=vtk.vtkSliderWidget(); a_sl.SetInteractor(iren); a_sl.SetRepresentation(a_rep); a_sl.EnabledOn(); a_sl.AddObserver('EndInteractionEvent', lambda o,e: upd_ax(int(o.GetRepresentation().GetValue())))
-    c_rep = make_slider('Coronal',0,nc-1,init_c,(0.6,0.05),(0.9,0.05)); c_sl=vtk.vtkSliderWidget(); c_sl.SetInteractor(iren); c_sl.SetRepresentation(c_rep); c_sl.EnabledOn(); c_sl.AddObserver('EndInteractionEvent', lambda o,e: upd_co(int(o.GetRepresentation().GetValue())))
+    slice_rep = make_slider('Slice', 0, num_slices-1, init_slice, (0.1,0.05),(0.3,0.05))
+    zoom_rep  = make_slider('Zoom', init_zoom*0.5, init_zoom*2, init_zoom,      (0.35,0.05),(0.55,0.05))
+    win_rep   = make_slider('Window',1,hu_max-hu_min,init_window,               (0.6,0.05),(0.8,0.05))
+    lvl_rep   = make_slider('Level', hu_min, hu_max, init_level,                (0.85,0.05),(0.95,0.05))
 
-    # Window/Level sliders
-    w_rep = make_slider('Window',1,hu_max-hu_min,init_w,(0.1,0.9),(0.45,0.9)); w_sl=vtk.vtkSliderWidget(); w_sl.SetInteractor(iren); w_sl.SetRepresentation(w_rep); w_sl.EnabledOn()
-    l_rep = make_slider('Level',hu_min,hu_max,init_l,(0.55,0.9),(0.9,0.9)); l_sl=vtk.vtkSliderWidget(); l_sl.SetInteractor(iren); l_sl.SetRepresentation(l_rep); l_sl.EnabledOn()
-    w_sl.AddObserver('InteractionEvent', lambda o,e: [axial_pw.SetWindowLevel(o.GetRepresentation().GetValue(),l_rep.GetValue()), coronal_pw.SetWindowLevel(o.GetRepresentation().GetValue(),l_rep.GetValue()), ren_win.Render()])
-    l_sl.AddObserver('InteractionEvent', lambda o,e: [axial_pw.SetWindowLevel(w_rep.GetValue(),o.GetRepresentation().GetValue()), coronal_pw.SetWindowLevel(w_rep.GetValue(),o.GetRepresentation().GetValue()), ren_win.Render()])
+    slice_sl = vtk.vtkSliderWidget(); slice_sl.SetInteractor(iren); slice_sl.SetRepresentation(slice_rep); slice_sl.EnabledOn()
+    zoom_sl  = vtk.vtkSliderWidget(); zoom_sl .SetInteractor(iren); zoom_sl .SetRepresentation(zoom_rep);  zoom_sl .EnabledOn()
+    win_sl   = vtk.vtkSliderWidget(); win_sl .SetInteractor(iren); win_sl .SetRepresentation(win_rep);   win_sl .EnabledOn()
+    lvl_sl   = vtk.vtkSliderWidget(); lvl_sl .SetInteractor(iren); lvl_sl .SetRepresentation(lvl_rep);   lvl_sl .EnabledOn()
 
-    # Custom interactor for wheel
-    class DualStyle(vtk.vtkInteractorStyleImage):
-        def __init__(self): super().__init__(); self.AddObserver('MouseWheelForwardEvent',self.fwd); self.AddObserver('MouseWheelBackwardEvent',self.back)
-        def fwd(self,obj,evt): x,y=iren.GetEventPosition(); w,h=ren_win.GetSize(); (upd_ax if x<w*0.5 else upd_co)(int((a_rep if x<w*0.5 else c_rep).GetValue()+1))
-        def back(self,obj,evt): x,y=iren.GetEventPosition(); w,h=ren_win.GetSize(); (upd_ax if x<w*0.5 else upd_co)(int((a_rep if x<w*0.5 else c_rep).GetValue()-1))
-    iren.SetInteractorStyle(DualStyle())
+    # Mode updater
+    def set_mode(mode):
+        nonlocal current_mode
+        current_mode = mode
+        mode_label.SetInput(f"Mode: {current_mode}")
+        ren_win.Render()
+
+    # Callbacks per slider
+    def on_slice(obj,evt): val=int(round(obj.GetRepresentation().GetValue())); viewer.SetSlice(val); slice_label.SetInput(f"Slice: {val+1}/{num_slices}"); set_mode('slice')
+    slice_sl.AddObserver('EndInteractionEvent', on_slice)
+
+    def on_zoom(obj,evt): val=obj.GetRepresentation().GetValue(); cam.SetParallelScale(val); set_mode('zoom')
+    zoom_sl .AddObserver('EndInteractionEvent', on_zoom)
+
+    def on_win(obj,evt): val=int(round(obj.GetRepresentation().GetValue())); viewer.SetColorWindow(val); set_mode('window')
+    win_sl  .AddObserver('InteractionEvent', on_win)
+
+    def on_lvl(obj,evt): val=int(round(obj.GetRepresentation().GetValue())); viewer.SetColorLevel(val); set_mode('level')
+    lvl_sl  .AddObserver('InteractionEvent', on_lvl)
+
+    # Mouse wheel handler
+    def on_wheel(obj,evt,forward):
+        if current_mode=='slice':
+            cur = viewer.GetSlice(); new = min(num_slices-1, cur + (1 if forward else -1)); viewer.SetSlice(new); slice_label.SetInput(f"Slice: {new+1}/{num_slices}"); slice_rep.SetValue(new)
+        elif current_mode=='zoom':
+            cur = cam.GetParallelScale(); new = cur + ( -cam.GetParallelScale()*0.1 if forward else cam.GetParallelScale()*0.1 ) * ( -1 if forward else 1 )
+            cam.SetParallelScale(new); zoom_rep.SetValue(new)
+        elif current_mode=='window':
+            cur = viewer.GetColorWindow(); new = max(1, cur + (1 if forward else -1)); viewer.SetColorWindow(new); win_rep.SetValue(new)
+        elif current_mode=='level':
+            cur = viewer.GetColorLevel(); new = cur + (1 if forward else -1); viewer.SetColorLevel(new); lvl_rep.SetValue(new)
+        ren_win.Render()
+    iren.AddObserver('MouseWheelForwardEvent', lambda o,e: on_wheel(o,e,True))
+    iren.AddObserver('MouseWheelBackwardEvent',lambda o,e: on_wheel(o,e,False))
+
+    # Click outside resets to 'view'
+    iren.AddObserver('LeftButtonPressEvent', lambda o,e: set_mode('view'))
 
     # Start
-    iren.Initialize(); ren_win.Render(); print('Starting dual-view viewer...'); iren.Start()
+    ren_win.Render(); iren.Initialize(); print('Starting axial viewer with modes...'); iren.Start()
 
 if __name__=='__main__':
-    if len(sys.argv)!=2: print(f"Usage: {os.path.basename(sys.argv[0])} <CT_source>"); sys.exit(1)
+    if len(sys.argv)!=2:
+        print(f"Usage: {os.path.basename(sys.argv[0])} <CT_source>")
+        sys.exit(1)
     main(sys.argv[1])
