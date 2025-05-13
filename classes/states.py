@@ -114,11 +114,11 @@ class VisualState(ProjectState):
         self.context.transition_to(None)
 
 
-if __name__ == "__main__":
-    # The client code.
+# if __name__ == "__main__":
+#     # The client code.
 
-    context = Context(HomePageState())
-    context.request()
-    context.request()
-    context.request()
-    context.request()
+#     context = Context(HomePageState())
+#     context.request()
+#     context.request()
+#     context.request()
+#     context.request()
