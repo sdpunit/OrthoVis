@@ -1,6 +1,7 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
 from objects import Patient
+from singleton import SingletonPatient
 
 
 class Context:
@@ -11,12 +12,18 @@ class Context:
     """
 
     _state = None
+    _singleton_patient = None
+    _name = None
+    _description = None
     """
     A reference to the current state of the Context.
     """
-    
+
     def __init__(self, state: ProjectState) -> None:
         self.transition_to(state)
+        self._singleton_patient = patient
+        self._name = patient.name
+        self._description = description
 
     def transition_to(self, state: ProjectState):
         """
@@ -117,7 +124,6 @@ class VisualState(ProjectState):
 # if __name__ == "__main__":
 #     # The client code.
 
-#     context = Context(HomePageState())
 #     context.request()
 #     context.request()
 #     context.request()
