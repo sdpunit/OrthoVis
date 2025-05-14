@@ -15,6 +15,11 @@ class Context:
     A reference to the current state of the Context.
     """
 
+    """
+    A reference to the Singleton Patient.
+    """
+    _patient = None
+
     def __init__(self, state: ProjectState) -> None:
         self.transition_to(state)
 
