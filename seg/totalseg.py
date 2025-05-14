@@ -17,8 +17,8 @@ import subprocess
 # totalseg_download_weights -t appendicular_bones [patella, tibia, fibula]
 
 # Input and output directories
-ct_dir = "/mnt/c/users/avery/Desktop/PI201/DICOM/P0000001/ST000001/SE000003"  # Input CT directory 
-seg_dir = "/mnt/c/users/avery/Desktop/segmentation_masks"  # Output segmentation masks directory
+ct_dir = "/Users/liruohua/Desktop/OrthoVis/PI201/DICOM/P0000001/ST000001/SE000003"  # Input CT directory 
+seg_dir = "/Users/liruohua/Desktop/OrthoVis/segmentation_masks"  # Output segmentation masks directory
 roi = ["femur_left", "femur_right", "fibula", "patella", "tibia"] # ROIs 
 
 def run_totalseg(ct_dir: str, seg_dir: str): 
