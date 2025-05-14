@@ -85,7 +85,8 @@ def main(ct_source):
     init_window = 5.7e3
     init_level = 1.98e3
 
-    # VTK 2D viewer setup
+    
+    # VTK 2D viewer setup -- Axial
     viewer = vtk.vtkImageViewer2()
     viewer.SetInputData(vtk_img)
     viewer.SetSlice(init_slice)
@@ -93,6 +94,61 @@ def main(ct_source):
     ren = viewer.GetRenderer()
     iren = vtk.vtkRenderWindowInteractor()
     viewer.SetupInteractor(iren)
+
+    # Coronal view
+    viewer_coronal = vtk.vtkImageViewer2()
+    viewer_coronal.SetInputData(vtk_img)
+    viewer_coronal.SetSliceOrientationToXZ()  # 对应 coronal 方向
+    viewer_coronal.SetSlice(arr.shape[1] // 2)
+    iren_coronal = vtk.vtkRenderWindowInteractor()
+    viewer_coronal.SetupInteractor(iren_coronal)
+    viewer_coronal.GetRenderWindow().SetSize(600, 600)
+
+    # Coronal slider
+    num_coronal_slices = arr.shape[1]
+    init_coronal_slice = num_coronal_slices // 2
+    coronal_slice_rep = make_slider("Coronal Slice", 0, num_coronal_slices - 1, init_coronal_slice, (0.1, 0.05), (0.9, 0.05))
+    coronal_slice_slider = vtk.vtkSliderWidget()
+    coronal_slice_slider.SetInteractor(iren_coronal)
+    coronal_slice_slider.SetRepresentation(coronal_slice_rep)
+    coronal_slice_slider.SetAnimationModeToJump()
+    coronal_slice_slider.EnabledOn()
+
+    def on_coronal_slice(obj, event):
+        val = int(round(obj.GetRepresentation().GetValue()))
+        viewer_coronal.SetSlice(val)
+        viewer_coronal.GetRenderWindow().Render()
+
+    coronal_slice_slider.AddObserver("EndInteractionEvent", on_coronal_slice)
+
+
+    # Sagittal view
+    viewer_sagittal = vtk.vtkImageViewer2()
+    viewer_sagittal.SetInputData(vtk_img)
+    viewer_sagittal.SetSliceOrientationToYZ()  # 对应 sagittal 方向
+    viewer_sagittal.SetSlice(arr.shape[2] // 2)
+    iren_sagittal = vtk.vtkRenderWindowInteractor()
+    viewer_sagittal.SetupInteractor(iren_sagittal)
+    viewer_sagittal.GetRenderWindow().SetSize(600, 600)
+
+
+    # Sagittal slider
+    num_sagittal_slices = arr.shape[2]
+    init_sagittal_slice = num_sagittal_slices // 2
+    sagittal_slice_rep = make_slider("Sagittal Slice", 0, num_sagittal_slices - 1, init_sagittal_slice, (0.1, 0.05), (0.9, 0.05))
+    sagittal_slice_slider = vtk.vtkSliderWidget()
+    sagittal_slice_slider.SetInteractor(iren_sagittal)
+    sagittal_slice_slider.SetRepresentation(sagittal_slice_rep)
+    sagittal_slice_slider.SetAnimationModeToJump()
+    sagittal_slice_slider.EnabledOn()
+
+    def on_sagittal_slice(obj, event):
+        val = int(round(obj.GetRepresentation().GetValue()))
+        viewer_sagittal.SetSlice(val)
+        viewer_sagittal.GetRenderWindow().Render()
+
+    sagittal_slice_slider.AddObserver("EndInteractionEvent", on_sagittal_slice)
+
 
     ren.ResetCamera()
     ren_win.SetSize(600, 600)
@@ -114,14 +170,15 @@ def main(ct_source):
     slice_slider.SetAnimationModeToJump()
     slice_slider.EnabledOn()
 
-    # new
+    #new
     info_actor = vtk.vtkTextActor()
     tp = info_actor.GetTextProperty()
     tp.SetFontSize(20)
     tp.BoldOn()
     info_actor.SetPosition(10, 90)  
     ren.AddActor2D(info_actor)
-
+   
+    
 
     def on_slice(obj, event):
         val = int(round(obj.GetRepresentation().GetValue()))
@@ -177,72 +234,87 @@ def main(ct_source):
     lvl_slider.AddObserver("InteractionEvent", on_lvl)
 
     # mouse move listener
+
     def on_mouse_move(obj, event):
-        x, y = iren.GetEventPosition()
-        #picker = vtk.vtkPropPicker()
+        interactor = obj  
+        x, y = interactor.GetEventPosition()
+
+    
         picker = vtk.vtkCellPicker()
-        picker.SetTolerance(0.005)  
-        picker.Pick(x, y, 0, ren)
+        picker.SetTolerance(0.005)
+        picker.Pick(x, y, 0, interactor.GetRenderWindow().GetRenderers().GetFirstRenderer())
         pos = picker.GetPickPosition()
+        
         i = int(round(pos[0]))
         j = int(round(pos[1]))
-        k = viewer.GetSlice()
+        k = viewer.GetSlice()  
 
-        if 0 <= k < arr.shape[0] and 0 <= j < arr.shape[1] and 0 <= i < arr.shape[2]:
-            value = int(arr[k, j, i])
+        
+        if interactor == iren:
+            plane_name = "Axial"
+            plane_color = "Red"
+            k = viewer.GetSlice()
+            in_bounds = 0 <= k < arr.shape[0] and 0 <= j < arr.shape[1] and 0 <= i < arr.shape[2]
+            value = int(arr[k, j, i]) if in_bounds else 0
+            spacing_value = sitk_img.GetSpacing()[2]
 
-            # segment label 
-            label_text = ""
-            if 'label_arr' in globals():
-                label = label_arr[k, j, i]
-                label_name = label_map.get(label, f"Label {label}") if label > 0 else "None"
-                label_text = f"\nLabel: {label_name}"
-            else:
-                label_text = ""
+        elif interactor == iren_coronal:
+            plane_name = "Coronal"
+            plane_color = "Green"
+            j = viewer_coronal.GetSlice()
+            in_bounds = 0 <= j < arr.shape[1] and 0 <= k < arr.shape[0] and 0 <= i < arr.shape[2]
+            value = int(arr[k, j, i]) if in_bounds else 0
+            spacing_value = sitk_img.GetSpacing()[1]
 
-            
-            plane_name = "Axial"  
-            plane_color = "Red"  # need to be changed
+        elif interactor == iren_sagittal:
+            plane_name = "Sagittal"
+            plane_color = "Blue"
+            i = viewer_sagittal.GetSlice()
+            in_bounds = 0 <= i < arr.shape[2] and 0 <= j < arr.shape[1] and 0 <= k < arr.shape[0]
+            value = int(arr[k, j, i]) if in_bounds else 0
+            spacing_value = sitk_img.GetSpacing()[0]
 
-            # get RAS coord
-            ras_x = round(pos[0], 1)
-            ras_y = round(pos[1], 1)
-            ras_z = round(pos[2], 1)
+        else:
+            return  
 
-            # get spacing
-            spacing = sitk_img.GetSpacing()
-            spacing_text = f"{plane_name} Sp: {spacing[2]:.1f}"  # axial--- spacing[2]
+        # info
+        ras_x, ras_y, ras_z = round(pos[0], 1), round(pos[1], 1), round(pos[2], 1)
+        spacing_text = f"{plane_name} Sp: {spacing_value:.1f}"
 
-            # label info
-            if 'label_arr' in globals():
-                label = label_arr[k, j, i]
-                label_name = label_map.get(label, f"Label {label}") if label > 0 else "None"
-                label_rgb = (256, 214, 120)  
-                label_text = f"B {label}: {label_name} {label_rgb} {value}"
-            else:
-                label_text = f"B None {value}"
+        if 'label_arr' in globals():
+            label = label_arr[k, j, i]
+            label_name = label_map.get(label, f"Label {label}") if label > 0 else "None"
+            label_rgb = (256, 214, 120)
+            label_text = f"B {label}: {label_name} {label_rgb} {value}"
+        else:
+            label_text = f"B None {value}"
 
-            # Compose final display text
-            display_text = f"""{plane_color}       (R {ras_x}, A {ras_y}, S {ras_z})
-            {spacing_text}
+        display_text = f"""{plane_color}       (R {ras_x}, A {ras_y}, S {ras_z})
+        {spacing_text}
 
-            L None
-            F None
-            {label_text}
-            """
-            info_actor.SetInput(display_text)
-            ren_win.Render()
+        L None
+        F None
+        {label_text}
+        """
+        info_actor.SetInput(display_text)
+        interactor.GetRenderWindow().Render()
 
-            
 
     iren.AddObserver("MouseMoveEvent", on_mouse_move)
-
 
     # Initialize and start
     ren_win.Render()
     iren.Initialize()
     print("Starting 2D axial CT viewer...")
     iren.Start()
+
+    viewer_coronal.Render()
+    iren_coronal.Initialize()
+    iren_coronal.Start()
+
+    viewer_sagittal.Render()
+    iren_sagittal.Initialize()
+    iren_sagittal.Start()
 
 if __name__ == '__main__':
     if len(sys.argv) != 2:
