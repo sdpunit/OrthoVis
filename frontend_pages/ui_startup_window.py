@@ -1,0 +1,384 @@
+# -*- coding: utf-8 -*-
+
+################################################################################
+## Form generated from reading UI file 'testuiFsoxpB.ui'
+##
+## Created by: Qt User Interface Compiler version 6.9.0
+##
+## WARNING! All changes made in this file will be lost when recompiling UI file!
+################################################################################
+
+from PySide6.QtCore import (QCoreApplication, QDate, QDateTime, QLocale,
+    QMetaObject, QObject, QPoint, QRect,
+    QSize, QTime, QUrl, Qt)
+from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
+    QFont, QFontDatabase, QGradient, QIcon,
+    QImage, QKeySequence, QLinearGradient, QPainter,
+    QPalette, QPixmap, QRadialGradient, QTransform)
+from PySide6.QtWidgets import (QApplication, QFrame, QGridLayout, QHBoxLayout,
+    QLabel, QMainWindow, QPushButton, QSizePolicy,
+    QVBoxLayout, QWidget)
+
+class Ui_MainWindow(object):
+    def setupUi(self, MainWindow):
+        if not MainWindow.objectName():
+            MainWindow.setObjectName(u"MainWindow")
+        MainWindow.resize(1175, 740)
+        sizePolicy = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(MainWindow.sizePolicy().hasHeightForWidth())
+        MainWindow.setSizePolicy(sizePolicy)
+        MainWindow.setBaseSize(QSize(0, 0))
+        font = QFont()
+        font.setFamilies([u"Century Gothic"])
+        font.setPointSize(16)
+        font.setBold(True)
+        MainWindow.setFont(font)
+        self.centralwidget = QWidget(MainWindow)
+        self.centralwidget.setObjectName(u"centralwidget")
+        sizePolicy.setHeightForWidth(self.centralwidget.sizePolicy().hasHeightForWidth())
+        self.centralwidget.setSizePolicy(sizePolicy)
+        self.centralwidget.setMinimumSize(QSize(0, 0))
+        self.centralwidget.setBaseSize(QSize(0, 0))
+        self.horizontalLayout_2 = QHBoxLayout(self.centralwidget)
+        self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
+        self.mainLayout = QHBoxLayout()
+        self.mainLayout.setObjectName(u"mainLayout")
+        self.leftLayout = QGridLayout()
+        self.leftLayout.setObjectName(u"leftLayout")
+        self.leftFrame = QFrame(self.centralwidget)
+        self.leftFrame.setObjectName(u"leftFrame")
+        sizePolicy.setHeightForWidth(self.leftFrame.sizePolicy().hasHeightForWidth())
+        self.leftFrame.setSizePolicy(sizePolicy)
+        self.leftFrame.setStyleSheet(u"background-color: rgb(29, 52, 97);")
+        self.leftFrame.setFrameShape(QFrame.Shape.StyledPanel)
+        self.leftFrame.setFrameShadow(QFrame.Shadow.Raised)
+        self.gridLayout_4 = QGridLayout(self.leftFrame)
+        self.gridLayout_4.setObjectName(u"gridLayout_4")
+        self.lblOrthoVis = QLabel(self.leftFrame)
+        self.lblOrthoVis.setObjectName(u"lblOrthoVis")
+        sizePolicy1 = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
+        sizePolicy1.setHorizontalStretch(1)
+        sizePolicy1.setVerticalStretch(1)
+        sizePolicy1.setHeightForWidth(self.lblOrthoVis.sizePolicy().hasHeightForWidth())
+        self.lblOrthoVis.setSizePolicy(sizePolicy1)
+        font1 = QFont()
+        font1.setFamilies([u"Dubai"])
+        font1.setPointSize(56)
+        self.lblOrthoVis.setFont(font1)
+        self.lblOrthoVis.setStyleSheet(u"color: rgb(255, 255, 255);")
+        self.lblOrthoVis.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        self.gridLayout_4.addWidget(self.lblOrthoVis, 0, 1, 1, 1)
+
+        self.label = QLabel(self.leftFrame)
+        self.label.setObjectName(u"label")
+        self.label.setPixmap(QPixmap(u"C:/Users/hanna/Downloads/orthovis_logo.png"))
+
+        self.gridLayout_4.addWidget(self.label, 0, 0, 1, 1)
+
+
+        self.leftLayout.addWidget(self.leftFrame, 0, 0, 1, 1)
+
+
+        self.mainLayout.addLayout(self.leftLayout)
+
+        self.rightLayout = QVBoxLayout()
+        self.rightLayout.setObjectName(u"rightLayout")
+        self.rightFrame = QFrame(self.centralwidget)
+        self.rightFrame.setObjectName(u"rightFrame")
+        sizePolicy.setHeightForWidth(self.rightFrame.sizePolicy().hasHeightForWidth())
+        self.rightFrame.setSizePolicy(sizePolicy)
+        self.rightFrame.setFont(font)
+        self.rightFrame.setFrameShape(QFrame.Shape.StyledPanel)
+        self.rightFrame.setFrameShadow(QFrame.Shadow.Raised)
+        self.gridLayout_3 = QGridLayout(self.rightFrame)
+        self.gridLayout_3.setObjectName(u"gridLayout_3")
+        self.lblWelcome = QLabel(self.rightFrame)
+        self.lblWelcome.setObjectName(u"lblWelcome")
+        sizePolicy2 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        sizePolicy2.setHorizontalStretch(0)
+        sizePolicy2.setVerticalStretch(0)
+        sizePolicy2.setHeightForWidth(self.lblWelcome.sizePolicy().hasHeightForWidth())
+        self.lblWelcome.setSizePolicy(sizePolicy2)
+        font2 = QFont()
+        font2.setFamilies([u"Dubai"])
+        font2.setPointSize(18)
+        font2.setBold(True)
+        self.lblWelcome.setFont(font2)
+
+        self.gridLayout_3.addWidget(self.lblWelcome, 1, 0, 1, 1)
+
+        self.lblIntro = QLabel(self.rightFrame)
+        self.lblIntro.setObjectName(u"lblIntro")
+        sizePolicy2.setHeightForWidth(self.lblIntro.sizePolicy().hasHeightForWidth())
+        self.lblIntro.setSizePolicy(sizePolicy2)
+        font3 = QFont()
+        font3.setFamilies([u"Dubai"])
+        font3.setPointSize(14)
+        font3.setBold(False)
+        self.lblIntro.setFont(font3)
+        self.lblIntro.setWordWrap(True)
+
+        self.gridLayout_3.addWidget(self.lblIntro, 2, 0, 1, 1)
+
+        self.selectionLayout = QVBoxLayout()
+        self.selectionLayout.setObjectName(u"selectionLayout")
+        self.titles = QHBoxLayout()
+        self.titles.setObjectName(u"titles")
+        self.newPfoject = QLabel(self.rightFrame)
+        self.newPfoject.setObjectName(u"newPfoject")
+        font4 = QFont()
+        font4.setFamilies([u"Dubai"])
+        font4.setPointSize(18)
+        font4.setBold(False)
+        self.newPfoject.setFont(font4)
+
+        self.titles.addWidget(self.newPfoject)
+
+        self.openProject = QLabel(self.rightFrame)
+        self.openProject.setObjectName(u"openProject")
+        self.openProject.setFont(font4)
+
+        self.titles.addWidget(self.openProject)
+
+
+        self.selectionLayout.addLayout(self.titles)
+
+        self.texts = QHBoxLayout()
+        self.texts.setObjectName(u"texts")
+        self.newProjectText = QLabel(self.rightFrame)
+        self.newProjectText.setObjectName(u"newProjectText")
+        font5 = QFont()
+        font5.setFamilies([u"Dubai"])
+        font5.setPointSize(12)
+        font5.setBold(False)
+        self.newProjectText.setFont(font5)
+        self.newProjectText.setWordWrap(True)
+
+        self.texts.addWidget(self.newProjectText)
+
+        self.createProjectText = QLabel(self.rightFrame)
+        self.createProjectText.setObjectName(u"createProjectText")
+        self.createProjectText.setFont(font5)
+        self.createProjectText.setAlignment(Qt.AlignmentFlag.AlignLeading|Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignTop)
+        self.createProjectText.setWordWrap(True)
+
+        self.texts.addWidget(self.createProjectText)
+
+
+        self.selectionLayout.addLayout(self.texts)
+
+        self.buttonsLayout = QHBoxLayout()
+        self.buttonsLayout.setObjectName(u"buttonsLayout")
+        self.newProjectFrame = QFrame(self.rightFrame)
+        self.newProjectFrame.setObjectName(u"newProjectFrame")
+        sizePolicy.setHeightForWidth(self.newProjectFrame.sizePolicy().hasHeightForWidth())
+        self.newProjectFrame.setSizePolicy(sizePolicy)
+        self.newProjectFrame.setStyleSheet(u"background: transparent;\n"
+"border: transparent;")
+        self.newProjectFrame.setFrameShape(QFrame.Shape.StyledPanel)
+        self.newProjectFrame.setFrameShadow(QFrame.Shadow.Raised)
+        self.pushButton = QPushButton(self.newProjectFrame)
+        self.pushButton.setObjectName(u"pushButton")
+        self.pushButton.setGeometry(QRect(0, 10, 120, 30))
+        self.pushButton.setFont(font3)
+        self.pushButton.setStyleSheet(u"background-color: rgb(255, 215, 0);\n"
+"border-radius: 10px;\n"
+"border: none;")
+
+        self.buttonsLayout.addWidget(self.newProjectFrame)
+
+        self.openProjectFrame = QFrame(self.rightFrame)
+        self.openProjectFrame.setObjectName(u"openProjectFrame")
+        sizePolicy.setHeightForWidth(self.openProjectFrame.sizePolicy().hasHeightForWidth())
+        self.openProjectFrame.setSizePolicy(sizePolicy)
+        self.openProjectFrame.setStyleSheet(u"background: transparent;\n"
+"border: transparent")
+        self.openProjectFrame.setFrameShape(QFrame.Shape.StyledPanel)
+        self.openProjectFrame.setFrameShadow(QFrame.Shadow.Raised)
+        self.pushButton_2 = QPushButton(self.openProjectFrame)
+        self.pushButton_2.setObjectName(u"pushButton_2")
+        self.pushButton_2.setGeometry(QRect(0, 10, 130, 30))
+        self.pushButton_2.setFont(font3)
+        self.pushButton_2.setStyleSheet(u"background-color: rgb(255, 215, 0);\n"
+"border-radius: 10px;\n"
+"border: none\n"
+"")
+
+        self.buttonsLayout.addWidget(self.openProjectFrame)
+
+
+        self.selectionLayout.addLayout(self.buttonsLayout)
+
+        self.selectionLayout.setStretch(0, 1)
+        self.selectionLayout.setStretch(1, 2)
+        self.selectionLayout.setStretch(2, 1)
+
+        self.gridLayout_3.addLayout(self.selectionLayout, 3, 0, 1, 1)
+
+        self.recentsFrame = QFrame(self.rightFrame)
+        self.recentsFrame.setObjectName(u"recentsFrame")
+        self.recentsFrame.setFrameShape(QFrame.Shape.StyledPanel)
+        self.recentsFrame.setFrameShadow(QFrame.Shadow.Raised)
+        self.verticalLayout_3 = QVBoxLayout(self.recentsFrame)
+        self.verticalLayout_3.setObjectName(u"verticalLayout_3")
+        self.recentsLabel = QLabel(self.recentsFrame)
+        self.recentsLabel.setObjectName(u"recentsLabel")
+        sizePolicy2.setHeightForWidth(self.recentsLabel.sizePolicy().hasHeightForWidth())
+        self.recentsLabel.setSizePolicy(sizePolicy2)
+        self.recentsLabel.setFont(font4)
+
+        self.verticalLayout_3.addWidget(self.recentsLabel)
+
+        self.headers = QFrame(self.recentsFrame)
+        self.headers.setObjectName(u"headers")
+        sizePolicy2.setHeightForWidth(self.headers.sizePolicy().hasHeightForWidth())
+        self.headers.setSizePolicy(sizePolicy2)
+        self.headers.setStyleSheet(u"background-color: rgb(147, 154, 171);")
+        self.headers.setFrameShape(QFrame.Shape.StyledPanel)
+        self.headers.setFrameShadow(QFrame.Shadow.Raised)
+        self.horizontalLayout = QHBoxLayout(self.headers)
+        self.horizontalLayout.setObjectName(u"horizontalLayout")
+        self.fileNameLabel = QLabel(self.headers)
+        self.fileNameLabel.setObjectName(u"fileNameLabel")
+        sizePolicy2.setHeightForWidth(self.fileNameLabel.sizePolicy().hasHeightForWidth())
+        self.fileNameLabel.setSizePolicy(sizePolicy2)
+        font6 = QFont()
+        font6.setFamilies([u"Dubai"])
+        font6.setPointSize(12)
+        self.fileNameLabel.setFont(font6)
+        self.fileNameLabel.setStyleSheet(u"color: rgba(0,0,0, 128);")
+
+        self.horizontalLayout.addWidget(self.fileNameLabel)
+
+        self.lastAccessLabel = QLabel(self.headers)
+        self.lastAccessLabel.setObjectName(u"lastAccessLabel")
+        sizePolicy2.setHeightForWidth(self.lastAccessLabel.sizePolicy().hasHeightForWidth())
+        self.lastAccessLabel.setSizePolicy(sizePolicy2)
+        self.lastAccessLabel.setFont(font6)
+        self.lastAccessLabel.setStyleSheet(u"color: rgba(0,0,0,128);")
+
+        self.horizontalLayout.addWidget(self.lastAccessLabel)
+
+
+        self.verticalLayout_3.addWidget(self.headers)
+
+        self.project1Frame = QFrame(self.recentsFrame)
+        self.project1Frame.setObjectName(u"project1Frame")
+        self.project1Frame.setFrameShape(QFrame.Shape.StyledPanel)
+        self.project1Frame.setFrameShadow(QFrame.Shadow.Raised)
+        self.horizontalLayout_3 = QHBoxLayout(self.project1Frame)
+        self.horizontalLayout_3.setObjectName(u"horizontalLayout_3")
+        self.fileName1 = QLabel(self.project1Frame)
+        self.fileName1.setObjectName(u"fileName1")
+        font7 = QFont()
+        font7.setFamilies([u"Dubai"])
+        font7.setPointSize(12)
+        font7.setBold(True)
+        self.fileName1.setFont(font7)
+
+        self.horizontalLayout_3.addWidget(self.fileName1)
+
+        self.lastAccess1 = QLabel(self.project1Frame)
+        self.lastAccess1.setObjectName(u"lastAccess1")
+        self.lastAccess1.setFont(font7)
+
+        self.horizontalLayout_3.addWidget(self.lastAccess1)
+
+
+        self.verticalLayout_3.addWidget(self.project1Frame)
+
+        self.project2Frame = QFrame(self.recentsFrame)
+        self.project2Frame.setObjectName(u"project2Frame")
+        self.project2Frame.setFrameShape(QFrame.Shape.StyledPanel)
+        self.project2Frame.setFrameShadow(QFrame.Shadow.Raised)
+        self.horizontalLayout_4 = QHBoxLayout(self.project2Frame)
+        self.horizontalLayout_4.setObjectName(u"horizontalLayout_4")
+        self.fileName2 = QLabel(self.project2Frame)
+        self.fileName2.setObjectName(u"fileName2")
+        self.fileName2.setFont(font7)
+
+        self.horizontalLayout_4.addWidget(self.fileName2)
+
+        self.lastAccess2 = QLabel(self.project2Frame)
+        self.lastAccess2.setObjectName(u"lastAccess2")
+        self.lastAccess2.setFont(font7)
+
+        self.horizontalLayout_4.addWidget(self.lastAccess2)
+
+
+        self.verticalLayout_3.addWidget(self.project2Frame)
+
+        self.project3Frame = QFrame(self.recentsFrame)
+        self.project3Frame.setObjectName(u"project3Frame")
+        self.project3Frame.setFrameShape(QFrame.Shape.StyledPanel)
+        self.project3Frame.setFrameShadow(QFrame.Shadow.Raised)
+        self.horizontalLayout_5 = QHBoxLayout(self.project3Frame)
+        self.horizontalLayout_5.setObjectName(u"horizontalLayout_5")
+        self.fileName3 = QLabel(self.project3Frame)
+        self.fileName3.setObjectName(u"fileName3")
+        self.fileName3.setFont(font7)
+
+        self.horizontalLayout_5.addWidget(self.fileName3)
+
+        self.lastAccess3 = QLabel(self.project3Frame)
+        self.lastAccess3.setObjectName(u"lastAccess3")
+        self.lastAccess3.setFont(font7)
+
+        self.horizontalLayout_5.addWidget(self.lastAccess3)
+
+
+        self.verticalLayout_3.addWidget(self.project3Frame)
+
+
+        self.gridLayout_3.addWidget(self.recentsFrame, 4, 0, 1, 1)
+
+        self.gridLayout_3.setRowStretch(0, 1)
+        self.gridLayout_3.setRowStretch(1, 1)
+        self.gridLayout_3.setRowStretch(2, 1)
+        self.gridLayout_3.setRowStretch(3, 2)
+        self.gridLayout_3.setRowStretch(4, 2)
+
+        self.rightLayout.addWidget(self.rightFrame)
+
+
+        self.mainLayout.addLayout(self.rightLayout)
+
+        self.mainLayout.setStretch(0, 4)
+        self.mainLayout.setStretch(1, 7)
+
+        self.horizontalLayout_2.addLayout(self.mainLayout)
+
+        self.horizontalLayout_2.setStretch(0, 4)
+        MainWindow.setCentralWidget(self.centralwidget)
+
+        self.retranslateUi(MainWindow)
+
+        QMetaObject.connectSlotsByName(MainWindow)
+    # setupUi
+
+    def retranslateUi(self, MainWindow):
+        MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"MainWindow", None))
+        self.lblOrthoVis.setText(QCoreApplication.translate("MainWindow", u"OrthoVis", None))
+        self.label.setText("")
+        self.lblWelcome.setText(QCoreApplication.translate("MainWindow", u"Welcome to OrthoVis 2.0!", None))
+        self.lblIntro.setText(QCoreApplication.translate("MainWindow", u"OrthoVis 2.0 provides fast and accurate 3D joint movement analysis by registering CT and fluoroscopy images, streamlining orthopedic research and clinical assessment.", None))
+        self.newPfoject.setText(QCoreApplication.translate("MainWindow", u"New Project", None))
+        self.openProject.setText(QCoreApplication.translate("MainWindow", u"Open Project", None))
+        self.newProjectText.setText(QCoreApplication.translate("MainWindow", u"Create a new OrthoVis project. You will need valid CT scan and Fluroscopy files for OrthoVis to produce an accurate 3D reconstruction.", None))
+        self.createProjectText.setText(QCoreApplication.translate("MainWindow", u"Already got a project? Open an OrthoVis project from file system.", None))
+        self.pushButton.setText(QCoreApplication.translate("MainWindow", u"New Project", None))
+        self.pushButton_2.setText(QCoreApplication.translate("MainWindow", u"Open Project", None))
+        self.recentsLabel.setText(QCoreApplication.translate("MainWindow", u"Recents", None))
+        self.fileNameLabel.setText(QCoreApplication.translate("MainWindow", u"File name", None))
+        self.lastAccessLabel.setText(QCoreApplication.translate("MainWindow", u"Last opened by you", None))
+        self.fileName1.setText(QCoreApplication.translate("MainWindow", u"Neil\u2019s Kneeling Project", None))
+        self.lastAccess1.setText(QCoreApplication.translate("MainWindow", u"1 April 2025", None))
+        self.fileName2.setText(QCoreApplication.translate("MainWindow", u"Ben\u2019s Bending Knee Project", None))
+        self.lastAccess2.setText(QCoreApplication.translate("MainWindow", u"1 April 2024", None))
+        self.fileName3.setText(QCoreApplication.translate("MainWindow", u"Hanna\u2019s Hyper Knee Project", None))
+        self.lastAccess3.setText(QCoreApplication.translate("MainWindow", u"1 April 2023", None))
+    # retranslateUi
+

@@ -2,7 +2,7 @@
 from PySide6.QtWidgets import QMainWindow, QStackedWidget, QPushButton, QWidget, QVBoxLayout
 
 # Import the application pages from frontend_pages.
-from frontend_pages.startup_window import Homepage
+from frontend_pages.startup_window import HomePage
 from frontend_pages.new_project_window import NewProject
 from frontend_pages.segmentation_window import Segmentation
 
@@ -19,7 +19,7 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("OrthoVis 2.0")
 
         # Start up page, chose to create project or open project
-        self.homepage = Homepage()
+        self.homepage = HomePage()
 
         # Sets up new project, imports CT and Fluro etc
         self.newproject = NewProject()
