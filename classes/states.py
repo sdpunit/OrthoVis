@@ -13,17 +13,17 @@ class Context:
 
     _state = None
     _singleton_patient = None
-    _name = None
-    _description = None
+    # _name = None
+    # _description = None
     """
     A reference to the current state of the Context.
     """
 
-    def __init__(self, state: ProjectState) -> None:
+    def __init__(self, state: ProjectState, patient: SingletonPatient) -> None:
         self.transition_to(state)
         self._singleton_patient = patient
-        self._name = patient.name
-        self._description = description
+        # self._name = patient.name
+        # self._description = description
 
     def transition_to(self, state: ProjectState):
         """
@@ -58,22 +58,6 @@ class ProjectState(ABC):
     @context.setter
     def context(self, context: Context) -> None:
         self._context = context
-
-    @property
-    def patient(self) -> Patient:
-        return self._patient
-
-    @patient.setter
-    def patient(self, patient: Patient) -> None:
-        self._patient = patient
-
-    @property
-    def state(self) -> int:
-        return self._state
-
-    @state.setter
-    def state(self, state: int) -> None:
-        self._state = state
 
     @abstractmethod
     def handle(self) -> None:

@@ -5,18 +5,26 @@ class SingletonPatient:
     _patient = None
 
     @staticmethod
-    def get_instance(name: str, age: int, CT=None, fluroscopy=None, segmentedCT=None):
+    def get_instance():
         if SingletonPatient._instance is None:
             SingletonPatient._instance = SingletonPatient()
-            SingletonPatient._patient = Patient(name=name, age=age, CT=CT, fluroscopy=fluroscopy, segmentedCT= segmentedCT)
+            SingletonPatient._patient = Patient("", 0, "", "", "")
         return SingletonPatient._instance
+    
+    @property
+    def patient(self):
+      return self._patient
 
-    def set_CT(self, CT):
-        self._patient.CT = CT
-        return True
-    def set_fluroscopy(self, fluroscopy):
-        self._patient.fluroscopy = fluroscopy
-        return True
+
+
 # Usage
 if __name__ == "__main__":
-    SingletonPatient_instance = SingletonPatient.get_instance("Test",30)
+    SingletonPatient_instance = SingletonPatient.get_instance()
+    patient = SingletonPatient_instance.patient
+    patient.name = "Test"
+    patient.age = 30
+    patient.CT = "CT"
+    patient.fluroscopy = "Fluoro"
+    patient.segmentedCT = "SegmentedCT"
+
+    print(patient.to_string())

@@ -54,3 +54,4 @@ class MainWindow(QMainWindow):
 
 
         ## IMPLEMENT A BUNCH OF LOGIC HERE TO CYCLE BETWEEN STATES
+        
