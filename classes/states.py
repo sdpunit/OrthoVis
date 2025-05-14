@@ -19,7 +19,7 @@ class Context:
     A reference to the current state of the Context.
     """
 
-    def __init__(self, state: ProjectState, patient: SingletonPatient) -> None:
+    def __init__(self, state: ProjectState, patient:SingletonPatient) -> None:
         self.transition_to(state)
         self._singleton_patient = patient
         # self._name = patient.name
@@ -105,9 +105,10 @@ class VisualState(ProjectState):
         self.context.transition_to(None)
 
 
-# if __name__ == "__main__":
+#if __name__ == "__main__":
 #     # The client code.
-
+#     singletonPatient_instance = SingletonPatient.get_instance()
+#     context = Context(HomePageState())
 #     context.request()
 #     context.request()
 #     context.request()
