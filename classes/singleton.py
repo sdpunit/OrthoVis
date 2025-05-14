@@ -37,5 +37,5 @@ if __name__ == "__main__":
     singletonPatient_instance2 = SingletonPatient.get_instance()
 
     assert id(singletonPatient_instance) == id(singletonPatient_instance2)
-    
+
     print(patient.to_string())
