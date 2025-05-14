@@ -1,0 +1,1 @@
+# This file manages the actual display window and handles the logic to decide which page to show.

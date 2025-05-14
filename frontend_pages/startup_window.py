@@ -1,0 +1,1 @@
+# Startup window on opening of the application
