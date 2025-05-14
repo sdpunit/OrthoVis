@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'testuiFsoxpB.ui'
+## Form generated from reading UI file 'ui_startup_windowwTeRRU.ui'
 ##
 ## Created by: Qt User Interface Compiler version 6.9.0
 ##
@@ -16,38 +16,34 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QApplication, QFrame, QGridLayout, QHBoxLayout,
-    QLabel, QMainWindow, QPushButton, QSizePolicy,
-    QVBoxLayout, QWidget)
+    QLabel, QPushButton, QSizePolicy, QVBoxLayout,
+    QWidget)
 
-class Ui_MainWindow(object):
-    def setupUi(self, MainWindow):
-        if not MainWindow.objectName():
-            MainWindow.setObjectName(u"MainWindow")
-        MainWindow.resize(1175, 740)
+class Ui_HomePage(object):
+    def setupUi(self, HomePage):
+        if not HomePage.objectName():
+            HomePage.setObjectName(u"HomePage")
+        HomePage.resize(1175, 740)
         sizePolicy = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(MainWindow.sizePolicy().hasHeightForWidth())
-        MainWindow.setSizePolicy(sizePolicy)
-        MainWindow.setBaseSize(QSize(0, 0))
+        sizePolicy.setHeightForWidth(HomePage.sizePolicy().hasHeightForWidth())
+        HomePage.setSizePolicy(sizePolicy)
+        HomePage.setBaseSize(QSize(0, 0))
         font = QFont()
         font.setFamilies([u"Century Gothic"])
         font.setPointSize(16)
         font.setBold(True)
-        MainWindow.setFont(font)
-        self.centralwidget = QWidget(MainWindow)
-        self.centralwidget.setObjectName(u"centralwidget")
-        sizePolicy.setHeightForWidth(self.centralwidget.sizePolicy().hasHeightForWidth())
-        self.centralwidget.setSizePolicy(sizePolicy)
-        self.centralwidget.setMinimumSize(QSize(0, 0))
-        self.centralwidget.setBaseSize(QSize(0, 0))
-        self.horizontalLayout_2 = QHBoxLayout(self.centralwidget)
-        self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
+        HomePage.setFont(font)
+        self.gridLayout_2 = QGridLayout(HomePage)
+        self.gridLayout_2.setObjectName(u"gridLayout_2")
+        self.gridLayout = QGridLayout()
+        self.gridLayout.setObjectName(u"gridLayout")
         self.mainLayout = QHBoxLayout()
         self.mainLayout.setObjectName(u"mainLayout")
         self.leftLayout = QGridLayout()
         self.leftLayout.setObjectName(u"leftLayout")
-        self.leftFrame = QFrame(self.centralwidget)
+        self.leftFrame = QFrame(HomePage)
         self.leftFrame.setObjectName(u"leftFrame")
         sizePolicy.setHeightForWidth(self.leftFrame.sizePolicy().hasHeightForWidth())
         self.leftFrame.setSizePolicy(sizePolicy)
@@ -86,7 +82,7 @@ class Ui_MainWindow(object):
 
         self.rightLayout = QVBoxLayout()
         self.rightLayout.setObjectName(u"rightLayout")
-        self.rightFrame = QFrame(self.centralwidget)
+        self.rightFrame = QFrame(HomePage)
         self.rightFrame.setObjectName(u"rightFrame")
         sizePolicy.setHeightForWidth(self.rightFrame.sizePolicy().hasHeightForWidth())
         self.rightFrame.setSizePolicy(sizePolicy)
@@ -150,17 +146,25 @@ class Ui_MainWindow(object):
         self.texts.setObjectName(u"texts")
         self.newProjectText = QLabel(self.rightFrame)
         self.newProjectText.setObjectName(u"newProjectText")
+        sizePolicy3 = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
+        sizePolicy3.setHorizontalStretch(0)
+        sizePolicy3.setVerticalStretch(0)
+        sizePolicy3.setHeightForWidth(self.newProjectText.sizePolicy().hasHeightForWidth())
+        self.newProjectText.setSizePolicy(sizePolicy3)
         font5 = QFont()
         font5.setFamilies([u"Dubai"])
         font5.setPointSize(12)
         font5.setBold(False)
         self.newProjectText.setFont(font5)
+        self.newProjectText.setAlignment(Qt.AlignmentFlag.AlignLeading|Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignTop)
         self.newProjectText.setWordWrap(True)
 
         self.texts.addWidget(self.newProjectText)
 
         self.createProjectText = QLabel(self.rightFrame)
         self.createProjectText.setObjectName(u"createProjectText")
+        sizePolicy3.setHeightForWidth(self.createProjectText.sizePolicy().hasHeightForWidth())
+        self.createProjectText.setSizePolicy(sizePolicy3)
         self.createProjectText.setFont(font5)
         self.createProjectText.setAlignment(Qt.AlignmentFlag.AlignLeading|Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignTop)
         self.createProjectText.setWordWrap(True)
@@ -176,13 +180,14 @@ class Ui_MainWindow(object):
         self.newProjectFrame.setObjectName(u"newProjectFrame")
         sizePolicy.setHeightForWidth(self.newProjectFrame.sizePolicy().hasHeightForWidth())
         self.newProjectFrame.setSizePolicy(sizePolicy)
+        self.newProjectFrame.setMinimumSize(QSize(0, 30))
         self.newProjectFrame.setStyleSheet(u"background: transparent;\n"
 "border: transparent;")
         self.newProjectFrame.setFrameShape(QFrame.Shape.StyledPanel)
         self.newProjectFrame.setFrameShadow(QFrame.Shadow.Raised)
         self.pushButton = QPushButton(self.newProjectFrame)
         self.pushButton.setObjectName(u"pushButton")
-        self.pushButton.setGeometry(QRect(0, 10, 120, 30))
+        self.pushButton.setGeometry(QRect(0, 0, 120, 30))
         self.pushButton.setFont(font3)
         self.pushButton.setStyleSheet(u"background-color: rgb(255, 215, 0);\n"
 "border-radius: 10px;\n"
@@ -192,15 +197,19 @@ class Ui_MainWindow(object):
 
         self.openProjectFrame = QFrame(self.rightFrame)
         self.openProjectFrame.setObjectName(u"openProjectFrame")
-        sizePolicy.setHeightForWidth(self.openProjectFrame.sizePolicy().hasHeightForWidth())
-        self.openProjectFrame.setSizePolicy(sizePolicy)
+        sizePolicy4 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        sizePolicy4.setHorizontalStretch(0)
+        sizePolicy4.setVerticalStretch(0)
+        sizePolicy4.setHeightForWidth(self.openProjectFrame.sizePolicy().hasHeightForWidth())
+        self.openProjectFrame.setSizePolicy(sizePolicy4)
+        self.openProjectFrame.setMinimumSize(QSize(0, 30))
         self.openProjectFrame.setStyleSheet(u"background: transparent;\n"
 "border: transparent")
         self.openProjectFrame.setFrameShape(QFrame.Shape.StyledPanel)
         self.openProjectFrame.setFrameShadow(QFrame.Shadow.Raised)
         self.pushButton_2 = QPushButton(self.openProjectFrame)
         self.pushButton_2.setObjectName(u"pushButton_2")
-        self.pushButton_2.setGeometry(QRect(0, 10, 130, 30))
+        self.pushButton_2.setGeometry(QRect(0, 0, 130, 30))
         self.pushButton_2.setFont(font3)
         self.pushButton_2.setStyleSheet(u"background-color: rgb(255, 215, 0);\n"
 "border-radius: 10px;\n"
@@ -349,36 +358,37 @@ class Ui_MainWindow(object):
         self.mainLayout.setStretch(0, 4)
         self.mainLayout.setStretch(1, 7)
 
-        self.horizontalLayout_2.addLayout(self.mainLayout)
+        self.gridLayout.addLayout(self.mainLayout, 0, 0, 1, 1)
 
-        self.horizontalLayout_2.setStretch(0, 4)
-        MainWindow.setCentralWidget(self.centralwidget)
 
-        self.retranslateUi(MainWindow)
+        self.gridLayout_2.addLayout(self.gridLayout, 0, 0, 1, 1)
 
-        QMetaObject.connectSlotsByName(MainWindow)
+
+        self.retranslateUi(HomePage)
+
+        QMetaObject.connectSlotsByName(HomePage)
     # setupUi
 
-    def retranslateUi(self, MainWindow):
-        MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"MainWindow", None))
-        self.lblOrthoVis.setText(QCoreApplication.translate("MainWindow", u"OrthoVis", None))
+    def retranslateUi(self, HomePage):
+        HomePage.setWindowTitle(QCoreApplication.translate("HomePage", u"MainWindow", None))
+        self.lblOrthoVis.setText(QCoreApplication.translate("HomePage", u"OrthoVis", None))
         self.label.setText("")
-        self.lblWelcome.setText(QCoreApplication.translate("MainWindow", u"Welcome to OrthoVis 2.0!", None))
-        self.lblIntro.setText(QCoreApplication.translate("MainWindow", u"OrthoVis 2.0 provides fast and accurate 3D joint movement analysis by registering CT and fluoroscopy images, streamlining orthopedic research and clinical assessment.", None))
-        self.newPfoject.setText(QCoreApplication.translate("MainWindow", u"New Project", None))
-        self.openProject.setText(QCoreApplication.translate("MainWindow", u"Open Project", None))
-        self.newProjectText.setText(QCoreApplication.translate("MainWindow", u"Create a new OrthoVis project. You will need valid CT scan and Fluroscopy files for OrthoVis to produce an accurate 3D reconstruction.", None))
-        self.createProjectText.setText(QCoreApplication.translate("MainWindow", u"Already got a project? Open an OrthoVis project from file system.", None))
-        self.pushButton.setText(QCoreApplication.translate("MainWindow", u"New Project", None))
-        self.pushButton_2.setText(QCoreApplication.translate("MainWindow", u"Open Project", None))
-        self.recentsLabel.setText(QCoreApplication.translate("MainWindow", u"Recents", None))
-        self.fileNameLabel.setText(QCoreApplication.translate("MainWindow", u"File name", None))
-        self.lastAccessLabel.setText(QCoreApplication.translate("MainWindow", u"Last opened by you", None))
-        self.fileName1.setText(QCoreApplication.translate("MainWindow", u"Neil\u2019s Kneeling Project", None))
-        self.lastAccess1.setText(QCoreApplication.translate("MainWindow", u"1 April 2025", None))
-        self.fileName2.setText(QCoreApplication.translate("MainWindow", u"Ben\u2019s Bending Knee Project", None))
-        self.lastAccess2.setText(QCoreApplication.translate("MainWindow", u"1 April 2024", None))
-        self.fileName3.setText(QCoreApplication.translate("MainWindow", u"Hanna\u2019s Hyper Knee Project", None))
-        self.lastAccess3.setText(QCoreApplication.translate("MainWindow", u"1 April 2023", None))
+        self.lblWelcome.setText(QCoreApplication.translate("HomePage", u"Welcome to OrthoVis 2.0!", None))
+        self.lblIntro.setText(QCoreApplication.translate("HomePage", u"OrthoVis 2.0 provides fast and accurate 3D joint movement analysis by registering CT and fluoroscopy images, streamlining orthopedic research and clinical assessment.", None))
+        self.newPfoject.setText(QCoreApplication.translate("HomePage", u"New Project", None))
+        self.openProject.setText(QCoreApplication.translate("HomePage", u"Open Project", None))
+        self.newProjectText.setText(QCoreApplication.translate("HomePage", u"Create a new OrthoVis project. You will need valid CT scan and Fluroscopy files for OrthoVis to produce an accurate 3D reconstruction.", None))
+        self.createProjectText.setText(QCoreApplication.translate("HomePage", u"Already got a project? Open an OrthoVis project from file system.", None))
+        self.pushButton.setText(QCoreApplication.translate("HomePage", u"New Project", None))
+        self.pushButton_2.setText(QCoreApplication.translate("HomePage", u"Open Project", None))
+        self.recentsLabel.setText(QCoreApplication.translate("HomePage", u"Recents", None))
+        self.fileNameLabel.setText(QCoreApplication.translate("HomePage", u"File name", None))
+        self.lastAccessLabel.setText(QCoreApplication.translate("HomePage", u"Last opened by you", None))
+        self.fileName1.setText(QCoreApplication.translate("HomePage", u"Neil\u2019s Kneeling Project", None))
+        self.lastAccess1.setText(QCoreApplication.translate("HomePage", u"1 April 2025", None))
+        self.fileName2.setText(QCoreApplication.translate("HomePage", u"Ben\u2019s Bending Knee Project", None))
+        self.lastAccess2.setText(QCoreApplication.translate("HomePage", u"1 April 2024", None))
+        self.fileName3.setText(QCoreApplication.translate("HomePage", u"Hanna\u2019s Hyper Knee Project", None))
+        self.lastAccess3.setText(QCoreApplication.translate("HomePage", u"1 April 2023", None))
     # retranslateUi
 
