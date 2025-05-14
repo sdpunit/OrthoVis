@@ -72,6 +72,7 @@ def make_slider(title, mn, mx, init, p1, p2):
     rep.SetTubeWidth(0.005)
     return rep
 
+
 # Main viewer
 def main(ct_source):
     # Load and cache CT volume
@@ -112,6 +113,15 @@ def main(ct_source):
     slice_slider.SetRepresentation(slice_rep)
     slice_slider.SetAnimationModeToJump()
     slice_slider.EnabledOn()
+
+    # new
+    info_actor = vtk.vtkTextActor()
+    tp = info_actor.GetTextProperty()
+    tp.SetFontSize(20)
+    tp.BoldOn()
+    info_actor.SetPosition(10, 90)  
+    ren.AddActor2D(info_actor)
+
 
     def on_slice(obj, event):
         val = int(round(obj.GetRepresentation().GetValue()))
@@ -165,6 +175,68 @@ def main(ct_source):
 
     win_slider.AddObserver("InteractionEvent", on_win)
     lvl_slider.AddObserver("InteractionEvent", on_lvl)
+
+    # mouse move listener
+    def on_mouse_move(obj, event):
+        x, y = iren.GetEventPosition()
+        #picker = vtk.vtkPropPicker()
+        picker = vtk.vtkCellPicker()
+        picker.SetTolerance(0.005)  
+        picker.Pick(x, y, 0, ren)
+        pos = picker.GetPickPosition()
+        i = int(round(pos[0]))
+        j = int(round(pos[1]))
+        k = viewer.GetSlice()
+
+        if 0 <= k < arr.shape[0] and 0 <= j < arr.shape[1] and 0 <= i < arr.shape[2]:
+            value = int(arr[k, j, i])
+
+            # segment label 
+            label_text = ""
+            if 'label_arr' in globals():
+                label = label_arr[k, j, i]
+                label_name = label_map.get(label, f"Label {label}") if label > 0 else "None"
+                label_text = f"\nLabel: {label_name}"
+            else:
+                label_text = ""
+
+            
+            plane_name = "Axial"  
+            plane_color = "Red"  # need to be changed
+
+            # get RAS coord
+            ras_x = round(pos[0], 1)
+            ras_y = round(pos[1], 1)
+            ras_z = round(pos[2], 1)
+
+            # get spacing
+            spacing = sitk_img.GetSpacing()
+            spacing_text = f"{plane_name} Sp: {spacing[2]:.1f}"  # axial--- spacing[2]
+
+            # label info
+            if 'label_arr' in globals():
+                label = label_arr[k, j, i]
+                label_name = label_map.get(label, f"Label {label}") if label > 0 else "None"
+                label_rgb = (256, 214, 120)  
+                label_text = f"B {label}: {label_name} {label_rgb} {value}"
+            else:
+                label_text = f"B None {value}"
+
+            # Compose final display text
+            display_text = f"""{plane_color}       (R {ras_x}, A {ras_y}, S {ras_z})
+            {spacing_text}
+
+            L None
+            F None
+            {label_text}
+            """
+            info_actor.SetInput(display_text)
+            ren_win.Render()
+
+            
+
+    iren.AddObserver("MouseMoveEvent", on_mouse_move)
+
 
     # Initialize and start
     ren_win.Render()
