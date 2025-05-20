@@ -1,7 +1,6 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
-from objects import Patient
-from singleton import SingletonPatient
+from classes.singleton import SingletonPatient
 
 
 class Context:

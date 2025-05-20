@@ -58,8 +58,8 @@ class MainWindow(QMainWindow):
         self.stack.setCurrentIndex(0)             # Start at the opening page
 
         ## IMPLEMENT A BUNCH OF LOGIC HERE TO CYCLE BETWEEN STATES
-        singletonPatient_instance = SingletonPatient.get_instance()
-        context = Context(HomePageState(), singletonPatient_instance)
+        # singletonPatient_instance = SingletonPatient.get_instance()
+        # context = Context(HomePageState(), singletonPatient_instance)
         ## Transit to Segment state on clicking Import CT
         # Todo:
         
