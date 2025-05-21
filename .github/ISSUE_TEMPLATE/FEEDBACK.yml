@@ -24,7 +24,7 @@ body:
       description: When was this feedback received?
       placeholder: DD/MM
       
-  - type: input
+  - type: textarea
     id: description
     attributes:
       label: Whats the feedback
