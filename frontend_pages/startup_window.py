@@ -16,12 +16,10 @@ class HomePage(QWidget):
                 background-color: rgb(255, 215, 0);
                 border-radius: 10px;
                 font-size: 16px;
-                transition: all 0.3s;
             }
             QPushButton:hover {
                 background-color: rgb(255, 230, 50);
                 font-size: 18px;
-                transform: scale(1.1); 
             }
         """)
         self.ui.pushButton_2.setStyleSheet("""
@@ -29,12 +27,10 @@ class HomePage(QWidget):
                         background-color: rgb(255, 215, 0);
                         border-radius: 10px;
                         font-size: 16px;
-                        transition: all 0.3s;
                     }
                     QPushButton:hover {
                         background-color: rgb(255, 230, 50);
                         font-size: 18px;
-                        transform: scale(1.1); 
                     }
                 """)
     def handle_new_project(self):
