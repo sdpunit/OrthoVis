@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'new_project_windowWzVYGL.ui'
+## Form generated from reading UI file 'new_project_windowsmITus.ui'
 ##
 ## Created by: Qt User Interface Compiler version 6.9.0
 ##
@@ -32,28 +32,40 @@ class Ui_Form(object):
         self.horizontalLayout.setContentsMargins(0, 0, 0, 0)
         self.sidebar = Sidebar(Form)
         self.sidebar.setObjectName(u"sidebar")
+        sizePolicy = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        sizePolicy.setHorizontalStretch(1)
+        sizePolicy.setVerticalStretch(1)
+        sizePolicy.setHeightForWidth(self.sidebar.sizePolicy().hasHeightForWidth())
+        self.sidebar.setSizePolicy(sizePolicy)
 
         self.horizontalLayout.addWidget(self.sidebar)
 
         self.mainpanel = QWidget(Form)
         self.mainpanel.setObjectName(u"mainpanel")
+        sizePolicy1 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        sizePolicy1.setHorizontalStretch(0)
+        sizePolicy1.setVerticalStretch(0)
+        sizePolicy1.setHeightForWidth(self.mainpanel.sizePolicy().hasHeightForWidth())
+        self.mainpanel.setSizePolicy(sizePolicy1)
         self.verticalLayout = QVBoxLayout(self.mainpanel)
         self.verticalLayout.setSpacing(0)
         self.verticalLayout.setObjectName(u"verticalLayout")
         self.verticalLayout.setContentsMargins(0, 0, 0, 0)
         self.titlebar = Titlebar(self.mainpanel)
         self.titlebar.setObjectName(u"titlebar")
-        sizePolicy = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.titlebar.sizePolicy().hasHeightForWidth())
-        self.titlebar.setSizePolicy(sizePolicy)
+        sizePolicy2 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        sizePolicy2.setHorizontalStretch(0)
+        sizePolicy2.setVerticalStretch(0)
+        sizePolicy2.setHeightForWidth(self.titlebar.sizePolicy().hasHeightForWidth())
+        self.titlebar.setSizePolicy(sizePolicy2)
         self.titlebar.setMinimumSize(QSize(0, 70))
 
         self.verticalLayout.addWidget(self.titlebar)
 
         self.frame = QFrame(self.mainpanel)
         self.frame.setObjectName(u"frame")
+        sizePolicy1.setHeightForWidth(self.frame.sizePolicy().hasHeightForWidth())
+        self.frame.setSizePolicy(sizePolicy1)
         self.frame.setFrameShape(QFrame.Shape.StyledPanel)
         self.frame.setFrameShadow(QFrame.Shadow.Raised)
 
