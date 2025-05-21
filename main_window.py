@@ -50,7 +50,7 @@ class MainWindow(QMainWindow):
 
         self.setCentralWidget(self.stack)
 
-        self.stack.setCurrentIndex(2)             # Start at the opening page
+        self.stack.setCurrentIndex(1)             # Start at the opening page
 
 
         ## IMPLEMENT A BUNCH OF LOGIC HERE TO CYCLE BETWEEN STATES
