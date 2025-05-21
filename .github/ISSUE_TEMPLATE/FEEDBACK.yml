@@ -18,11 +18,11 @@ body:
       required: true  
 
   - type: input
-  id: feedback-date
-  attributes:
-    label: Date Received
-    description: When was this feedback received?
-    placeholder: DD/MM
+    id: feedback-date
+    attributes:
+      label: Date Received
+      description: When was this feedback received?
+      placeholder: DD/MM
       
   - type: input
     id: description
