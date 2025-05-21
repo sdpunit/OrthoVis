@@ -24,8 +24,7 @@ body:
       label: Urgency for the feeback
       description: How urgently does this feedback need to actioned.
       placeholder: |
-        - Describe the logic
-        - Mention components or files involved
+        - Low/Mid/High
 
   - type: textarea
     id: description
