@@ -24,7 +24,8 @@ from vtkmodules.vtkRenderingCore import (
     vtkActor2D,
     vtkTextMapper,
     vtkTextProperty,
-    vtkPolyDataMapper2D
+    vtkPolyDataMapper2D,
+    vtkTextActor
 )
 from vtkmodules.vtkCommonDataModel import vtkPolyData, vtkCellArray
 from vtkmodules.vtkCommonCore import vtkPoints
@@ -63,17 +64,17 @@ def sitk_to_vtk(img):
 
 # Create a thin vertical slider with jump animation
 
-def make_slider(label, vmin, vmax, init, xpos):
+def make_slider(vmin, vmax, init, xpos):
     rep = vtk.vtkSliderRepresentation2D()
     rep.SetMinimumValue(vmin)
     rep.SetMaximumValue(vmax)
     rep.SetValue(init)
     
-    # Slider positioning (vertical line)
+    # Slider positioning (vertical)
     rep.GetPoint1Coordinate().SetCoordinateSystemToNormalizedDisplay()
-    rep.GetPoint1Coordinate().SetValue(xpos, 0.15)  # Bottom position
+    rep.GetPoint1Coordinate().SetValue(xpos, 0.1)  # Bottom position
     rep.GetPoint2Coordinate().SetCoordinateSystemToNormalizedDisplay()
-    rep.GetPoint2Coordinate().SetValue(xpos, 0.85)  # Top position
+    rep.GetPoint2Coordinate().SetValue(xpos, 0.4)  # Top position
     
     # Slider appearance
     rep.SetSliderLength(0.008)  # Slider handle size
@@ -84,16 +85,6 @@ def make_slider(label, vmin, vmax, init, xpos):
     rep.ShowSliderLabelOff()    # Remove value text
     rep.SetEndCapLength(0.0)    # Remove end caps
     
-    # Label properties (positioned above slider)
-    rep.SetTitleText(label)
-    title_prop = rep.GetTitleProperty()
-    title_prop.SetFontSize(12)
-    title_prop.SetColor(1, 1, 1)  # White
-    title_prop.SetJustificationToCentered()
-    title_prop.SetVerticalJustificationToBottom()
-    rep.SetTitleHeight(0.03)  # Text size 
-    
-    # Critical: Disable all highlighting that causes traces
     rep.GetSliderProperty().SetColor(1, 1, 0)  # Yellow slider
     rep.GetSelectedProperty().SetColor(1, 1, 0)  # Same yellow when selected
     rep.GetTubeProperty().SetColor(0.4, 0.4, 0.4)  # Dark gray track
@@ -133,7 +124,7 @@ class SliceViewer:
         self.viewer.SetRenderWindow(render_window)
         # Slice counter text
         text_prop = vtkTextProperty()
-        text_prop.SetFontSize(14)
+        text_prop.SetFontSize(18)
         text_prop.SetColor(1, 1, 1)
         self.mapper = vtkTextMapper()
         self.mapper.SetTextProperty(text_prop)
@@ -157,38 +148,6 @@ class SliceViewer:
     def contains(self, xn, yn):
         x0, y0, x1, y1 = self.viewport
         return x0 <= xn <= x1 and y0 <= yn <= y1
-
-# Draw gold crosshair overlay
-
-def add_crosshair(render_window):
-    overlay = vtkRenderer()
-    overlay.SetLayer(1)
-    overlay.InteractiveOff()
-    overlay.SetViewport(0.0, 0.0, 1.0, 1.0)
-    pts = vtkPoints()
-    pts.InsertNextPoint(0, 0.5, 0)
-    pts.InsertNextPoint(1, 0.5, 0)
-    pts.InsertNextPoint(0.5, 0, 0)
-    pts.InsertNextPoint(0.5, 1, 0)
-    lines = vtkCellArray()
-    lines.InsertNextCell(2)
-    lines.InsertCellPoint(0)
-    lines.InsertCellPoint(1)
-    lines.InsertNextCell(2)
-    lines.InsertCellPoint(2)
-    lines.InsertCellPoint(3)
-    pd = vtkPolyData()
-    pd.SetPoints(pts)
-    pd.SetLines(lines)
-    mapper = vtkPolyDataMapper2D()
-    mapper.SetInputData(pd)
-    actor = vtkActor2D()
-    actor.SetMapper(mapper)
-    actor.GetProperty().SetColor(1, 0.84, 0)
-    actor.GetProperty().SetLineWidth(1)
-    overlay.AddActor2D(actor)
-    render_window.AddRenderer(overlay)
-    return overlay
 
 class QuadStyle(vtkInteractorStyleImage):
     def __init__(self, viewers):
@@ -251,8 +210,9 @@ def main(ct_path: str):
     vtk_img, arr = sitk_to_vtk(img)
 
     render_window = vtkRenderWindow()
+    render_window.SetAlphaBitPlanes(1)
     render_window.SetSize(900, 900)
-    render_window.SetNumberOfLayers(2)
+    render_window.SetNumberOfLayers(3)
 
     # Define quadrants (axial, coronal, sagittal)
     quads = {
@@ -267,28 +227,33 @@ def main(ct_path: str):
         sv = SliceViewer(vtk_img, arr, name.lower(), vp, name, render_window)
         viewers.append(sv)
 
-    # Add crosshair overlay
-    overlay_renderer = add_crosshair(render_window)
-
     # Create interactor and style
     interactor = vtkRenderWindowInteractor()
     interactor.SetRenderWindow(render_window)
     interactor.SetInteractorStyle(QuadStyle(viewers))
 
-    # Window/Level sliders on right
+
+    # Reset each camera so the slice fills the quadrant
+    for sv in viewers:
+        ren = sv.viewer.GetRenderer()
+        ren.ResetCamera()             # zoom so image fills viewport
+        ren.ResetCameraClippingRange()
+        cam = ren.GetActiveCamera()
+        cam.Zoom(1.4)
+
+    # Window/Level sliders on right (in their own layer)
+    slider_renderer = vtkRenderer()
+    slider_renderer.SetLayer(2)
+    slider_renderer.InteractiveOff()
+    slider_renderer.SetViewport(0.0, 0.0, 1.0, 1.0)
+    render_window.AddRenderer(slider_renderer)
+
     hu_min, hu_max = int(arr.min()), int(arr.max())
-    win_rep = make_slider('W', 1, hu_max - hu_min, hu_max - hu_min, 0.96)
-    lvl_rep = make_slider('L', hu_min, hu_max, (hu_max + hu_min)//2, 0.92)
+    win_rep = make_slider(1, hu_max - hu_min, hu_max - hu_min, 0.95)
+    lvl_rep = make_slider(hu_min, hu_max, (hu_max + hu_min)//2, 0.92)
 
     win_wid = vtk.vtkSliderWidget()
     lvl_wid = vtk.vtkSliderWidget()
-
-    for wid, rep in ((win_wid, win_rep), (lvl_wid, lvl_rep)):
-        wid.SetInteractor(interactor)
-        wid.SetRepresentation(rep)
-        wid.SetAnimationModeToJump()
-        wid.SetCurrentRenderer(overlay_renderer)
-        wid.EnabledOn()
 
     def wl_callback(obj, event):
         w = int(round(win_rep.GetValue()))
@@ -298,13 +263,37 @@ def main(ct_path: str):
             sv.viewer.SetColorLevel(l)
         render_window.Render()
 
-    win_wid.AddObserver('InteractionEvent', wl_callback)
-    lvl_wid.AddObserver('InteractionEvent', wl_callback)
+    for wid, rep in ((win_wid, win_rep), (lvl_wid, lvl_rep)):
+        wid.SetInteractor(interactor)
+        wid.SetRepresentation(rep)
+        wid.SetAnimationModeToJump()
+        wid.SetCurrentRenderer(slider_renderer)
+        # strip out VTK’s incremental redraws
+        wid.RemoveObservers("StartInteractionEvent")
+        wid.RemoveObservers("InteractionEvent")
+        wid.RemoveObservers("EndInteractionEvent")
+        # attach only our full-render callback
+        wid.AddObserver("InteractionEvent", wl_callback)
+        wid.EnabledOn()
+
+    # Add "W" and "L" text actors just above each slider
+    for label, xpos in (("W", 0.947), ("L", 0.918)):
+        txt = vtkTextActor()
+        txt.SetInput(label)
+        tp = txt.GetTextProperty()
+        tp.SetFontSize(16)
+        tp.BoldOn()
+        tp.SetColor(1, 1, 1)
+        coord = txt.GetPositionCoordinate()
+        coord.SetCoordinateSystemToNormalizedDisplay()
+        coord.SetValue(xpos, 0.335) 
+        slider_renderer.AddActor2D(txt)
 
     # Start interaction
     render_window.Render()
     interactor.Initialize()
     interactor.Start()
+
 
 if __name__ == '__main__':
     if len(sys.argv) != 2:
