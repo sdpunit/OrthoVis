@@ -1,0 +1,43 @@
+name: Feedback
+description: | 
+  Open a PBI based on feedback from clients.
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Reminder:**
+        - Still make sure you complete the labels
+        - Select milestone 
+        - Fill out all the sections
+  - type: input
+    id: feedback-from
+    attributes:
+      label: Who is the feedback from
+      description: Write who the stakeholder is and their name
+      placeholder: Stakeholder - Name
+    validations:
+      required: true  
+      
+  - type: textarea
+    id: urgency
+    attributes:
+      label: Urgency for the feeback
+      description: Is this feedback urgent? 
+      placeholder: |
+        - Describe the logic
+        - Mention components or files involved
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Implementation
+      description: Describe the feedback and how to implement it
+      placeholder: |
+        Description
+        - [ ] Criteria 1
+        - [ ] Criteria 2
+      value: |
+        - [ ] 
+        - [ ] 
+    validations:
+      required: true
