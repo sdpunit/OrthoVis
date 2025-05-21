@@ -18,11 +18,11 @@ body:
     validations:
       required: true  
       
-  - type: textarea
+  - type: input
     id: urgency
     attributes:
       label: Urgency for the feeback
-      description: Is this feedback urgent? 
+      description: How urgently does this feedback need to actioned.
       placeholder: |
         - Describe the logic
         - Mention components or files involved
@@ -31,7 +31,7 @@ body:
     id: description
     attributes:
       label: Implementation
-      description: Describe the feedback and how to implement it
+      description: Describe the feedback and how would this be implemented.
       placeholder: |
         Description
         - [ ] Criteria 1
