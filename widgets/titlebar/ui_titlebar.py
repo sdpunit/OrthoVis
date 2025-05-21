@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'titlebarpIBfuF.ui'
+## Form generated from reading UI file 'titlebarOVoTsX.ui'
 ##
 ## Created by: Qt User Interface Compiler version 6.9.0
 ##
@@ -23,25 +23,40 @@ class Ui_TitleBar(object):
         if not TitleBar.objectName():
             TitleBar.setObjectName(u"TitleBar")
         TitleBar.resize(790, 91)
-        self.gridLayout = QGridLayout(TitleBar)
-        self.gridLayout.setObjectName(u"gridLayout")
-        self.horizontalFrame = QFrame(TitleBar)
-        self.horizontalFrame.setObjectName(u"horizontalFrame")
         sizePolicy = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(TitleBar.sizePolicy().hasHeightForWidth())
+        TitleBar.setSizePolicy(sizePolicy)
+        font = QFont()
+        font.setPointSize(24)
+        font.setBold(True)
+        TitleBar.setFont(font)
+        self.gridLayout = QGridLayout(TitleBar)
+        self.gridLayout.setSpacing(0)
+        self.gridLayout.setObjectName(u"gridLayout")
+        self.gridLayout.setContentsMargins(0, 0, 0, 0)
+        self.horizontalFrame = QFrame(TitleBar)
+        self.horizontalFrame.setObjectName(u"horizontalFrame")
         sizePolicy.setHeightForWidth(self.horizontalFrame.sizePolicy().hasHeightForWidth())
         self.horizontalFrame.setSizePolicy(sizePolicy)
+        self.horizontalFrame.setMinimumSize(QSize(0, 90))
         self.horizontalFrame.setStyleSheet(u"background-color: rgb(111, 138, 183);")
         self.horizontalLayout = QHBoxLayout(self.horizontalFrame)
         self.horizontalLayout.setObjectName(u"horizontalLayout")
+        self.horizontalLayout.setContentsMargins(-1, 0, -1, 0)
         self.title = QLabel(self.horizontalFrame)
         self.title.setObjectName(u"title")
-        font = QFont()
-        font.setFamilies([u"Dubai"])
-        font.setPointSize(24)
-        font.setBold(False)
-        self.title.setFont(font)
+        sizePolicy1 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        sizePolicy1.setHorizontalStretch(0)
+        sizePolicy1.setVerticalStretch(0)
+        sizePolicy1.setHeightForWidth(self.title.sizePolicy().hasHeightForWidth())
+        self.title.setSizePolicy(sizePolicy1)
+        font1 = QFont()
+        font1.setFamilies([u"Segoe UI"])
+        font1.setPointSize(24)
+        font1.setBold(True)
+        self.title.setFont(font1)
         self.title.setStyleSheet(u"color: rgb(255, 255, 255);")
 
         self.horizontalLayout.addWidget(self.title)
