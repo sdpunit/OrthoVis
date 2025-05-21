@@ -4,7 +4,7 @@ from PySide6.QtWidgets import QMainWindow, QStackedWidget, QPushButton, QWidget,
 # Import the application pages from frontend_pages.
 from frontend_pages.startup.startup_window import HomePage
 from frontend_pages.new_project.new_project_window import NewProject
-from frontend_pages.segmentation_window import Segmentation
+from segmentation.segmentation_window import Segmentation
 
 # Imports for Widgets that are yet to be created...
 # from frontend_pages.calibration_window import Calibration
@@ -50,7 +50,7 @@ class MainWindow(QMainWindow):
 
         self.setCentralWidget(self.stack)
 
-        self.stack.setCurrentIndex(0)             # Start at the opening page
+        self.stack.setCurrentIndex(1)             # Start at the opening page
 
 
         ## IMPLEMENT A BUNCH OF LOGIC HERE TO CYCLE BETWEEN STATES
