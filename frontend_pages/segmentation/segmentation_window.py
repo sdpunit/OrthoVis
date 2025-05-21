@@ -8,3 +8,5 @@ class Segmentation(QWidget):
         super().__init__()
         self.ui = Ui_Form()
         self.ui.setupUi(self)
+
+        self.ui.titlebar.ui.title.setText("Segmentation")
