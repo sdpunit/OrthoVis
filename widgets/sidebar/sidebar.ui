@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>247</width>
-    <height>625</height>
+    <height>600</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -20,7 +20,7 @@
    <string>Form</string>
   </property>
   <property name="styleSheet">
-   <string notr="true">colour: rgb(75, 99, 255)</string>
+   <string notr="true">background-color: #1D3461</string>
   </property>
   <widget class="QLabel" name="label">
    <property name="geometry">
@@ -31,11 +31,21 @@
      <height>51</height>
     </rect>
    </property>
+   <property name="sizePolicy">
+    <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+     <horstretch>0</horstretch>
+     <verstretch>0</verstretch>
+    </sizepolicy>
+   </property>
    <property name="font">
     <font>
      <pointsize>40</pointsize>
      <bold>true</bold>
     </font>
+   </property>
+   <property name="styleSheet">
+    <string notr="true">background-color: #1D3461;
+color: white;</string>
    </property>
    <property name="text">
     <string>OrthoVis</string>
@@ -57,6 +67,13 @@
      <kerning>true</kerning>
     </font>
    </property>
+   <property name="styleSheet">
+    <string notr="true">color: white;
+background-color: #1D3461;
+border: none;
+padding: 10px 25px;      
+text-align: left;</string>
+   </property>
    <property name="text">
     <string>Project Setup</string>
    </property>
@@ -75,6 +92,13 @@
      <pointsize>19</pointsize>
      <bold>true</bold>
     </font>
+   </property>
+   <property name="styleSheet">
+    <string notr="true">color: white;
+background-color: #1D3461;
+border: none;
+padding: 10px 25px;      
+text-align: left;</string>
    </property>
    <property name="text">
     <string>Segmentation</string>
@@ -95,6 +119,13 @@
      <bold>true</bold>
     </font>
    </property>
+   <property name="styleSheet">
+    <string notr="true">color: white;
+background-color: #1D3461;
+border: none;
+padding: 10px 25px;      
+text-align: left;</string>
+   </property>
    <property name="text">
     <string>Calibration</string>
    </property>
@@ -113,6 +144,13 @@
      <pointsize>19</pointsize>
      <bold>true</bold>
     </font>
+   </property>
+   <property name="styleSheet">
+    <string notr="true">color: white;
+background-color: #1D3461;
+border: none;
+padding: 10px 25px;      
+text-align: left;</string>
    </property>
    <property name="text">
     <string>Define Axis</string>
@@ -134,7 +172,11 @@
     </font>
    </property>
    <property name="styleSheet">
-    <string notr="true">background-color: rgb(76, 75, 255);</string>
+    <string notr="true">color: white;
+background-color: #1D3461;
+border: none;
+padding: 10px 25px;      
+text-align: left;</string>
    </property>
    <property name="text">
     <string>Registration</string>
@@ -155,10 +197,41 @@
      <bold>true</bold>
     </font>
    </property>
+   <property name="styleSheet">
+    <string notr="true">color: white;
+background-color: #1D3461;
+border: none;
+padding: 10px 25px;      
+text-align: left;</string>
+   </property>
    <property name="text">
     <string>Visualisation</string>
    </property>
   </widget>
+  <widget class="QFrame" name="background">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>251</width>
+     <height>601</height>
+    </rect>
+   </property>
+   <property name="frameShape">
+    <enum>QFrame::Shape::StyledPanel</enum>
+   </property>
+   <property name="frameShadow">
+    <enum>QFrame::Shadow::Raised</enum>
+   </property>
+  </widget>
+  <zorder>background</zorder>
+  <zorder>label</zorder>
+  <zorder>project_setup</zorder>
+  <zorder>segmentation</zorder>
+  <zorder>calibration</zorder>
+  <zorder>define_axis</zorder>
+  <zorder>registration</zorder>
+  <zorder>visualisaiton</zorder>
  </widget>
  <resources/>
  <connections/>
