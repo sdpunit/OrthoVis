@@ -12,6 +12,7 @@ Ensure the following Python packages are installed:
 - `SimpleITK`
 - `os` *(built-in)*
 - `pickle` *(built-in)*
+- `TotalSegmentator`
 
 ---
 
@@ -41,8 +42,8 @@ Reusable subcomponents, like:
 
 ### 📁 `seg/`
 CT segmentation and 3D data processing scripts:
-- `ct-seg-backend.ipynb`: Jupyter notebook for testing segmentation logic
-- `renderer.py`, `renderer2.py`, `totalseg.py`: CT rendering and segmentation algorithms
+- `totalseg.py`: fully automated CT segmentation using TotalSegmentator 
+- `renderer.py`: CT rendering
 
 ### 📄 `main_window.py` / `main.py`
 Entry points of the application.
@@ -63,7 +64,7 @@ Top-level file describing the project and how to use it.
    ```
 3.Install required dependencies:
    ```bash
-   pip install PySide6 SimpleITK
+   pip install PySide6 SimpleITK TotalSegmentator 
    ```
 4.Run the main application script, e.g.:
    ```bash
