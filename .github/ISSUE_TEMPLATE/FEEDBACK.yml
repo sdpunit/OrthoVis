@@ -7,7 +7,7 @@ body:
       value: |
         **Reminder:**
         - Select milestone
-        - Fill out all the fields after you submit this
+        - Fill out all the fields after you submit
   - type: input
     id: feedback-from
     attributes:
@@ -31,6 +31,8 @@ body:
       description: Describe the feedback given
       placeholder: |
         Be detailed.
+    validation:
+      required: true
 
   - type: textarea
     id: implementation
@@ -41,5 +43,10 @@ body:
         Description
         - [ ] Criteria 1
         - [ ] Criteria 2
+      value: |
+        - [ ] 
+        - [ ] 
+    validations:
+      required: true
     validations:
       required: true
