@@ -80,7 +80,7 @@ class Ui_HomePage(object):
         self.label.setObjectName(u"label")
         font3 = QFont()
         self.label.setFont(font3)
-        self.label.setPixmap(QPixmap(u"C:/Users/hanna/Downloads/orthovis_logo.png"))
+        self.label.setPixmap(QPixmap(u"assets/orthovis_logo.png"))
 
         self.gridLayout_4.addWidget(self.label, 0, 0, 1, 1)
 
