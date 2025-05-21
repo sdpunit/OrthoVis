@@ -4,7 +4,7 @@ from PySide6.QtWidgets import QMainWindow, QStackedWidget, QPushButton, QWidget,
 # Import the application pages from frontend_pages.
 from frontend_pages.startup.startup_window import HomePage
 from frontend_pages.new_project.new_project_window import NewProject
-from segmentation.segmentation_window import Segmentation
+from frontend_pages.segmentation.segmentation_window import Segmentation
 
 # Imports for Widgets that are yet to be created...
 # from frontend_pages.calibration_window import Calibration
