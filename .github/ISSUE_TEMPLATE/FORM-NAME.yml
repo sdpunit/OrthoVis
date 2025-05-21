@@ -13,8 +13,8 @@ body:
     id: story-points
     attributes:
       label: Story Points
-      description: Estimate the effort
-      placeholder: 1-10
+      description: Estimate the effort using planning poker
+      placeholder: 1, 2, 3, 5, 8, 13, 20, 40
     validations:
       required: true  
       
