@@ -1,7 +1,7 @@
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QPushButton
 from PySide6.QtGui import QIcon
 from PySide6.QtCore import QSize
-from widgets.ui_sidebar import Ui_Form
+from widgets.sidebar.ui_sidebar import Ui_Form
 
 class Sidebar(QWidget):
     def __init__(self, parent=None):
