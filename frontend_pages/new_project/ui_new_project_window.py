@@ -20,6 +20,7 @@ from PySide6.QtWidgets import (QApplication, QFrame, QHBoxLayout, QLabel,
     QTextEdit, QVBoxLayout, QWidget)
 
 from widgets.sidebar.sidebar import Sidebar
+from widgets.titlebar.titlebar import Titlebar
 
 class Ui_Form(object):
     def setupUi(self, Form):
@@ -27,6 +28,7 @@ class Ui_Form(object):
             Form.setObjectName(u"Form")
         Form.resize(839, 677)
         self.horizontalLayout = QHBoxLayout(Form)
+        self.horizontalLayout.setSpacing(0)
         self.horizontalLayout.setObjectName(u"horizontalLayout")
         self.horizontalLayout.setContentsMargins(0, 0, 0, 0)
         self.sidebar = Sidebar(Form)
@@ -200,10 +202,10 @@ class Ui_Form(object):
         self.verticalLayout.addWidget(self.dataPanel)
 
 
-        self.horizontalLayout.addWidget(self.widget_2)
+        self.horizontalLayout.addWidget(self.mainpanel)
 
         self.horizontalLayout.setStretch(0, 1)
-        self.horizontalLayout.setStretch(1, 2)
+        self.horizontalLayout.setStretch(1, 3)
 
         self.retranslateUi(Form)
 
