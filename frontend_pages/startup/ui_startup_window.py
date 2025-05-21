@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'ui_startup_windowwTeRRU.ui'
+## Form generated from reading UI file 'startup_windowRcIVfA.ui'
 ##
 ## Created by: Qt User Interface Compiler version 6.9.0
 ##
@@ -47,6 +47,11 @@ class Ui_HomePage(object):
         self.leftFrame.setObjectName(u"leftFrame")
         sizePolicy.setHeightForWidth(self.leftFrame.sizePolicy().hasHeightForWidth())
         self.leftFrame.setSizePolicy(sizePolicy)
+        font1 = QFont()
+        font1.setFamilies([u"Segoe UI"])
+        font1.setPointSize(16)
+        font1.setBold(False)
+        self.leftFrame.setFont(font1)
         self.leftFrame.setStyleSheet(u"background-color: rgb(29, 52, 97);")
         self.leftFrame.setFrameShape(QFrame.Shape.StyledPanel)
         self.leftFrame.setFrameShadow(QFrame.Shadow.Raised)
@@ -59,17 +64,22 @@ class Ui_HomePage(object):
         sizePolicy1.setVerticalStretch(1)
         sizePolicy1.setHeightForWidth(self.lblOrthoVis.sizePolicy().hasHeightForWidth())
         self.lblOrthoVis.setSizePolicy(sizePolicy1)
-        font1 = QFont()
-        font1.setFamilies([u"Dubai"])
-        font1.setPointSize(56)
-        self.lblOrthoVis.setFont(font1)
-        self.lblOrthoVis.setStyleSheet(u"color: rgb(255, 255, 255);")
+        font2 = QFont()
+        font2.setFamilies([u"Segoe UI"])
+        font2.setPointSize(56)
+        font2.setBold(True)
+        font2.setItalic(False)
+        self.lblOrthoVis.setFont(font2)
+        self.lblOrthoVis.setStyleSheet(u"color: rgb(255, 255, 255);\n"
+"font: 700 56pt \"Segoe UI\";")
         self.lblOrthoVis.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.gridLayout_4.addWidget(self.lblOrthoVis, 0, 1, 1, 1)
 
         self.label = QLabel(self.leftFrame)
         self.label.setObjectName(u"label")
+        font3 = QFont()
+        self.label.setFont(font3)
         self.label.setPixmap(QPixmap(u"C:/Users/hanna/Downloads/orthovis_logo.png"))
 
         self.gridLayout_4.addWidget(self.label, 0, 0, 1, 1)
@@ -86,7 +96,7 @@ class Ui_HomePage(object):
         self.rightFrame.setObjectName(u"rightFrame")
         sizePolicy.setHeightForWidth(self.rightFrame.sizePolicy().hasHeightForWidth())
         self.rightFrame.setSizePolicy(sizePolicy)
-        self.rightFrame.setFont(font)
+        self.rightFrame.setFont(font1)
         self.rightFrame.setFrameShape(QFrame.Shape.StyledPanel)
         self.rightFrame.setFrameShadow(QFrame.Shadow.Raised)
         self.gridLayout_3 = QGridLayout(self.rightFrame)
@@ -98,11 +108,13 @@ class Ui_HomePage(object):
         sizePolicy2.setVerticalStretch(0)
         sizePolicy2.setHeightForWidth(self.lblWelcome.sizePolicy().hasHeightForWidth())
         self.lblWelcome.setSizePolicy(sizePolicy2)
-        font2 = QFont()
-        font2.setFamilies([u"Dubai"])
-        font2.setPointSize(18)
-        font2.setBold(True)
-        self.lblWelcome.setFont(font2)
+        font4 = QFont()
+        font4.setFamilies([u"Segoe UI"])
+        font4.setPointSize(14)
+        font4.setWeight(QFont.DemiBold)
+        font4.setItalic(False)
+        self.lblWelcome.setFont(font4)
+        self.lblWelcome.setStyleSheet(u"font: 600 14pt \"Segoe UI\";")
 
         self.gridLayout_3.addWidget(self.lblWelcome, 1, 0, 1, 1)
 
@@ -110,11 +122,13 @@ class Ui_HomePage(object):
         self.lblIntro.setObjectName(u"lblIntro")
         sizePolicy2.setHeightForWidth(self.lblIntro.sizePolicy().hasHeightForWidth())
         self.lblIntro.setSizePolicy(sizePolicy2)
-        font3 = QFont()
-        font3.setFamilies([u"Dubai"])
-        font3.setPointSize(14)
-        font3.setBold(False)
-        self.lblIntro.setFont(font3)
+        font5 = QFont()
+        font5.setFamilies([u"Segoe UI"])
+        font5.setPointSize(12)
+        font5.setBold(False)
+        font5.setItalic(False)
+        self.lblIntro.setFont(font5)
+        self.lblIntro.setStyleSheet(u"font: 12pt \"Segoe UI\";")
         self.lblIntro.setWordWrap(True)
 
         self.gridLayout_3.addWidget(self.lblIntro, 2, 0, 1, 1)
@@ -125,17 +139,15 @@ class Ui_HomePage(object):
         self.titles.setObjectName(u"titles")
         self.newPfoject = QLabel(self.rightFrame)
         self.newPfoject.setObjectName(u"newPfoject")
-        font4 = QFont()
-        font4.setFamilies([u"Dubai"])
-        font4.setPointSize(18)
-        font4.setBold(False)
         self.newPfoject.setFont(font4)
+        self.newPfoject.setStyleSheet(u"font: 600 14pt \"Segoe UI\";")
 
         self.titles.addWidget(self.newPfoject)
 
         self.openProject = QLabel(self.rightFrame)
         self.openProject.setObjectName(u"openProject")
         self.openProject.setFont(font4)
+        self.openProject.setStyleSheet(u"font: 600 14pt \"Segoe UI\";")
 
         self.titles.addWidget(self.openProject)
 
@@ -151,11 +163,8 @@ class Ui_HomePage(object):
         sizePolicy3.setVerticalStretch(0)
         sizePolicy3.setHeightForWidth(self.newProjectText.sizePolicy().hasHeightForWidth())
         self.newProjectText.setSizePolicy(sizePolicy3)
-        font5 = QFont()
-        font5.setFamilies([u"Dubai"])
-        font5.setPointSize(12)
-        font5.setBold(False)
         self.newProjectText.setFont(font5)
+        self.newProjectText.setStyleSheet(u"font: 12pt \"Segoe UI\";")
         self.newProjectText.setAlignment(Qt.AlignmentFlag.AlignLeading|Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignTop)
         self.newProjectText.setWordWrap(True)
 
@@ -166,6 +175,7 @@ class Ui_HomePage(object):
         sizePolicy3.setHeightForWidth(self.createProjectText.sizePolicy().hasHeightForWidth())
         self.createProjectText.setSizePolicy(sizePolicy3)
         self.createProjectText.setFont(font5)
+        self.createProjectText.setStyleSheet(u"font: 12pt \"Segoe UI\";")
         self.createProjectText.setAlignment(Qt.AlignmentFlag.AlignLeading|Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignTop)
         self.createProjectText.setWordWrap(True)
 
@@ -181,6 +191,7 @@ class Ui_HomePage(object):
         sizePolicy.setHeightForWidth(self.newProjectFrame.sizePolicy().hasHeightForWidth())
         self.newProjectFrame.setSizePolicy(sizePolicy)
         self.newProjectFrame.setMinimumSize(QSize(0, 30))
+        self.newProjectFrame.setFont(font1)
         self.newProjectFrame.setStyleSheet(u"background: transparent;\n"
 "border: transparent;")
         self.newProjectFrame.setFrameShape(QFrame.Shape.StyledPanel)
@@ -188,10 +199,17 @@ class Ui_HomePage(object):
         self.pushButton = QPushButton(self.newProjectFrame)
         self.pushButton.setObjectName(u"pushButton")
         self.pushButton.setGeometry(QRect(0, 0, 120, 30))
-        self.pushButton.setFont(font3)
+        font6 = QFont()
+        font6.setFamilies([u"Segoe UI"])
+        font6.setPointSize(12)
+        font6.setWeight(QFont.DemiBold)
+        font6.setItalic(False)
+        self.pushButton.setFont(font6)
         self.pushButton.setStyleSheet(u"background-color: rgb(255, 215, 0);\n"
 "border-radius: 10px;\n"
-"border: none;")
+"border: none;\n"
+"font: 600 12pt \"Segoe UI\";\n"
+"")
 
         self.buttonsLayout.addWidget(self.newProjectFrame)
 
@@ -203,6 +221,7 @@ class Ui_HomePage(object):
         sizePolicy4.setHeightForWidth(self.openProjectFrame.sizePolicy().hasHeightForWidth())
         self.openProjectFrame.setSizePolicy(sizePolicy4)
         self.openProjectFrame.setMinimumSize(QSize(0, 30))
+        self.openProjectFrame.setFont(font1)
         self.openProjectFrame.setStyleSheet(u"background: transparent;\n"
 "border: transparent")
         self.openProjectFrame.setFrameShape(QFrame.Shape.StyledPanel)
@@ -210,10 +229,11 @@ class Ui_HomePage(object):
         self.pushButton_2 = QPushButton(self.openProjectFrame)
         self.pushButton_2.setObjectName(u"pushButton_2")
         self.pushButton_2.setGeometry(QRect(0, 0, 130, 30))
-        self.pushButton_2.setFont(font3)
+        self.pushButton_2.setFont(font6)
         self.pushButton_2.setStyleSheet(u"background-color: rgb(255, 215, 0);\n"
 "border-radius: 10px;\n"
-"border: none\n"
+"border: none;\n"
+"font: 600 12pt \"Segoe UI\";\n"
 "")
 
         self.buttonsLayout.addWidget(self.openProjectFrame)
@@ -229,6 +249,7 @@ class Ui_HomePage(object):
 
         self.recentsFrame = QFrame(self.rightFrame)
         self.recentsFrame.setObjectName(u"recentsFrame")
+        self.recentsFrame.setFont(font1)
         self.recentsFrame.setFrameShape(QFrame.Shape.StyledPanel)
         self.recentsFrame.setFrameShadow(QFrame.Shadow.Raised)
         self.verticalLayout_3 = QVBoxLayout(self.recentsFrame)
@@ -238,6 +259,7 @@ class Ui_HomePage(object):
         sizePolicy2.setHeightForWidth(self.recentsLabel.sizePolicy().hasHeightForWidth())
         self.recentsLabel.setSizePolicy(sizePolicy2)
         self.recentsLabel.setFont(font4)
+        self.recentsLabel.setStyleSheet(u"font: 600 14pt \"Segoe UI\";")
 
         self.verticalLayout_3.addWidget(self.recentsLabel)
 
@@ -245,6 +267,7 @@ class Ui_HomePage(object):
         self.headers.setObjectName(u"headers")
         sizePolicy2.setHeightForWidth(self.headers.sizePolicy().hasHeightForWidth())
         self.headers.setSizePolicy(sizePolicy2)
+        self.headers.setFont(font1)
         self.headers.setStyleSheet(u"background-color: rgb(147, 154, 171);")
         self.headers.setFrameShape(QFrame.Shape.StyledPanel)
         self.headers.setFrameShadow(QFrame.Shadow.Raised)
@@ -254,11 +277,9 @@ class Ui_HomePage(object):
         self.fileNameLabel.setObjectName(u"fileNameLabel")
         sizePolicy2.setHeightForWidth(self.fileNameLabel.sizePolicy().hasHeightForWidth())
         self.fileNameLabel.setSizePolicy(sizePolicy2)
-        font6 = QFont()
-        font6.setFamilies([u"Dubai"])
-        font6.setPointSize(12)
-        self.fileNameLabel.setFont(font6)
-        self.fileNameLabel.setStyleSheet(u"color: rgba(0,0,0, 128);")
+        self.fileNameLabel.setFont(font5)
+        self.fileNameLabel.setStyleSheet(u"color: rgba(0,0,0,128);\n"
+"font: 12pt \"Segoe UI\";")
 
         self.horizontalLayout.addWidget(self.fileNameLabel)
 
@@ -266,8 +287,9 @@ class Ui_HomePage(object):
         self.lastAccessLabel.setObjectName(u"lastAccessLabel")
         sizePolicy2.setHeightForWidth(self.lastAccessLabel.sizePolicy().hasHeightForWidth())
         self.lastAccessLabel.setSizePolicy(sizePolicy2)
-        self.lastAccessLabel.setFont(font6)
-        self.lastAccessLabel.setStyleSheet(u"color: rgba(0,0,0,128);")
+        self.lastAccessLabel.setFont(font5)
+        self.lastAccessLabel.setStyleSheet(u"color: rgba(0,0,0,128);\n"
+"font: 12pt \"Segoe UI\";")
 
         self.horizontalLayout.addWidget(self.lastAccessLabel)
 
@@ -276,23 +298,29 @@ class Ui_HomePage(object):
 
         self.project1Frame = QFrame(self.recentsFrame)
         self.project1Frame.setObjectName(u"project1Frame")
+        self.project1Frame.setFont(font1)
         self.project1Frame.setFrameShape(QFrame.Shape.StyledPanel)
         self.project1Frame.setFrameShadow(QFrame.Shadow.Raised)
         self.horizontalLayout_3 = QHBoxLayout(self.project1Frame)
         self.horizontalLayout_3.setObjectName(u"horizontalLayout_3")
         self.fileName1 = QLabel(self.project1Frame)
         self.fileName1.setObjectName(u"fileName1")
-        font7 = QFont()
-        font7.setFamilies([u"Dubai"])
-        font7.setPointSize(12)
-        font7.setBold(True)
-        self.fileName1.setFont(font7)
+        self.fileName1.setFont(font6)
+        self.fileName1.setStyleSheet(u"font: 12pt \"Segoe UI\";\n"
+"font: 600 12pt \"Segoe UI\";")
 
         self.horizontalLayout_3.addWidget(self.fileName1)
 
         self.lastAccess1 = QLabel(self.project1Frame)
         self.lastAccess1.setObjectName(u"lastAccess1")
+        font7 = QFont()
+        font7.setFamilies([u"Segoe UI"])
+        font7.setPointSize(11)
+        font7.setBold(False)
+        font7.setItalic(True)
         self.lastAccess1.setFont(font7)
+        self.lastAccess1.setStyleSheet(u"font: 12pt \"Segoe UI\";\n"
+"font: italic 11pt \"Segoe UI\";")
 
         self.horizontalLayout_3.addWidget(self.lastAccess1)
 
@@ -301,19 +329,24 @@ class Ui_HomePage(object):
 
         self.project2Frame = QFrame(self.recentsFrame)
         self.project2Frame.setObjectName(u"project2Frame")
+        self.project2Frame.setFont(font1)
         self.project2Frame.setFrameShape(QFrame.Shape.StyledPanel)
         self.project2Frame.setFrameShadow(QFrame.Shadow.Raised)
         self.horizontalLayout_4 = QHBoxLayout(self.project2Frame)
         self.horizontalLayout_4.setObjectName(u"horizontalLayout_4")
         self.fileName2 = QLabel(self.project2Frame)
         self.fileName2.setObjectName(u"fileName2")
-        self.fileName2.setFont(font7)
+        self.fileName2.setFont(font6)
+        self.fileName2.setStyleSheet(u"font: 12pt \"Segoe UI\";\n"
+"font: 600 12pt \"Segoe UI\";")
 
         self.horizontalLayout_4.addWidget(self.fileName2)
 
         self.lastAccess2 = QLabel(self.project2Frame)
         self.lastAccess2.setObjectName(u"lastAccess2")
         self.lastAccess2.setFont(font7)
+        self.lastAccess2.setStyleSheet(u"font: 12pt \"Segoe UI\";\n"
+"font: italic 11pt \"Segoe UI\";")
 
         self.horizontalLayout_4.addWidget(self.lastAccess2)
 
@@ -322,19 +355,24 @@ class Ui_HomePage(object):
 
         self.project3Frame = QFrame(self.recentsFrame)
         self.project3Frame.setObjectName(u"project3Frame")
+        self.project3Frame.setFont(font1)
         self.project3Frame.setFrameShape(QFrame.Shape.StyledPanel)
         self.project3Frame.setFrameShadow(QFrame.Shadow.Raised)
         self.horizontalLayout_5 = QHBoxLayout(self.project3Frame)
         self.horizontalLayout_5.setObjectName(u"horizontalLayout_5")
         self.fileName3 = QLabel(self.project3Frame)
         self.fileName3.setObjectName(u"fileName3")
-        self.fileName3.setFont(font7)
+        self.fileName3.setFont(font6)
+        self.fileName3.setStyleSheet(u"font: 12pt \"Segoe UI\";\n"
+"font: 600 12pt \"Segoe UI\";")
 
         self.horizontalLayout_5.addWidget(self.fileName3)
 
         self.lastAccess3 = QLabel(self.project3Frame)
         self.lastAccess3.setObjectName(u"lastAccess3")
         self.lastAccess3.setFont(font7)
+        self.lastAccess3.setStyleSheet(u"font: 12pt \"Segoe UI\";\n"
+"font: italic 11pt \"Segoe UI\";")
 
         self.horizontalLayout_5.addWidget(self.lastAccess3)
 
