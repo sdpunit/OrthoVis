@@ -1,4 +1,4 @@
-# main.py
+# lib.py
 
 import sys
 from PySide6.QtWidgets import QApplication
