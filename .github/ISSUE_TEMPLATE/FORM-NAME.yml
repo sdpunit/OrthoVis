@@ -1,6 +1,6 @@
-name: Backlog Item
+name: Backlog Item (PBI)
 description: | 
-  **ATTENTION:** Search for existing issues before creating a new one. PREVENT DUPLICATION.
+  PREVENT DUPLICATION. Search for existing issues before creating a new one. 
 body:
   - type: markdown
     attributes:
@@ -33,9 +33,9 @@ body:
       label: Acceptance Criteria
       description: Define what must be true for this to be considered done.
       placeholder: |
+        - [ ] Please be explicit and detailed
         - [ ] Criteria 1
         - [ ] Criteria 2
-        - [ ] Criteria 3
       value: |
         - [ ] 
         - [ ] 
