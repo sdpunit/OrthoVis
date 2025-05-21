@@ -24,7 +24,7 @@ body:
       label: Urgency for the feeback
       description: How urgently does this feedback need to actioned.
       placeholder: |
-        - Low/Mid/High
+        Low/Mid/High
 
   - type: textarea
     id: description
