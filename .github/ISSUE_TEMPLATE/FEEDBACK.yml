@@ -6,9 +6,8 @@ body:
     attributes:
       value: |
         **Reminder:**
-        - Still make sure you complete the labels
-        - Select milestone 
-        - Fill out all the sections
+        - Select milestone
+        - Fill out all the fields after you submit this
   - type: input
     id: feedback-from
     attributes:
@@ -17,17 +16,24 @@ body:
       placeholder: Stakeholder - Name
     validations:
       required: true  
+
+  - type: input
+  id: feedback-date
+  attributes:
+    label: Date Received
+    description: When was this feedback received?
+    placeholder: DD/MM
       
   - type: input
-    id: urgency
+    id: description
     attributes:
-      label: Urgency for the feeback
-      description: How urgently does this feedback need to actioned.
+      label: Whats the feedback
+      description: Describe the feedback given
       placeholder: |
-        Low/Mid/High
+        Be detailed.
 
   - type: textarea
-    id: description
+    id: implementation
     attributes:
       label: Implementation
       description: Describe the feedback and how would this be implemented.
@@ -35,8 +41,5 @@ body:
         Description
         - [ ] Criteria 1
         - [ ] Criteria 2
-      value: |
-        - [ ] 
-        - [ ] 
     validations:
       required: true
