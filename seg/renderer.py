@@ -91,7 +91,7 @@ def make_slider(label, vmin, vmax, init, xpos):
     title_prop.SetColor(1, 1, 1)  # White
     title_prop.SetJustificationToCentered()
     title_prop.SetVerticalJustificationToBottom()
-    rep.SetTitleHeight(0.08)  # Position above slider
+    rep.SetTitleHeight(0.03)  # Text size 
     
     # Critical: Disable all highlighting that causes traces
     rep.GetSliderProperty().SetColor(1, 1, 0)  # Yellow slider
