@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>699</width>
-    <height>607</height>
+    <width>839</width>
+    <height>677</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -80,7 +80,7 @@
        </widget>
       </item>
       <item>
-       <widget class="QFrame" name="frame">
+       <widget class="QFrame" name="dataPanel">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
           <horstretch>0</horstretch>
@@ -93,6 +93,21 @@
         <property name="frameShadow">
          <enum>QFrame::Shadow::Raised</enum>
         </property>
+        <layout class="QVBoxLayout" name="verticalLayout_2" stretch="5,1">
+         <item>
+          <layout class="QHBoxLayout" name="deatils">
+           <item>
+            <layout class="QVBoxLayout" name="projectNameLayout"/>
+           </item>
+           <item>
+            <layout class="QVBoxLayout" name="importListLayout"/>
+           </item>
+          </layout>
+         </item>
+         <item>
+          <layout class="QHBoxLayout" name="buttons"/>
+         </item>
+        </layout>
        </widget>
       </item>
      </layout>
