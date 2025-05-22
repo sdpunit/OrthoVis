@@ -43,9 +43,10 @@ def run_totalseg(ct_dir: str, seg_dir: str):
         print(result_appendicular.stderr)
     print("Finished '--ta appendicular_bones' segmentation./n")
     
+    rois = {f'{bone}.nii.gz' for bone in roi}
     for f in os.listdir(seg_dir):
-        if f not in [bone + ".nii.gz" for bone in roi]:
-            os.remove(f"{seg_dir}/{f}")  
+        if f not in rois:
+            os.remove(os.path.join(seg_dir, f))  
     print(f"TotalSegmentator masks successfully saved to: {seg_dir}")
 
 

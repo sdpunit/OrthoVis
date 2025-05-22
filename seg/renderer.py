@@ -203,7 +203,7 @@ class QuadStyle(vtkInteractorStyleImage):
 
         self.GetInteractor().GetRenderWindow().Render()
 
-# Main entrypoint
+# Main entry point
 
 def main(ct_path: str):
     img = cache_ct(ct_path)
@@ -249,8 +249,8 @@ def main(ct_path: str):
     render_window.AddRenderer(slider_renderer)
 
     hu_min, hu_max = int(arr.min()), int(arr.max())
-    win_rep = make_slider(1, hu_max - hu_min, hu_max - hu_min, 0.95)
-    lvl_rep = make_slider(hu_min, hu_max, (hu_max + hu_min)//2, 0.92)
+    win_rep = make_slider(1, hu_max - hu_min, hu_max - hu_min, 0.97)
+    lvl_rep = make_slider(hu_min, hu_max, (hu_max + hu_min)//2, 0.94)
 
     win_wid = vtk.vtkSliderWidget()
     lvl_wid = vtk.vtkSliderWidget()
@@ -276,8 +276,8 @@ def main(ct_path: str):
         wid.AddObserver("InteractionEvent", wl_callback)
         wid.EnabledOn()
 
-    # Add "W" and "L" text actors just above each slider
-    for label, xpos in (("W", 0.947), ("L", 0.918)):
+    # Add "W" and "L" text actors above each slider
+    for label, xpos in (("L", 0.937), ("W", 0.967)):
         txt = vtkTextActor()
         txt.SetInput(label)
         tp = txt.GetTextProperty()
