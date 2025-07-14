@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'new_project_windowmPYKoe.ui'
+## Form generated from reading UI file 'new_project_windowGZYsbk.ui'
 ##
 ## Created by: Qt User Interface Compiler version 6.9.0
 ##
@@ -26,7 +26,7 @@ class Ui_Form(object):
     def setupUi(self, Form):
         if not Form.objectName():
             Form.setObjectName(u"Form")
-        Form.resize(839, 677)
+        Form.resize(839, 669)
         self.horizontalLayout = QHBoxLayout(Form)
         self.horizontalLayout.setSpacing(0)
         self.horizontalLayout.setObjectName(u"horizontalLayout")
@@ -84,8 +84,12 @@ class Ui_Form(object):
         sizePolicy2.setHeightForWidth(self.projectNameLabel.sizePolicy().hasHeightForWidth())
         self.projectNameLabel.setSizePolicy(sizePolicy2)
         font = QFont()
+        font.setFamilies([u"Segoe UI"])
         font.setPointSize(16)
+        font.setWeight(QFont.DemiBold)
+        font.setItalic(False)
         self.projectNameLabel.setFont(font)
+        self.projectNameLabel.setStyleSheet(u"font: 600 16pt \"Segoe UI\";")
         self.projectNameLabel.setAlignment(Qt.AlignmentFlag.AlignLeading|Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignTop)
 
         self.projectNameLayout.addWidget(self.projectNameLabel)
@@ -109,6 +113,7 @@ class Ui_Form(object):
         sizePolicy2.setHeightForWidth(self.projectDesLabel.sizePolicy().hasHeightForWidth())
         self.projectDesLabel.setSizePolicy(sizePolicy2)
         self.projectDesLabel.setFont(font)
+        self.projectDesLabel.setStyleSheet(u"font: 600 16pt \"Segoe UI\";")
         self.projectDesLabel.setAlignment(Qt.AlignmentFlag.AlignLeading|Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignTop)
 
         self.projectDesLayout.addWidget(self.projectDesLabel)
@@ -139,6 +144,7 @@ class Ui_Form(object):
         sizePolicy2.setHeightForWidth(self.importListLabel.sizePolicy().hasHeightForWidth())
         self.importListLabel.setSizePolicy(sizePolicy2)
         self.importListLabel.setFont(font)
+        self.importListLabel.setStyleSheet(u"font: 600 16pt \"Segoe UI\";")
 
         self.importListLayout.addWidget(self.importListLabel)
 
@@ -156,42 +162,65 @@ class Ui_Form(object):
 
         self.verticalLayout_2.addLayout(self.details)
 
-        self.buttons = QHBoxLayout()
+        self.buttons = QVBoxLayout()
         self.buttons.setObjectName(u"buttons")
         self.buttons.setContentsMargins(9, 9, 9, 9)
-        self.importCT = QPushButton(self.dataPanel)
-        self.importCT.setObjectName(u"importCT")
+        self.importsLayout = QHBoxLayout()
+        self.importsLayout.setSpacing(20)
+        self.importsLayout.setObjectName(u"importsLayout")
+        self.importFluoro = QPushButton(self.dataPanel)
+        self.importFluoro.setObjectName(u"importFluoro")
         sizePolicy4 = QSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         sizePolicy4.setHorizontalStretch(0)
         sizePolicy4.setVerticalStretch(0)
-        sizePolicy4.setHeightForWidth(self.importCT.sizePolicy().hasHeightForWidth())
-        self.importCT.setSizePolicy(sizePolicy4)
-        self.importCT.setMinimumSize(QSize(120, 30))
+        sizePolicy4.setHeightForWidth(self.importFluoro.sizePolicy().hasHeightForWidth())
+        self.importFluoro.setSizePolicy(sizePolicy4)
+        self.importFluoro.setMinimumSize(QSize(180, 30))
         font1 = QFont()
         font1.setFamilies([u"Segoe UI"])
         font1.setPointSize(12)
         font1.setWeight(QFont.DemiBold)
         font1.setItalic(False)
-        self.importCT.setFont(font1)
-        self.importCT.setStyleSheet(u"background-color: rgb(255, 215, 0);\n"
-"font: 600 12pt \"Segoe UI\";\n"
-"border-radius: 10px;\n"
-"")
-
-        self.buttons.addWidget(self.importCT)
-
-        self.importFluoro = QPushButton(self.dataPanel)
-        self.importFluoro.setObjectName(u"importFluoro")
-        sizePolicy4.setHeightForWidth(self.importFluoro.sizePolicy().hasHeightForWidth())
-        self.importFluoro.setSizePolicy(sizePolicy4)
-        self.importFluoro.setMinimumSize(QSize(180, 30))
         self.importFluoro.setFont(font1)
         self.importFluoro.setStyleSheet(u"background-color: rgb(255, 215, 0);\n"
 "font: 600 12pt \"Segoe UI\";\n"
 "border-radius: 10px\n"
 "")
 
-        self.buttons.addWidget(self.importFluoro)
+        self.importsLayout.addWidget(self.importFluoro)
+
+        self.importCT = QPushButton(self.dataPanel)
+        self.importCT.setObjectName(u"importCT")
+        sizePolicy4.setHeightForWidth(self.importCT.sizePolicy().hasHeightForWidth())
+        self.importCT.setSizePolicy(sizePolicy4)
+        self.importCT.setMinimumSize(QSize(180, 30))
+        self.importCT.setFont(font1)
+        self.importCT.setStyleSheet(u"background-color: rgb(255, 215, 0);\n"
+"font: 600 12pt \"Segoe UI\";\n"
+"border-radius: 10px;\n"
+"")
+
+        self.importsLayout.addWidget(self.importCT)
+
+        self.save = QPushButton(self.dataPanel)
+        self.save.setObjectName(u"save")
+        sizePolicy5 = QSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        sizePolicy5.setHorizontalStretch(1)
+        sizePolicy5.setVerticalStretch(1)
+        sizePolicy5.setHeightForWidth(self.save.sizePolicy().hasHeightForWidth())
+        self.save.setSizePolicy(sizePolicy5)
+        self.save.setMinimumSize(QSize(60, 30))
+        self.save.setStyleSheet(u"background-color: rgb(255, 215, 0);\n"
+"font: 600 12pt \"Segoe UI\";\n"
+"border-radius: 10px;\n"
+"")
+
+        self.importsLayout.addWidget(self.save)
+
+        self.importsLayout.setStretch(0, 1)
+        self.importsLayout.setStretch(1, 1)
+
+        self.buttons.addLayout(self.importsLayout)
 
 
         self.verticalLayout_2.addLayout(self.buttons)
@@ -217,7 +246,8 @@ class Ui_Form(object):
         self.projectNameLabel.setText(QCoreApplication.translate("Form", u"Project Name", None))
         self.projectDesLabel.setText(QCoreApplication.translate("Form", u"Project Description", None))
         self.importListLabel.setText(QCoreApplication.translate("Form", u"Successful Imports", None))
-        self.importCT.setText(QCoreApplication.translate("Form", u"Import CT", None))
         self.importFluoro.setText(QCoreApplication.translate("Form", u"Import Fluoroscopy", None))
+        self.importCT.setText(QCoreApplication.translate("Form", u"Import CT", None))
+        self.save.setText(QCoreApplication.translate("Form", u"Save", None))
     # retranslateUi
 
