@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>839</width>
-    <height>677</height>
+    <width>1217</width>
+    <height>816</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -125,8 +125,14 @@
                  </property>
                  <property name="font">
                   <font>
+                   <family>Segoe UI</family>
                    <pointsize>16</pointsize>
+                   <italic>false</italic>
+                   <fontweight>DemiBold</fontweight>
                   </font>
+                 </property>
+                 <property name="styleSheet">
+                  <string notr="true">font: 600 16pt &quot;Segoe UI&quot;;</string>
                  </property>
                  <property name="text">
                   <string>Project Name</string>
@@ -178,8 +184,14 @@
                  </property>
                  <property name="font">
                   <font>
+                   <family>Segoe UI</family>
                    <pointsize>16</pointsize>
+                   <italic>false</italic>
+                   <fontweight>DemiBold</fontweight>
                   </font>
+                 </property>
+                 <property name="styleSheet">
+                  <string notr="true">font: 600 16pt &quot;Segoe UI&quot;;</string>
                  </property>
                  <property name="text">
                   <string>Project Description</string>
@@ -236,8 +248,14 @@
                </property>
                <property name="font">
                 <font>
+                 <family>Segoe UI</family>
                  <pointsize>16</pointsize>
+                 <italic>false</italic>
+                 <fontweight>DemiBold</fontweight>
                 </font>
+               </property>
+               <property name="styleSheet">
+                <string notr="true">font: 600 16pt &quot;Segoe UI&quot;;</string>
                </property>
                <property name="text">
                 <string>Successful Imports</string>
@@ -259,7 +277,7 @@
           </layout>
          </item>
          <item>
-          <layout class="QHBoxLayout" name="buttons">
+          <layout class="QVBoxLayout" name="buttons">
            <property name="leftMargin">
             <number>9</number>
            </property>
@@ -273,70 +291,102 @@
             <number>9</number>
            </property>
            <item>
-            <widget class="QPushButton" name="importCT">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
+            <layout class="QHBoxLayout" name="importsLayout" stretch="1,1,0">
+             <property name="spacing">
+              <number>20</number>
              </property>
-             <property name="minimumSize">
-              <size>
-               <width>120</width>
-               <height>30</height>
-              </size>
-             </property>
-             <property name="font">
-              <font>
-               <family>Segoe UI</family>
-               <pointsize>12</pointsize>
-               <italic>false</italic>
-               <fontweight>DemiBold</fontweight>
-              </font>
-             </property>
-             <property name="styleSheet">
-              <string notr="true">background-color: rgb(255, 215, 0);
-font: 600 12pt &quot;Segoe UI&quot;;
-border-radius: 10px;
-</string>
-             </property>
-             <property name="text">
-              <string>Import CT</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QPushButton" name="importFluoro">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="minimumSize">
-              <size>
-               <width>180</width>
-               <height>30</height>
-              </size>
-             </property>
-             <property name="font">
-              <font>
-               <family>Segoe UI</family>
-               <pointsize>12</pointsize>
-               <italic>false</italic>
-               <fontweight>DemiBold</fontweight>
-              </font>
-             </property>
-             <property name="styleSheet">
-              <string notr="true">background-color: rgb(255, 215, 0);
+             <item>
+              <widget class="QPushButton" name="importFluoro">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>180</width>
+                 <height>30</height>
+                </size>
+               </property>
+               <property name="font">
+                <font>
+                 <family>Segoe UI</family>
+                 <pointsize>12</pointsize>
+                 <italic>false</italic>
+                 <fontweight>DemiBold</fontweight>
+                </font>
+               </property>
+               <property name="styleSheet">
+                <string notr="true">background-color: rgb(255, 215, 0);
 font: 600 12pt &quot;Segoe UI&quot;;
 border-radius: 10px
 </string>
-             </property>
-             <property name="text">
-              <string>Import Fluoroscopy</string>
-             </property>
-            </widget>
+               </property>
+               <property name="text">
+                <string>Import Fluoroscopy</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="importCT">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>180</width>
+                 <height>30</height>
+                </size>
+               </property>
+               <property name="font">
+                <font>
+                 <family>Segoe UI</family>
+                 <pointsize>12</pointsize>
+                 <italic>false</italic>
+                 <fontweight>DemiBold</fontweight>
+                </font>
+               </property>
+               <property name="styleSheet">
+                <string notr="true">background-color: rgb(255, 215, 0);
+font: 600 12pt &quot;Segoe UI&quot;;
+border-radius: 10px;
+</string>
+               </property>
+               <property name="text">
+                <string>Import CT</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="save">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                 <horstretch>1</horstretch>
+                 <verstretch>1</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>60</width>
+                 <height>30</height>
+                </size>
+               </property>
+               <property name="styleSheet">
+                <string notr="true">background-color: rgb(255, 215, 0);
+font: 600 12pt &quot;Segoe UI&quot;;
+border-radius: 10px;
+</string>
+               </property>
+               <property name="text">
+                <string>Save</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
            </item>
           </layout>
          </item>
