@@ -1,11 +1,19 @@
 # This file can open pop up for importing both CT and Fluroscopy
 from PySide6.QtWidgets import QWidget
-from frontend_pages.new_project.ui_new_project_window import Ui_Form
+from frontend_pages.project_setup.ui_project_setup_window import Ui_Form
 
-class NewProject(QWidget):
+name = ""
+
+class ProjectSetup(QWidget):
     def __init__(self):
         super().__init__()
         self.ui = Ui_Form()
         self.ui.setupUi(self)
 
         self.ui.titlebar.ui.title.setText("New Project")
+        self.ui.projectNameInput.setText(name)
+        print(self.ui.projectNameInput.text())
+
+    def changeName(self, new_name):
+        name = new_name
+        self.ui.projectNameInput.setText(name)
