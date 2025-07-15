@@ -47,6 +47,13 @@
              <verstretch>0</verstretch>
             </sizepolicy>
            </property>
+           <property name="font">
+            <font>
+             <family>Segoe UI</family>
+             <pointsize>16</pointsize>
+             <bold>false</bold>
+            </font>
+           </property>
            <property name="styleSheet">
             <string notr="true">background-color: rgb(29, 52, 97);</string>
            </property>
@@ -67,12 +74,15 @@
               </property>
               <property name="font">
                <font>
-                <family>Dubai</family>
+                <family>Segoe UI</family>
                 <pointsize>56</pointsize>
+                <italic>false</italic>
+                <bold>true</bold>
                </font>
               </property>
               <property name="styleSheet">
-               <string notr="true">color: rgb(255, 255, 255);</string>
+               <string notr="true">color: rgb(255, 255, 255);
+font: 700 56pt &quot;Segoe UI&quot;;</string>
               </property>
               <property name="text">
                <string>OrthoVis</string>
@@ -84,6 +94,9 @@
             </item>
             <item row="0" column="0">
              <widget class="QLabel" name="label">
+              <property name="font">
+               <font/>
+              </property>
               <property name="text">
                <string/>
               </property>
@@ -109,9 +122,9 @@
            </property>
            <property name="font">
             <font>
-             <family>Century Gothic</family>
+             <family>Segoe UI</family>
              <pointsize>16</pointsize>
-             <bold>true</bold>
+             <bold>false</bold>
             </font>
            </property>
            <property name="frameShape">
@@ -131,10 +144,14 @@
               </property>
               <property name="font">
                <font>
-                <family>Dubai</family>
-                <pointsize>18</pointsize>
-                <bold>true</bold>
+                <family>Segoe UI</family>
+                <pointsize>14</pointsize>
+                <italic>false</italic>
+                <fontweight>DemiBold</fontweight>
                </font>
+              </property>
+              <property name="styleSheet">
+               <string notr="true">font: 600 14pt &quot;Segoe UI&quot;;</string>
               </property>
               <property name="text">
                <string>Welcome to OrthoVis 2.0!</string>
@@ -151,10 +168,14 @@
               </property>
               <property name="font">
                <font>
-                <family>Dubai</family>
-                <pointsize>14</pointsize>
+                <family>Segoe UI</family>
+                <pointsize>12</pointsize>
+                <italic>false</italic>
                 <bold>false</bold>
                </font>
+              </property>
+              <property name="styleSheet">
+               <string notr="true">font: 12pt &quot;Segoe UI&quot;;</string>
               </property>
               <property name="text">
                <string>OrthoVis 2.0 provides fast and accurate 3D joint movement analysis by registering CT and fluoroscopy images, streamlining orthopedic research and clinical assessment.</string>
@@ -172,10 +193,14 @@
                  <widget class="QLabel" name="newPfoject">
                   <property name="font">
                    <font>
-                    <family>Dubai</family>
-                    <pointsize>18</pointsize>
-                    <bold>false</bold>
+                    <family>Segoe UI</family>
+                    <pointsize>14</pointsize>
+                    <italic>false</italic>
+                    <fontweight>DemiBold</fontweight>
                    </font>
+                  </property>
+                  <property name="styleSheet">
+                   <string notr="true">font: 600 14pt &quot;Segoe UI&quot;;</string>
                   </property>
                   <property name="text">
                    <string>New Project</string>
@@ -186,10 +211,14 @@
                  <widget class="QLabel" name="openProject">
                   <property name="font">
                    <font>
-                    <family>Dubai</family>
-                    <pointsize>18</pointsize>
-                    <bold>false</bold>
+                    <family>Segoe UI</family>
+                    <pointsize>14</pointsize>
+                    <italic>false</italic>
+                    <fontweight>DemiBold</fontweight>
                    </font>
+                  </property>
+                  <property name="styleSheet">
+                   <string notr="true">font: 600 14pt &quot;Segoe UI&quot;;</string>
                   </property>
                   <property name="text">
                    <string>Open Project</string>
@@ -210,10 +239,14 @@
                   </property>
                   <property name="font">
                    <font>
-                    <family>Dubai</family>
+                    <family>Segoe UI</family>
                     <pointsize>12</pointsize>
+                    <italic>false</italic>
                     <bold>false</bold>
                    </font>
+                  </property>
+                  <property name="styleSheet">
+                   <string notr="true">font: 12pt &quot;Segoe UI&quot;;</string>
                   </property>
                   <property name="text">
                    <string>Create a new OrthoVis project. You will need valid CT scan and Fluroscopy files for OrthoVis to produce an accurate 3D reconstruction.</string>
@@ -236,10 +269,14 @@
                   </property>
                   <property name="font">
                    <font>
-                    <family>Dubai</family>
+                    <family>Segoe UI</family>
                     <pointsize>12</pointsize>
+                    <italic>false</italic>
                     <bold>false</bold>
                    </font>
+                  </property>
+                  <property name="styleSheet">
+                   <string notr="true">font: 12pt &quot;Segoe UI&quot;;</string>
                   </property>
                   <property name="text">
                    <string>Already got a project? Open an OrthoVis project from file system.</string>
@@ -270,6 +307,13 @@
                     <height>30</height>
                    </size>
                   </property>
+                  <property name="font">
+                   <font>
+                    <family>Segoe UI</family>
+                    <pointsize>16</pointsize>
+                    <bold>false</bold>
+                   </font>
+                  </property>
                   <property name="styleSheet">
                    <string notr="true">background: transparent;
 border: transparent;</string>
@@ -291,15 +335,18 @@ border: transparent;</string>
                    </property>
                    <property name="font">
                     <font>
-                     <family>Dubai</family>
-                     <pointsize>14</pointsize>
-                     <bold>false</bold>
+                     <family>Segoe UI</family>
+                     <pointsize>12</pointsize>
+                     <italic>false</italic>
+                     <fontweight>DemiBold</fontweight>
                     </font>
                    </property>
                    <property name="styleSheet">
                     <string notr="true">background-color: rgb(255, 215, 0);
 border-radius: 10px;
-border: none;</string>
+border: none;
+font: 600 12pt &quot;Segoe UI&quot;;
+</string>
                    </property>
                    <property name="text">
                     <string>New Project</string>
@@ -320,6 +367,13 @@ border: none;</string>
                     <width>0</width>
                     <height>30</height>
                    </size>
+                  </property>
+                  <property name="font">
+                   <font>
+                    <family>Segoe UI</family>
+                    <pointsize>16</pointsize>
+                    <bold>false</bold>
+                   </font>
                   </property>
                   <property name="styleSheet">
                    <string notr="true">background: transparent;
@@ -342,15 +396,17 @@ border: transparent</string>
                    </property>
                    <property name="font">
                     <font>
-                     <family>Dubai</family>
-                     <pointsize>14</pointsize>
-                     <bold>false</bold>
+                     <family>Segoe UI</family>
+                     <pointsize>12</pointsize>
+                     <italic>false</italic>
+                     <fontweight>DemiBold</fontweight>
                     </font>
                    </property>
                    <property name="styleSheet">
                     <string notr="true">background-color: rgb(255, 215, 0);
 border-radius: 10px;
-border: none
+border: none;
+font: 600 12pt &quot;Segoe UI&quot;;
 </string>
                    </property>
                    <property name="text">
@@ -365,6 +421,13 @@ border: none
             </item>
             <item row="4" column="0">
              <widget class="QFrame" name="recentsFrame">
+              <property name="font">
+               <font>
+                <family>Segoe UI</family>
+                <pointsize>16</pointsize>
+                <bold>false</bold>
+               </font>
+              </property>
               <property name="frameShape">
                <enum>QFrame::Shape::StyledPanel</enum>
               </property>
@@ -382,10 +445,14 @@ border: none
                  </property>
                  <property name="font">
                   <font>
-                   <family>Dubai</family>
-                   <pointsize>18</pointsize>
-                   <bold>false</bold>
+                   <family>Segoe UI</family>
+                   <pointsize>14</pointsize>
+                   <italic>false</italic>
+                   <fontweight>DemiBold</fontweight>
                   </font>
+                 </property>
+                 <property name="styleSheet">
+                  <string notr="true">font: 600 14pt &quot;Segoe UI&quot;;</string>
                  </property>
                  <property name="text">
                   <string>Recents</string>
@@ -399,6 +466,13 @@ border: none
                    <horstretch>0</horstretch>
                    <verstretch>0</verstretch>
                   </sizepolicy>
+                 </property>
+                 <property name="font">
+                  <font>
+                   <family>Segoe UI</family>
+                   <pointsize>16</pointsize>
+                   <bold>false</bold>
+                  </font>
                  </property>
                  <property name="styleSheet">
                   <string notr="true">background-color: rgb(147, 154, 171);</string>
@@ -420,12 +494,15 @@ border: none
                     </property>
                     <property name="font">
                      <font>
-                      <family>Dubai</family>
+                      <family>Segoe UI</family>
                       <pointsize>12</pointsize>
+                      <italic>false</italic>
+                      <bold>false</bold>
                      </font>
                     </property>
                     <property name="styleSheet">
-                     <string notr="true">color: rgba(0,0,0, 128);</string>
+                     <string notr="true">color: rgba(0,0,0,128);
+font: 12pt &quot;Segoe UI&quot;;</string>
                     </property>
                     <property name="text">
                      <string>File name</string>
@@ -442,12 +519,15 @@ border: none
                     </property>
                     <property name="font">
                      <font>
-                      <family>Dubai</family>
+                      <family>Segoe UI</family>
                       <pointsize>12</pointsize>
+                      <italic>false</italic>
+                      <bold>false</bold>
                      </font>
                     </property>
                     <property name="styleSheet">
-                     <string notr="true">color: rgba(0,0,0,128);</string>
+                     <string notr="true">color: rgba(0,0,0,128);
+font: 12pt &quot;Segoe UI&quot;;</string>
                     </property>
                     <property name="text">
                      <string>Last opened by you</string>
@@ -459,6 +539,13 @@ border: none
                </item>
                <item>
                 <widget class="QFrame" name="project1Frame">
+                 <property name="font">
+                  <font>
+                   <family>Segoe UI</family>
+                   <pointsize>16</pointsize>
+                   <bold>false</bold>
+                  </font>
+                 </property>
                  <property name="frameShape">
                   <enum>QFrame::Shape::StyledPanel</enum>
                  </property>
@@ -470,10 +557,15 @@ border: none
                    <widget class="QLabel" name="fileName1">
                     <property name="font">
                      <font>
-                      <family>Dubai</family>
+                      <family>Segoe UI</family>
                       <pointsize>12</pointsize>
-                      <bold>true</bold>
+                      <italic>false</italic>
+                      <fontweight>DemiBold</fontweight>
                      </font>
+                    </property>
+                    <property name="styleSheet">
+                     <string notr="true">font: 12pt &quot;Segoe UI&quot;;
+font: 600 12pt &quot;Segoe UI&quot;;</string>
                     </property>
                     <property name="text">
                      <string>Neil’s Kneeling Project</string>
@@ -484,10 +576,15 @@ border: none
                    <widget class="QLabel" name="lastAccess1">
                     <property name="font">
                      <font>
-                      <family>Dubai</family>
-                      <pointsize>12</pointsize>
-                      <bold>true</bold>
+                      <family>Segoe UI</family>
+                      <pointsize>11</pointsize>
+                      <italic>true</italic>
+                      <bold>false</bold>
                      </font>
+                    </property>
+                    <property name="styleSheet">
+                     <string notr="true">font: 12pt &quot;Segoe UI&quot;;
+font: italic 11pt &quot;Segoe UI&quot;;</string>
                     </property>
                     <property name="text">
                      <string>1 April 2025</string>
@@ -499,6 +596,13 @@ border: none
                </item>
                <item>
                 <widget class="QFrame" name="project2Frame">
+                 <property name="font">
+                  <font>
+                   <family>Segoe UI</family>
+                   <pointsize>16</pointsize>
+                   <bold>false</bold>
+                  </font>
+                 </property>
                  <property name="frameShape">
                   <enum>QFrame::Shape::StyledPanel</enum>
                  </property>
@@ -510,10 +614,15 @@ border: none
                    <widget class="QLabel" name="fileName2">
                     <property name="font">
                      <font>
-                      <family>Dubai</family>
+                      <family>Segoe UI</family>
                       <pointsize>12</pointsize>
-                      <bold>true</bold>
+                      <italic>false</italic>
+                      <fontweight>DemiBold</fontweight>
                      </font>
+                    </property>
+                    <property name="styleSheet">
+                     <string notr="true">font: 12pt &quot;Segoe UI&quot;;
+font: 600 12pt &quot;Segoe UI&quot;;</string>
                     </property>
                     <property name="text">
                      <string>Ben’s Bending Knee Project</string>
@@ -524,10 +633,15 @@ border: none
                    <widget class="QLabel" name="lastAccess2">
                     <property name="font">
                      <font>
-                      <family>Dubai</family>
-                      <pointsize>12</pointsize>
-                      <bold>true</bold>
+                      <family>Segoe UI</family>
+                      <pointsize>11</pointsize>
+                      <italic>true</italic>
+                      <bold>false</bold>
                      </font>
+                    </property>
+                    <property name="styleSheet">
+                     <string notr="true">font: 12pt &quot;Segoe UI&quot;;
+font: italic 11pt &quot;Segoe UI&quot;;</string>
                     </property>
                     <property name="text">
                      <string>1 April 2024</string>
@@ -539,6 +653,13 @@ border: none
                </item>
                <item>
                 <widget class="QFrame" name="project3Frame">
+                 <property name="font">
+                  <font>
+                   <family>Segoe UI</family>
+                   <pointsize>16</pointsize>
+                   <bold>false</bold>
+                  </font>
+                 </property>
                  <property name="frameShape">
                   <enum>QFrame::Shape::StyledPanel</enum>
                  </property>
@@ -550,10 +671,15 @@ border: none
                    <widget class="QLabel" name="fileName3">
                     <property name="font">
                      <font>
-                      <family>Dubai</family>
+                      <family>Segoe UI</family>
                       <pointsize>12</pointsize>
-                      <bold>true</bold>
+                      <italic>false</italic>
+                      <fontweight>DemiBold</fontweight>
                      </font>
+                    </property>
+                    <property name="styleSheet">
+                     <string notr="true">font: 12pt &quot;Segoe UI&quot;;
+font: 600 12pt &quot;Segoe UI&quot;;</string>
                     </property>
                     <property name="text">
                      <string>Hanna’s Hyper Knee Project</string>
@@ -564,10 +690,15 @@ border: none
                    <widget class="QLabel" name="lastAccess3">
                     <property name="font">
                      <font>
-                      <family>Dubai</family>
-                      <pointsize>12</pointsize>
-                      <bold>true</bold>
+                      <family>Segoe UI</family>
+                      <pointsize>11</pointsize>
+                      <italic>true</italic>
+                      <bold>false</bold>
                      </font>
+                    </property>
+                    <property name="styleSheet">
+                     <string notr="true">font: 12pt &quot;Segoe UI&quot;;
+font: italic 11pt &quot;Segoe UI&quot;;</string>
                     </property>
                     <property name="text">
                      <string>1 April 2023</string>
