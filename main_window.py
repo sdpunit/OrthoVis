@@ -3,7 +3,7 @@ from PySide6.QtWidgets import QMainWindow, QStackedWidget, QPushButton, QWidget,
 
 # Import the application pages from frontend_pages.
 from frontend_pages.startup.startup_window import HomePage
-from frontend_pages.new_project.new_project_window import NewProject
+from frontend_pages.project_setup.project_setup_window import ProjectSetup
 from frontend_pages.segmentation.segmentation_window import Segmentation
 
 # Imports for Widgets that are yet to be created...
@@ -27,7 +27,7 @@ class MainWindow(QMainWindow):
         self.homepage = HomePage()
 
         # Sets up new project, imports CT and Fluro etc
-        self.newproject = NewProject()
+        self.projectsetup = ProjectSetup()
 
         # Visualise the Imported ct, start segmentation
         self.segmentation = Segmentation()
@@ -47,7 +47,7 @@ class MainWindow(QMainWindow):
 
         # Add the pages to the widget stack
         self.stack.addWidget(self.homepage)       # index 0
-        self.stack.addWidget(self.newproject)     # index 1
+        self.stack.addWidget(self.projectsetup)     # index 1
         self.stack.addWidget(self.segmentation)   # index 2
         # self.stack.addWidget(self.calibration)       # index 3
         # self.stack.addWidget(self.defineaxis)     # index 4
@@ -57,9 +57,3 @@ class MainWindow(QMainWindow):
 
         self.stack.setCurrentIndex(0)             # Start at the opening page
 
-        ## IMPLEMENT A BUNCH OF LOGIC HERE TO CYCLE BETWEEN STATES
-        # singletonPatient_instance = SingletonPatient.get_instance()
-        # context = Context(HomePageState(), singletonPatient_instance)
-        ## Transit to Segment state on clicking Import CT
-        # Todo:
-        

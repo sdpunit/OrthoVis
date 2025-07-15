@@ -1,6 +1,6 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
-from classes.singleton import SingletonPatient
+from classes.singleton import SingletonData
 
 
 class Context:
@@ -11,20 +11,20 @@ class Context:
     """
 
     _state = None
-    _singleton_patient = None
+    _singleton_data = None
     # _name = None
     # _description = None
     """
     A reference to the current state of the Context.
     """
 
-    def __init__(self, state: ProjectState, patient:SingletonPatient) -> None:
+    def __init__(self, state: DataState, data: SingletonData) -> None:
         self.transition_to(state)
-        self._singleton_patient = patient
+        self._singleton_data = data
         # self._name = patient.name
         # self._description = description
 
-    def transition_to(self, state: ProjectState):
+    def transition_to(self, state: DataState):
         """
         The Context allows changing the State object at runtime.
         """
@@ -42,7 +42,7 @@ class Context:
 
 
 
-class ProjectState(ABC):
+class DataState(ABC):
     """
     The base State class declares methods that all Concrete State should
     implement and also provides a backreference to the Context object,
@@ -69,45 +69,45 @@ Concrete States implement various behaviors, associated with a state of the
 Context.
 """
 
-class HomePageState(ProjectState):
+class RawState(DataState):
     def handle(self) -> None:
-        print("HomePageState wants to change the state of the context.")
+        print("RawState wants to change the state of the context.")
         self.context.transition_to(SegmentState())
 
-class SegmentState(ProjectState):
+class SegmentState(DataState):
     def handle(self) -> None:
         print("SegmentState wants to change the state of the context.")
         self.context.transition_to(CalibrationState())
 
-class CalibrationState(ProjectState):
+class CalibrationState(DataState):
     def handle(self) -> None:
         print("CalibrationState wants to change the state of the context.")
         self.context.transition_to(RegistrationState())
 
-class RegistrationState(ProjectState):
+class RegistrationState(DataState):
     def handle(self) -> None:
         print("Registration wants to change the state of the context.")
         self.context.transition_to(ReferenceSysState())
 
-class ReferenceSysState(ProjectState):
+class ReferenceSysState(DataState):
     def handle(self) -> None:
         print("ReferenceSysState wants to change the state of the context.")
         self.context.transition_to(MotionState())
 
-class MotionState(ProjectState):
+class MotionState(DataState):
     def handle(self) -> None:
         print("Motion wants to change the state of the context.")
         self.context.transition_to(VisualState())
 
-class VisualState(ProjectState):
+class VisualState(DataState):
     def handle(self) -> None:
         self.context.transition_to(None)
 
 
-#if __name__ == "__main__":
+# if __name__ == "__main__":
 #     # The client code.
-#     singletonPatient_instance = SingletonPatient.get_instance()
-#     context = Context(HomePageState())
+#     Singleton_instance = SingletonData.get_instance()
+#     context = Context(RawState(), Singleton_instance)
 #     context.request()
 #     context.request()
 #     context.request()

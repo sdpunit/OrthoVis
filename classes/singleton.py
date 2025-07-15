@@ -51,16 +51,16 @@ class Patient:
     return "Name: "+self.name+"\n Age: "+str(self.age) + "\n CT: "+self.CT+"\n Flurocopy: "+self.fluroscopy
 
 
-class SingletonPatient:
+class SingletonData:
     _instance = None
     _patient = None
 
     @staticmethod
     def get_instance():
-        if SingletonPatient._instance is None:
-            SingletonPatient._instance = SingletonPatient()
-            SingletonPatient._patient = Patient("", 0, "", "", "")
-        return SingletonPatient._instance
+        if SingletonData._instance is None:
+            SingletonData._instance = SingletonData()
+            SingletonData._patient = Patient("", 0, "", "", "")
+        return SingletonData._instance
     
     @property
     def patient(self):
@@ -70,7 +70,7 @@ class SingletonPatient:
 
 # Usage
 # if __name__ == "__main__":
-#     singletonPatient_instance = SingletonPatient.get_instance()
+#     singletonPatient_instance = SingletonData.get_instance()
 #     patient = singletonPatient_instance.patient
 #     patient.name = "Test"
 #     patient.age = 30
@@ -85,7 +85,7 @@ class SingletonPatient:
 #     assert patient.fluroscopy == "Fluoro"
 #     assert patient.segmentedCT =="SegmentedCT"
 
-#     singletonPatient_instance2 = SingletonPatient.get_instance()
+#     singletonPatient_instance2 = SingletonData.get_instance()
 
 #     assert id(singletonPatient_instance) == id(singletonPatient_instance2)
 
