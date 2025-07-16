@@ -1,7 +1,76 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
-from classes.singleton import SingletonData
 
+
+class Patient:
+  def __init__(self, name : str, age : int, CT : str, fluroscopy : str, segmentedCT : str):
+    self.name = name
+    self.age = age
+    self.CT = CT
+    self.fluroscopy = fluroscopy
+    self.segmentedCT = segmentedCT
+  
+  @property
+  def name(self):
+    return self._name
+
+  @name.setter
+  def name(self, value):
+    self._name = value.upper()
+
+  @property
+  def age(self):
+    return self._age
+
+  @age.setter
+  def age(self, value):
+    self._age = value
+
+  @property
+  def CT(self):
+    return self._CT
+
+  @CT.setter
+  def CT(self, value):
+    self._CT = value
+
+  @property
+  def fluroscopy(self):
+    return self._fluroscopy 
+
+  @fluroscopy.setter
+  def fluroscopy(self, value):
+    self._fluroscopy = value
+
+  @property
+  def segmentedCT(self):
+    return self._segmentedCT 
+
+  @segmentedCT.setter
+  def segmentedCT(self, value):
+    self._segmentedCT = value
+
+
+  def to_string(self):
+    return "Name: "+self.name+"\n Age: "+str(self.age) + "\n CT: "+self.CT+"\n Flurocopy: "+self.fluroscopy
+  
+
+class SingletonPatient:
+    _instance = None
+    _patient = None
+    _state = None
+
+    @staticmethod
+    def get_instance():
+        if SingletonPatient._instance is None:
+            SingletonPatient._instance = SingletonPatient()
+            SingletonPatient._patient = Patient("", 0, "", "", "")
+        return SingletonPatient._instance
+    
+    @property
+    def patient(self):
+      return self._patient
+  
 
 class Context:
     """
@@ -10,7 +79,6 @@ class Context:
     state of the Context.
     """
 
-    _state = None
     _singleton_data = None
     # _name = None
     # _description = None
@@ -18,9 +86,9 @@ class Context:
     A reference to the current state of the Context.
     """
 
-    def __init__(self, state: DataState, data: SingletonData) -> None:
-        self.transition_to(state)
+    def __init__(self, state: DataState, data: SingletonPatient) -> None:
         self._singleton_data = data
+        self.transition_to(state)
         # self._name = patient.name
         # self._description = description
 
@@ -30,15 +98,15 @@ class Context:
         """
 
         print(f"Context: Transition to {type(state).__name__}")
-        self._state = state
-        self._state.context = self
+        self._singleton_data._state = state
+        self._singleton_data._state.context = self
 
     """
     The Context delegates part of its behavior to the current State object.
     """
 
     def request(self):
-        self._state.handle()
+        self._singleton_data._state.handle()
 
 
 
@@ -106,7 +174,7 @@ class VisualState(DataState):
 
 # if __name__ == "__main__":
 #     # The client code.
-#     Singleton_instance = SingletonData.get_instance()
+#     Singleton_instance = SingletonPatient.get_instance()
 #     context = Context(RawState(), Singleton_instance)
 #     context.request()
 #     context.request()

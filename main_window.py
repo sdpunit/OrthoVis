@@ -11,10 +11,7 @@ from frontend_pages.segmentation.segmentation_window import Segmentation
 # from frontend_pages.axis_window import DefineAxis
 # from frontend_pages.visualisation_window import Visualisation
 
-# Import for Singleton and State classes
-from classes.singleton import SingletonPatient
-from classes.states import Context
-from classes.states import HomePageState
+
 
 # This file manages the actual display window and handles the logic to decide which page to show.
 
