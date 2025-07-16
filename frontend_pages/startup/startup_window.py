@@ -43,11 +43,6 @@ class HomePage(QWidget):
             self,
             "Select the CT sequence folder (e.g. SE000000)"
         )
-        ## IMPLEMENT A BUNCH OF LOGIC HERE TO CYCLE BETWEEN STATES
-        # singletonPatient_instance = SingletonPatient.get_instance()
-        # context = Context(HomePageState(), singletonPatient_instance)
-        ## Transit to Segment state on clicking Import CT
-        # Todo:
         
         if folder_path:
             print(f"Selected folder: {folder_path}")
