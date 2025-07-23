@@ -13,6 +13,8 @@ class ProjectSetup(QWidget):
         self.ui.titlebar.ui.title.setText("New Project")
         self.ui.projectNameInput.setText(name)
         print(self.ui.projectNameInput.text())
+    
+    
 
     def changeName(self, new_name):
         name = new_name
