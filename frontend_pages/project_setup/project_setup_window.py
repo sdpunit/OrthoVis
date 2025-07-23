@@ -10,7 +10,7 @@ class ProjectSetup(QWidget):
         self.ui = Ui_Form()
         self.ui.setupUi(self)
 
-        self.ui.titlebar.ui.title.setText("New Project")
+        self.ui.titlebar.ui.title.setText("Project Setup")
         self.ui.projectNameInput.setText(name)
         print(self.ui.projectNameInput.text())
     
