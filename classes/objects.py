@@ -105,8 +105,14 @@ class Context:
     The Context delegates part of its behavior to the current State object.
     """
 
-    def request(self):
-        self._singleton_data._state.handle()
+    def request_import(self, path: str):
+        self._singleton_data._state.handle_import(path)
+
+    def request_process(self):
+        self._singleton_data._state.handle_process()
+
+    def request_save(self):
+        self._singleton_data._state.handle_save()
 
 
 
@@ -127,9 +133,16 @@ class DataState(ABC):
         self._context = context
 
     @abstractmethod
-    def handle(self) -> None:
+    def handle_import(self) -> None:
         pass
-
+    
+    @abstractmethod
+    def handle_process(self) -> None:
+        pass
+    
+    @abstractmethod
+    def handle_save(self) -> None:
+        pass
 
 
 """
@@ -138,45 +151,102 @@ Context.
 """
 
 class RawState(DataState):
-    def handle(self) -> None:
+    def handle_import(self) -> None:
+        print("RawState wants to change the state of the context.")
+        self.context.transition_to(SegmentState())
+
+    def handle_process(self) -> None:
+        print("RawState wants to change the state of the context.")
+        self.context.transition_to(SegmentState())
+
+    def handle_save(self) -> None:
         print("RawState wants to change the state of the context.")
         self.context.transition_to(SegmentState())
 
 class SegmentState(DataState):
-    def handle(self) -> None:
-        print("SegmentState wants to change the state of the context.")
-        self.context.transition_to(CalibrationState())
+    def handle_import(self) -> None:
+        print("RawState wants to change the state of the context.")
+        self.context.transition_to(SegmentState())
+
+    def handle_process(self) -> None:
+        print("RawState wants to change the state of the context.")
+        self.context.transition_to(SegmentState())
+
+    def handle_save(self) -> None:
+        print("RawState wants to change the state of the context.")
+        self.context.transition_to(SegmentState())
 
 class CalibrationState(DataState):
-    def handle(self) -> None:
-        print("CalibrationState wants to change the state of the context.")
-        self.context.transition_to(RegistrationState())
+    def handle_import(self) -> None:
+        print("RawState wants to change the state of the context.")
+        self.context.transition_to(SegmentState())
+
+    def handle_process(self) -> None:
+        print("RawState wants to change the state of the context.")
+        self.context.transition_to(SegmentState())
+
+    def handle_save(self) -> None:
+        print("RawState wants to change the state of the context.")
+        self.context.transition_to(SegmentState())
 
 class RegistrationState(DataState):
-    def handle(self) -> None:
-        print("Registration wants to change the state of the context.")
-        self.context.transition_to(ReferenceSysState())
+    def handle_import(self) -> None:
+        print("RawState wants to change the state of the context.")
+        self.context.transition_to(SegmentState())
+
+    def handle_process(self) -> None:
+        print("RawState wants to change the state of the context.")
+        self.context.transition_to(SegmentState())
+
+    def handle_save(self) -> None:
+        print("RawState wants to change the state of the context.")
+        self.context.transition_to(SegmentState())
 
 class ReferenceSysState(DataState):
-    def handle(self) -> None:
-        print("ReferenceSysState wants to change the state of the context.")
-        self.context.transition_to(MotionState())
+    def handle_import(self) -> None:
+        print("RawState wants to change the state of the context.")
+        self.context.transition_to(SegmentState())
+
+    def handle_process(self) -> None:
+        print("RawState wants to change the state of the context.")
+        self.context.transition_to(SegmentState())
+
+    def handle_save(self) -> None:
+        print("RawState wants to change the state of the context.")
+        self.context.transition_to(SegmentState())
 
 class MotionState(DataState):
-    def handle(self) -> None:
-        print("Motion wants to change the state of the context.")
-        self.context.transition_to(VisualState())
+    def handle_import(self) -> None:
+        print("RawState wants to change the state of the context.")
+        self.context.transition_to(SegmentState())
+
+    def handle_process(self) -> None:
+        print("RawState wants to change the state of the context.")
+        self.context.transition_to(SegmentState())
+
+    def handle_save(self) -> None:
+        print("RawState wants to change the state of the context.")
+        self.context.transition_to(SegmentState())
 
 class VisualState(DataState):
-    def handle(self) -> None:
-        self.context.transition_to(None)
+    def handle_import(self) -> None:
+        print("RawState wants to change the state of the context.")
+        self.context.transition_to(SegmentState())
+
+    def handle_process(self) -> None:
+        print("RawState wants to change the state of the context.")
+        self.context.transition_to(SegmentState())
+
+    def handle_save(self) -> None:
+        print("RawState wants to change the state of the context.")
+        self.context.transition_to(SegmentState())
 
 
 # if __name__ == "__main__":
 #     # The client code.
 #     Singleton_instance = SingletonPatient.get_instance()
 #     context = Context(RawState(), Singleton_instance)
-#     context.request()
-#     context.request()
-#     context.request()
-#     context.request()
+#     context.handle_import_import()
+#     context.handle_import_import()
+#     context.handle_import_import()
+#     context.handle_import_import()
