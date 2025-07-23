@@ -1,5 +1,9 @@
 from __future__ import annotations
+
+import json
 from abc import ABC, abstractmethod
+from pathlib import Path
+import os
 
 
 class Patient:
@@ -61,7 +65,7 @@ class SingletonPatient:
     _state = None
 
     @staticmethod
-    def get_instance():
+    def get_instance(name: str = "", age: int = 0, CT: str = "", fluroscopy: str = "", segmentedCT: str = "") -> SingletonPatient:
         if SingletonPatient._instance is None:
             SingletonPatient._instance = SingletonPatient()
             SingletonPatient._patient = Patient("", 0, "", "", "")
@@ -70,6 +74,10 @@ class SingletonPatient:
     @property
     def patient(self):
       return self._patient
+
+    @property
+    def state(self):
+        return self._state
   
 
 class Context:
@@ -123,7 +131,16 @@ class DataState(ABC):
     associated with the State. This backreference can be used by States to
     transition the Context to another State.
     """
+    def __init__(self, state_name):
+        self._state_name = state_name
 
+    @property
+    def state_name(self):
+        return self._state_name
+
+    @state_name.setter
+    def state_name(self, value):
+        self._state_name = value
     @property
     def context(self) -> Context:
         return self._context
@@ -151,6 +168,8 @@ Context.
 """
 
 class RawState(DataState):
+    def __init__(self):
+        super().__init__("RawState")
     def handle_import(self) -> None:
         print("RawState wants to change the state of the context.")
         self.context.transition_to(SegmentState())
@@ -159,11 +178,23 @@ class RawState(DataState):
         print("RawState wants to change the state of the context.")
         self.context.transition_to(SegmentState())
 
-    def handle_save(self) -> None:
-        print("RawState wants to change the state of the context.")
-        self.context.transition_to(SegmentState())
+    def handle_save(self,context:Context) -> None:
+        print("RawState wants to save the context to local space.")
+        current_dir = Path(__file__).resolve().parent
+        parent_dir = current_dir.parent
+        folder = parent_dir / "Projects" / context.patient.name
+        folder.mkdir(parents=True, exist_ok=True)
+        data = {
+            "name": context._singleton_data._patient._name,
+            "age": context._singleton_data._patient._age,
+            "state": context._state.state_name,
+        }
+        with open(os.path.join(folder, "data.json"), "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
 
 class SegmentState(DataState):
+    def __init__(self):
+        super().__init__("SegmentState")
     def handle_import(self) -> None:
         print("RawState wants to change the state of the context.")
         self.context.transition_to(SegmentState())
@@ -177,6 +208,8 @@ class SegmentState(DataState):
         self.context.transition_to(SegmentState())
 
 class CalibrationState(DataState):
+    def __init__(self):
+        super().__init__("CalibrationState")
     def handle_import(self) -> None:
         print("RawState wants to change the state of the context.")
         self.context.transition_to(SegmentState())
@@ -190,6 +223,8 @@ class CalibrationState(DataState):
         self.context.transition_to(SegmentState())
 
 class RegistrationState(DataState):
+    def __init__(self):
+        super().__init__("RegistrationState")
     def handle_import(self) -> None:
         print("RawState wants to change the state of the context.")
         self.context.transition_to(SegmentState())
@@ -203,6 +238,8 @@ class RegistrationState(DataState):
         self.context.transition_to(SegmentState())
 
 class ReferenceSysState(DataState):
+    def __init__(self):
+        super().__init__("ReferenceSysState")
     def handle_import(self) -> None:
         print("RawState wants to change the state of the context.")
         self.context.transition_to(SegmentState())
@@ -216,6 +253,8 @@ class ReferenceSysState(DataState):
         self.context.transition_to(SegmentState())
 
 class MotionState(DataState):
+    def __init__(self):
+        super().__init__("MotionState")
     def handle_import(self) -> None:
         print("RawState wants to change the state of the context.")
         self.context.transition_to(SegmentState())
@@ -229,6 +268,8 @@ class MotionState(DataState):
         self.context.transition_to(SegmentState())
 
 class VisualState(DataState):
+    def __init__(self):
+        super().__init__("VisualState")
     def handle_import(self) -> None:
         print("RawState wants to change the state of the context.")
         self.context.transition_to(SegmentState())
