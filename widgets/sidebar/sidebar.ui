@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>300</width>
-    <height>599</height>
+    <height>593</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -168,20 +168,20 @@ color: white;</string>
         </property>
         <property name="font">
          <font>
-          <pointsize>19</pointsize>
+          <pointsize>18</pointsize>
           <bold>true</bold>
           <kerning>true</kerning>
          </font>
         </property>
         <property name="styleSheet">
-         <string notr="true">color: white;
-background-color: #1D3461;
-border: none;
-padding: 10px 25px;      
-text-align: center;</string>
+         <string notr="true">QPushButton { color: white; background-color: #1D3461; border: none; padding: 10px 25px;  text-align: center;}               
+QPushButton:hover { background-color: #6f8ab7; font-size: 20pt;}</string>
         </property>
         <property name="text">
          <string>Project Setup</string>
+        </property>
+        <property name="default">
+         <bool>false</bool>
         </property>
        </widget>
       </item>
@@ -200,11 +200,8 @@ text-align: center;</string>
          </font>
         </property>
         <property name="styleSheet">
-         <string notr="true">color: white;
-background-color: #1D3461;
-border: none;
-padding: 10px 25px;      
-text-align: center;</string>
+         <string notr="true">QPushButton { color: white; background-color: #1D3461; border: none; padding: 10px 25px;  text-align: center;}               
+QPushButton:hover { background-color: #6f8ab7; font-size: 20pt;}</string>
         </property>
         <property name="text">
          <string>Segmentation</string>
@@ -226,11 +223,8 @@ text-align: center;</string>
          </font>
         </property>
         <property name="styleSheet">
-         <string notr="true">color: white;
-background-color: #1D3461;
-border: none;
-padding: 10px 25px;      
-text-align: center;</string>
+         <string notr="true">QPushButton { color: white; background-color: #1D3461; border: none; padding: 10px 25px;  text-align: center;}               
+QPushButton:hover { background-color: #6f8ab7; font-size: 20pt;}</string>
         </property>
         <property name="text">
          <string>Calibration</string>
@@ -252,11 +246,8 @@ text-align: center;</string>
          </font>
         </property>
         <property name="styleSheet">
-         <string notr="true">color: white;
-background-color: #1D3461;
-border: none;
-padding: 10px 25px;      
-text-align: center;</string>
+         <string notr="true">QPushButton { color: white; background-color: #1D3461; border: none; padding: 10px 25px;  text-align: center;}               
+QPushButton:hover { background-color: #6f8ab7; font-size: 20pt;}</string>
         </property>
         <property name="text">
          <string>Define Axis</string>
@@ -278,14 +269,14 @@ text-align: center;</string>
          </font>
         </property>
         <property name="styleSheet">
-         <string notr="true">color: white;
-background-color: #1D3461;
-border: none;
-padding: 10px 25px;      
-text-align: center;</string>
+         <string notr="true">QPushButton { color: white; background-color: #1D3461; border: none; padding: 10px 25px;  text-align: center;}               
+QPushButton:hover { background-color: #6f8ab7; font-size: 20pt;}</string>
         </property>
         <property name="text">
          <string>Registration</string>
+        </property>
+        <property name="flat">
+         <bool>false</bool>
         </property>
        </widget>
       </item>
@@ -304,11 +295,8 @@ text-align: center;</string>
          </font>
         </property>
         <property name="styleSheet">
-         <string notr="true">color: white;
-background-color: #1D3461;
-border: none;
-padding: 10px 25px;      
-text-align: center;</string>
+         <string notr="true">QPushButton { color: white; background-color: #1D3461; border: none; padding: 10px 25px;  text-align: center;}               
+QPushButton:hover { background-color: #6f8ab7; font-size: 20pt;}</string>
         </property>
         <property name="text">
          <string>Visualisation</string>
