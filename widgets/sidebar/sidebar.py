@@ -13,7 +13,12 @@ class Sidebar(QWidget):
 
         self.ui.project_setup.clicked.connect(self.select_project_setup)
         self.ui.segmentation.clicked.connect(self.select_segmentation)
-        
+
+        # These pages haven't been created yet
+        # self.ui.calibration.clicked.connect(self.select_calibration)
+        # self.ui.define_axis.clicked.connect(self.select_define_axis)
+        # self.ui.registration.clicked.connect(self.select_registration)
+        # self.ui.visualisation.clicked.connect(self.select_visualisation)
 
     def select_project_setup(self):
         print(self.parent().parent())
