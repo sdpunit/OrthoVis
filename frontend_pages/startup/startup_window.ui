@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1175</width>
-    <height>740</height>
+    <height>1321</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -186,7 +186,7 @@ font: 700 56pt &quot;Segoe UI&quot;;</string>
              </widget>
             </item>
             <item row="3" column="0">
-             <layout class="QVBoxLayout" name="selectionLayout" stretch="1,2,1">
+             <layout class="QVBoxLayout" name="selectionLayout" stretch="1,2,2">
               <item>
                <layout class="QHBoxLayout" name="titles">
                 <item>
@@ -330,8 +330,20 @@ border: transparent;</string>
                      <x>0</x>
                      <y>0</y>
                      <width>120</width>
-                     <height>30</height>
+                     <height>40</height>
                     </rect>
+                   </property>
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Minimum" vsizetype="MinimumExpanding">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>0</width>
+                     <height>30</height>
+                    </size>
                    </property>
                    <property name="font">
                     <font>
@@ -391,8 +403,20 @@ border: transparent</string>
                      <x>0</x>
                      <y>0</y>
                      <width>130</width>
-                     <height>30</height>
+                     <height>40</height>
                     </rect>
+                   </property>
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Minimum" vsizetype="MinimumExpanding">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>0</width>
+                     <height>30</height>
+                    </size>
                    </property>
                    <property name="font">
                     <font>

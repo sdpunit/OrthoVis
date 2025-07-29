@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'startup_windowRcIVfA.ui'
+## Form generated from reading UI file 'startup_windowmlIvOy.ui'
 ##
 ## Created by: Qt User Interface Compiler version 6.9.0
 ##
@@ -23,7 +23,7 @@ class Ui_HomePage(object):
     def setupUi(self, HomePage):
         if not HomePage.objectName():
             HomePage.setObjectName(u"HomePage")
-        HomePage.resize(1175, 740)
+        HomePage.resize(1175, 1321)
         sizePolicy = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -80,7 +80,7 @@ class Ui_HomePage(object):
         self.label.setObjectName(u"label")
         font3 = QFont()
         self.label.setFont(font3)
-        self.label.setPixmap(QPixmap(u"assets/orthovis_logo.png"))
+        self.label.setPixmap(QPixmap(u"C:/Users/hanna/Downloads/orthovis_logo.png"))
 
         self.gridLayout_4.addWidget(self.label, 0, 0, 1, 1)
 
@@ -198,7 +198,13 @@ class Ui_HomePage(object):
         self.newProjectFrame.setFrameShadow(QFrame.Shadow.Raised)
         self.pushButton = QPushButton(self.newProjectFrame)
         self.pushButton.setObjectName(u"pushButton")
-        self.pushButton.setGeometry(QRect(0, 0, 120, 30))
+        self.pushButton.setGeometry(QRect(0, 0, 120, 40))
+        sizePolicy4 = QSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.MinimumExpanding)
+        sizePolicy4.setHorizontalStretch(0)
+        sizePolicy4.setVerticalStretch(0)
+        sizePolicy4.setHeightForWidth(self.pushButton.sizePolicy().hasHeightForWidth())
+        self.pushButton.setSizePolicy(sizePolicy4)
+        self.pushButton.setMinimumSize(QSize(0, 30))
         font6 = QFont()
         font6.setFamilies([u"Segoe UI"])
         font6.setPointSize(12)
@@ -215,11 +221,11 @@ class Ui_HomePage(object):
 
         self.openProjectFrame = QFrame(self.rightFrame)
         self.openProjectFrame.setObjectName(u"openProjectFrame")
-        sizePolicy4 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
-        sizePolicy4.setHorizontalStretch(0)
-        sizePolicy4.setVerticalStretch(0)
-        sizePolicy4.setHeightForWidth(self.openProjectFrame.sizePolicy().hasHeightForWidth())
-        self.openProjectFrame.setSizePolicy(sizePolicy4)
+        sizePolicy5 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        sizePolicy5.setHorizontalStretch(0)
+        sizePolicy5.setVerticalStretch(0)
+        sizePolicy5.setHeightForWidth(self.openProjectFrame.sizePolicy().hasHeightForWidth())
+        self.openProjectFrame.setSizePolicy(sizePolicy5)
         self.openProjectFrame.setMinimumSize(QSize(0, 30))
         self.openProjectFrame.setFont(font1)
         self.openProjectFrame.setStyleSheet(u"background: transparent;\n"
@@ -228,7 +234,10 @@ class Ui_HomePage(object):
         self.openProjectFrame.setFrameShadow(QFrame.Shadow.Raised)
         self.pushButton_2 = QPushButton(self.openProjectFrame)
         self.pushButton_2.setObjectName(u"pushButton_2")
-        self.pushButton_2.setGeometry(QRect(0, 0, 130, 30))
+        self.pushButton_2.setGeometry(QRect(0, 0, 130, 40))
+        sizePolicy4.setHeightForWidth(self.pushButton_2.sizePolicy().hasHeightForWidth())
+        self.pushButton_2.setSizePolicy(sizePolicy4)
+        self.pushButton_2.setMinimumSize(QSize(0, 30))
         self.pushButton_2.setFont(font6)
         self.pushButton_2.setStyleSheet(u"background-color: rgb(255, 215, 0);\n"
 "border-radius: 10px;\n"
@@ -243,7 +252,7 @@ class Ui_HomePage(object):
 
         self.selectionLayout.setStretch(0, 1)
         self.selectionLayout.setStretch(1, 2)
-        self.selectionLayout.setStretch(2, 1)
+        self.selectionLayout.setStretch(2, 2)
 
         self.gridLayout_3.addLayout(self.selectionLayout, 3, 0, 1, 1)
 
