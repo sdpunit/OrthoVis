@@ -10,3 +10,14 @@ class Segmentation(QWidget):
         self.ui.setupUi(self)
 
         self.ui.titlebar.ui.title.setText("Segmentation")
+
+        self.ui.sidebar.ui.segmentation.setStyleSheet(
+        """
+            QPushButton { 
+                color: white; 
+                background-color: #6f8ab7; 
+                border: none; 
+                padding: 10px 25px;  
+                text-align: center;}
+        """
+        )
