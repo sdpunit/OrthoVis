@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'sidebarLEFOJI.ui'
+## Form generated from reading UI file 'sidebaryYsKCv.ui'
 ##
 ## Created by: Qt User Interface Compiler version 6.9.0
 ##
@@ -144,15 +144,15 @@ class Ui_Form(object):
 
         self.verticalLayout_2.addWidget(self.registration)
 
-        self.visualisaiton = QPushButton(self.background)
-        self.visualisaiton.setObjectName(u"visualisaiton")
-        sizePolicy1.setHeightForWidth(self.visualisaiton.sizePolicy().hasHeightForWidth())
-        self.visualisaiton.setSizePolicy(sizePolicy1)
-        self.visualisaiton.setFont(font2)
-        self.visualisaiton.setStyleSheet(u"QPushButton { color: white; background-color: #1D3461; border: none; padding: 10px 25px;  text-align: center;}               \n"
+        self.visualisation = QPushButton(self.background)
+        self.visualisation.setObjectName(u"visualisation")
+        sizePolicy1.setHeightForWidth(self.visualisation.sizePolicy().hasHeightForWidth())
+        self.visualisation.setSizePolicy(sizePolicy1)
+        self.visualisation.setFont(font2)
+        self.visualisation.setStyleSheet(u"QPushButton { color: white; background-color: #1D3461; border: none; padding: 10px 25px;  text-align: center;}               \n"
 "QPushButton:hover { background-color: #6f8ab7; font-size: 20pt;}")
 
-        self.verticalLayout_2.addWidget(self.visualisaiton)
+        self.verticalLayout_2.addWidget(self.visualisation)
 
         self.verticalLayout_2.setStretch(0, 1)
         self.verticalLayout_2.setStretch(1, 1)
@@ -182,6 +182,6 @@ class Ui_Form(object):
         self.calibration.setText(QCoreApplication.translate("Form", u"Calibration", None))
         self.define_axis.setText(QCoreApplication.translate("Form", u"Define Axis", None))
         self.registration.setText(QCoreApplication.translate("Form", u"Registration", None))
-        self.visualisaiton.setText(QCoreApplication.translate("Form", u"Visualisation", None))
+        self.visualisation.setText(QCoreApplication.translate("Form", u"Visualisation", None))
     # retranslateUi
 
