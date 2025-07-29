@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'segmentation_window.ui'
+## Form generated from reading UI file 'segmentation_windowmrMKqO.ui'
 ##
 ## Created by: Qt User Interface Compiler version 6.9.0
 ##
@@ -25,14 +25,12 @@ class Ui_Form(object):
     def setupUi(self, Form):
         if not Form.objectName():
             Form.setObjectName(u"Form")
-        Form.resize(825, 600)
+        Form.resize(1257, 889)
         self.horizontalLayout = QHBoxLayout(Form)
+        self.horizontalLayout.setSpacing(0)
         self.horizontalLayout.setObjectName(u"horizontalLayout")
-        self.widget = QWidget(Form)
-        self.widget.setObjectName(u"widget")
-        self.horizontalLayout_2 = QHBoxLayout(self.widget)
-        self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
-        self.sidebar = Sidebar(self.widget)
+        self.horizontalLayout.setContentsMargins(0, 0, 0, 0)
+        self.sidebar = Sidebar(Form)
         self.sidebar.setObjectName(u"sidebar")
         sizePolicy = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         sizePolicy.setHorizontalStretch(1)
@@ -40,9 +38,9 @@ class Ui_Form(object):
         sizePolicy.setHeightForWidth(self.sidebar.sizePolicy().hasHeightForWidth())
         self.sidebar.setSizePolicy(sizePolicy)
 
-        self.horizontalLayout_2.addWidget(self.sidebar)
+        self.horizontalLayout.addWidget(self.sidebar)
 
-        self.mainpanel = QWidget(self.widget)
+        self.mainpanel = QWidget(Form)
         self.mainpanel.setObjectName(u"mainpanel")
         sizePolicy1 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         sizePolicy1.setHorizontalStretch(0)
@@ -85,17 +83,16 @@ class Ui_Form(object):
         self.segment_btn_2 = QPushButton(self.frame_2)
         self.segment_btn_2.setObjectName(u"segment_btn_2")
         self.segment_btn_2.setGeometry(QRect(350, 420, 151, 41))
+        self.segment_btn_2.raise_()
+        self.frame_3.raise_()
 
         self.verticalLayout.addWidget(self.frame_2)
 
 
-        self.horizontalLayout_2.addWidget(self.mainpanel)
+        self.horizontalLayout.addWidget(self.mainpanel)
 
-        self.horizontalLayout_2.setStretch(0, 1)
-        self.horizontalLayout_2.setStretch(1, 3)
-
-        self.horizontalLayout.addWidget(self.widget)
-
+        self.horizontalLayout.setStretch(0, 1)
+        self.horizontalLayout.setStretch(1, 3)
 
         self.retranslateUi(Form)
 
@@ -110,8 +107,8 @@ class Ui_Form(object):
 "hr { height: 1px; border-width: 0; }\n"
 "li.unchecked::marker { content: \"\\2610\"; }\n"
 "li.checked::marker { content: \"\\2612\"; }\n"
-"</style></head><body style=\" font-family:'.AppleSystemUIFont'; font-size:13pt; font-weight:400; font-style:normal;\">\n"
-"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-weight:700;\">VTK Display Window</span></p></body></html>", None))
+"</style></head><body style=\" font-family:'Segoe UI'; font-size:10.5pt; font-weight:400; font-style:normal;\">\n"
+"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:'.AppleSystemUIFont'; font-size:13pt; font-weight:700;\">VTK Display Window</span></p></body></html>", None))
         self.segment_btn_2.setText(QCoreApplication.translate("Form", u"Segment CT", None))
     # retranslateUi
 
