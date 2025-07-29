@@ -12,7 +12,17 @@ class ProjectSetup(QWidget):
 
         self.ui.titlebar.ui.title.setText("Project Setup")
         self.ui.projectNameInput.setText(name)
-        print(self.ui.projectNameInput.text())
+        
+        self.ui.sidebar.ui.project_setup.setStyleSheet(
+        """
+            QPushButton { 
+                color: white; 
+                background-color: #6f8ab7; 
+                border: none; 
+                padding: 10px 25px;  
+                text-align: center;}
+        """
+        )
     
     
 

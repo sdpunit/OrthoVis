@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1217</width>
-    <height>816</height>
+    <width>1687</width>
+    <height>1224</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -47,7 +47,7 @@
        <verstretch>0</verstretch>
       </sizepolicy>
      </property>
-     <layout class="QVBoxLayout" name="verticalLayout">
+     <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0">
       <property name="spacing">
        <number>0</number>
       </property>
@@ -306,7 +306,7 @@
                <property name="minimumSize">
                 <size>
                  <width>180</width>
-                 <height>30</height>
+                 <height>40</height>
                 </size>
                </property>
                <property name="font">
@@ -339,7 +339,7 @@ border-radius: 10px
                <property name="minimumSize">
                 <size>
                  <width>180</width>
-                 <height>30</height>
+                 <height>40</height>
                 </size>
                </property>
                <property name="font">
@@ -372,7 +372,7 @@ border-radius: 10px;
                <property name="minimumSize">
                 <size>
                  <width>60</width>
-                 <height>30</height>
+                 <height>40</height>
                 </size>
                </property>
                <property name="styleSheet">
