@@ -1,8 +1,11 @@
 # This file can open pop up for importing both CT and Fluroscopy
 from PySide6.QtWidgets import QWidget
+from PySide6.QtGui import QStandardItemModel, QStandardItem
 from frontend_pages.project_setup.ui_project_setup_window import Ui_Form
+from PySide6.QtWidgets import QFileDialog
 
 name = ""
+model = QStandardItemModel()
 
 class ProjectSetup(QWidget):
     def __init__(self):
@@ -10,8 +13,13 @@ class ProjectSetup(QWidget):
         self.ui = Ui_Form()
         self.ui.setupUi(self)
 
-        self.ui.titlebar.ui.title.setText("Project Setup")
+        self.ui.importListView.setModel(model)
+
+        self.ui.titlebar.ui.title.setText("New Project")
         self.ui.projectNameInput.setText(name)
+        self.ui.importCT.clicked.connect(self.handleImportCT)
+        self.ui.importFluoro.clicked.connect(self.handleImportFluoro)
+        self.ui.save.clicked.connect(self.handleSave)
         
         self.ui.sidebar.ui.project_setup.setStyleSheet(
         """
@@ -23,7 +31,34 @@ class ProjectSetup(QWidget):
                 text-align: center;}
         """
         )
+
+
+    def handleSave(self):
+        self.parent().setCurrentIndex(2)
     
+    def handleImportCT(self):
+        folder_path = QFileDialog.getExistingDirectory(
+            self,
+            "Select the CT sequence folder (e.g. SE000000)"
+        )
+        
+        if folder_path:
+            item = QStandardItem(folder_path)
+            model.appendRow(item)
+
+            print(f"Selected folder: {folder_path}")
+
+
+    def handleImportFluoro(self):
+        folder_path = QFileDialog.getExistingDirectory(
+            self,
+            "Select the CT sequence folder (e.g. SE000000)"
+        )
+        
+        if folder_path:
+            item = QStandardItem(folder_path)
+            model.appendRow(item)
+            print(f"Selected folder: {folder_path}")
     
 
     def changeName(self, new_name):
