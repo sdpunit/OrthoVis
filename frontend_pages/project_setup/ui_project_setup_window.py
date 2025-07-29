@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'new_project_windowGZYsbk.ui'
+## Form generated from reading UI file 'project_setup_windowetDqOH.ui'
 ##
 ## Created by: Qt User Interface Compiler version 6.9.0
 ##
@@ -26,7 +26,7 @@ class Ui_Form(object):
     def setupUi(self, Form):
         if not Form.objectName():
             Form.setObjectName(u"Form")
-        Form.resize(839, 669)
+        Form.resize(1687, 1224)
         self.horizontalLayout = QHBoxLayout(Form)
         self.horizontalLayout.setSpacing(0)
         self.horizontalLayout.setObjectName(u"horizontalLayout")
@@ -175,7 +175,7 @@ class Ui_Form(object):
         sizePolicy4.setVerticalStretch(0)
         sizePolicy4.setHeightForWidth(self.importFluoro.sizePolicy().hasHeightForWidth())
         self.importFluoro.setSizePolicy(sizePolicy4)
-        self.importFluoro.setMinimumSize(QSize(180, 30))
+        self.importFluoro.setMinimumSize(QSize(180, 40))
         font1 = QFont()
         font1.setFamilies([u"Segoe UI"])
         font1.setPointSize(12)
@@ -193,7 +193,7 @@ class Ui_Form(object):
         self.importCT.setObjectName(u"importCT")
         sizePolicy4.setHeightForWidth(self.importCT.sizePolicy().hasHeightForWidth())
         self.importCT.setSizePolicy(sizePolicy4)
-        self.importCT.setMinimumSize(QSize(180, 30))
+        self.importCT.setMinimumSize(QSize(180, 40))
         self.importCT.setFont(font1)
         self.importCT.setStyleSheet(u"background-color: rgb(255, 215, 0);\n"
 "font: 600 12pt \"Segoe UI\";\n"
@@ -209,7 +209,7 @@ class Ui_Form(object):
         sizePolicy5.setVerticalStretch(1)
         sizePolicy5.setHeightForWidth(self.save.sizePolicy().hasHeightForWidth())
         self.save.setSizePolicy(sizePolicy5)
-        self.save.setMinimumSize(QSize(60, 30))
+        self.save.setMinimumSize(QSize(60, 40))
         self.save.setStyleSheet(u"background-color: rgb(255, 215, 0);\n"
 "font: 600 12pt \"Segoe UI\";\n"
 "border-radius: 10px;\n"
