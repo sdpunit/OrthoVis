@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1687</width>
-    <height>1224</height>
+    <width>623</width>
+    <height>564</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -291,7 +291,7 @@
             <number>9</number>
            </property>
            <item>
-            <layout class="QHBoxLayout" name="importsLayout" stretch="1,1,0">
+            <layout class="QHBoxLayout" name="importsLayout" stretch="1,0">
              <property name="spacing">
               <number>20</number>
              </property>
@@ -318,46 +318,19 @@
                 </font>
                </property>
                <property name="styleSheet">
-                <string notr="true">background-color: rgb(255, 215, 0);
+                <string notr="true">QPushButton {
+background-color: rgb(255, 215, 0);
 font: 600 12pt &quot;Segoe UI&quot;;
-border-radius: 10px
+border-radius: 10px;}
+
+QPushButton:hover {
+background-color: rgb(255, 230, 50);
+font-size: 14pt;
+}
 </string>
                </property>
                <property name="text">
-                <string>Import Fluoroscopy</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QPushButton" name="importCT">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
-               <property name="minimumSize">
-                <size>
-                 <width>180</width>
-                 <height>40</height>
-                </size>
-               </property>
-               <property name="font">
-                <font>
-                 <family>Segoe UI</family>
-                 <pointsize>12</pointsize>
-                 <italic>false</italic>
-                 <fontweight>DemiBold</fontweight>
-                </font>
-               </property>
-               <property name="styleSheet">
-                <string notr="true">background-color: rgb(255, 215, 0);
-font: 600 12pt &quot;Segoe UI&quot;;
-border-radius: 10px;
-</string>
-               </property>
-               <property name="text">
-                <string>Import CT</string>
+                <string>Import Data</string>
                </property>
               </widget>
              </item>
@@ -376,9 +349,15 @@ border-radius: 10px;
                 </size>
                </property>
                <property name="styleSheet">
-                <string notr="true">background-color: rgb(255, 215, 0);
+                <string notr="true">QPushButton {
+background-color: rgb(255, 215, 0);
 font: 600 12pt &quot;Segoe UI&quot;;
-border-radius: 10px;
+border-radius: 10px;}
+
+QPushButton:hover {
+background-color: rgb(255, 230, 50);
+font-size: 14pt;
+}
 </string>
                </property>
                <property name="text">
