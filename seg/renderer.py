@@ -203,6 +203,8 @@ class QuadStyle(vtkInteractorStyleImage):
 
         self.GetInteractor().GetRenderWindow().Render()
 
+
+
 # Main entry point
 
 def main(ct_path: str):
