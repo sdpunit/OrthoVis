@@ -8,23 +8,42 @@ import SimpleITK as sitk
 
 
 class Patient:
-    def __init__(self, name: str, age: int, CT: str, fluoroscopy: str):
+    def __init__(self, name: str, age: int, CT: str):
         self.name = name
         self.age = age
-        file_names = sorted([os.path.join(CT, f) for f in os.listdir(CT)])
-        reader = sitk.ImageSeriesReader()
-        reader.SetFileNames(file_names)
-        ct_image = reader.Execute()
-        self.CT = ct_image
-        if fluoroscopy == "":
-            self.fluoroscopy = sitk.Image()
-        else:
-            file_names = sorted([os.path.join(fluoroscopy, f) for f in os.listdir(fluoroscopy)])
-            reader = sitk.ImageSeriesReader()
-            reader.SetFileNames(file_names)
-            fluoroscopy_image = reader.Execute()
-            self.fluoroscopy = fluoroscopy_image
+        st_path = os.path.abspath(CT)
+        if not os.path.exists(st_path):
+            raise FileNotFoundError(f"❌ path dose not exist: {st_path}")
 
+        # 路径拼接
+        se1_path = os.path.join(st_path, "SE000001")
+        se3_path = os.path.join(st_path, "SE000003")
+
+        # 检查 CT 和 fluoroscopy 是否存在
+        if not os.path.exists(se1_path):
+            raise FileNotFoundError(f"❌ Fluoroscopy path dose not exist: {se1_path}")
+        if not os.path.exists(se3_path):
+            raise FileNotFoundError(f"❌ CT path dose not exist: {se3_path}")
+
+        # 加载 fluoroscopy (SE000001)
+        self.fluoroscopy = self._load_series(se1_path)
+        print(f"✅ loading fluoroscopy data (SE000001)")
+
+        # 加载 CT (SE000003)
+        self.CT = self._load_series(se3_path,True)
+        print(f"✅ loading CT data (SE000003)")
+
+    def _load_series(self, series_path,is_ct: bool = False):
+        files = sorted([os.path.join(series_path, f) for f in os.listdir(series_path)])
+        if is_ct:
+            # 多切片的 CT 用 3D volume 读取
+            reader = sitk.ImageSeriesReader()
+            reader.SetFileNames(files)
+            return reader.Execute()
+        else:
+            # fluoroscopy 返回单张或多张2D图像列表
+            images = [sitk.ReadImage(f) for f in files]
+            return images if len(images) > 1 else images[0]
 
     @property
     def name(self):
@@ -69,10 +88,10 @@ class SingletonPatient:
     _state = None
 
     @staticmethod
-    def get_instance(name: str = "", age: int = 0, CT: str = "", fluroscopy: str = "") -> SingletonPatient:
+    def get_instance(name: str = "", age: int = 0, CT: str = "") -> SingletonPatient:
         if SingletonPatient._instance is None:
             SingletonPatient._instance = SingletonPatient()
-            SingletonPatient._patient = Patient(name, age, CT, fluroscopy)
+            SingletonPatient._patient = Patient(name, age, CT)
         return SingletonPatient._instance
 
     @property
