@@ -3,6 +3,7 @@ from PySide6.QtWidgets import QWidget
 from PySide6.QtGui import QStandardItemModel, QStandardItem
 from frontend_pages.project_setup.ui_project_setup_window import Ui_Form
 from PySide6.QtWidgets import QFileDialog
+from classes.test import *
 
 name = ""
 model = QStandardItemModel()
@@ -33,6 +34,15 @@ class ProjectSetup(QWidget):
 
 
     def handleSave(self):
+        projectName = self.ui.projectNameInput.text()
+        # Initialize a new patient and context
+        #print(f"Item: {model.itemFromIndex(0)}")
+        idx = model.index(0, 0)
+        path = model.itemFromIndex(idx).text()
+        print(f"{path}")
+        context = initialize_project(projectName, 24, path)
+        #Test for simple save function
+        save_patient_data_to_file(context, projectName)
         self.parent().setCurrentIndex(2)
     
     # def handleImportCT(self):
