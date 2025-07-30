@@ -8,23 +8,42 @@ import SimpleITK as sitk
 
 
 class Patient:
-    def __init__(self, name: str, age: int, CT: str, fluoroscopy: str):
+    def __init__(self, name: str, age: int, CT: str):
         self.name = name
         self.age = age
-        file_names = sorted([os.path.join(CT, f) for f in os.listdir(CT)])
-        reader = sitk.ImageSeriesReader()
-        reader.SetFileNames(file_names)
-        ct_image = reader.Execute()
-        self.CT = ct_image
-        if fluoroscopy == "":
-            self.fluoroscopy = sitk.Image()
-        else:
-            file_names = sorted([os.path.join(fluoroscopy, f) for f in os.listdir(fluoroscopy)])
-            reader = sitk.ImageSeriesReader()
-            reader.SetFileNames(file_names)
-            fluoroscopy_image = reader.Execute()
-            self.fluoroscopy = fluoroscopy_image
+        st_path = os.path.abspath(CT)
+        if not os.path.exists(st_path):
+            raise FileNotFoundError(f"❌ path dose not exist: {st_path}")
 
+        # 路径拼接
+        se1_path = os.path.join(st_path, "SE000001")
+        se3_path = os.path.join(st_path, "SE000003")
+
+        # 检查 CT 和 fluoroscopy 是否存在
+        if not os.path.exists(se1_path):
+            raise FileNotFoundError(f"❌ Fluoroscopy path dose not exist: {se1_path}")
+        if not os.path.exists(se3_path):
+            raise FileNotFoundError(f"❌ CT path dose not exist: {se3_path}")
+
+        # 加载 fluoroscopy (SE000001)
+        self.fluoroscopy = self._load_series(se1_path)
+        print(f"✅ loading fluoroscopy data (SE000001)")
+
+        # 加载 CT (SE000003)
+        self.CT = self._load_series(se3_path,True)
+        print(f"✅ loading CT data (SE000003)")
+
+    def _load_series(self, series_path,is_ct: bool = False):
+        files = sorted([os.path.join(series_path, f) for f in os.listdir(series_path)])
+        if is_ct:
+            # For CT, we can read a series of images
+            reader = sitk.ImageSeriesReader()
+            reader.SetFileNames(files)
+            return reader.Execute()
+        else:
+            # For fluoroscopy, we can read multiple images or a single image
+            images = [sitk.ReadImage(f) for f in files]
+            return images if len(images) > 1 else images[0]
 
     @property
     def name(self):
@@ -69,10 +88,10 @@ class SingletonPatient:
     _state = None
 
     @staticmethod
-    def get_instance(name: str = "", age: int = 0, CT: str = "", fluroscopy: str = "") -> SingletonPatient:
+    def get_instance(name: str = "", age: int = 0, CT: str = "") -> SingletonPatient:
         if SingletonPatient._instance is None:
             SingletonPatient._instance = SingletonPatient()
-            SingletonPatient._patient = Patient(name, age, CT, fluroscopy)
+            SingletonPatient._patient = Patient(name, age, CT)
         return SingletonPatient._instance
 
     @property
@@ -125,6 +144,9 @@ class Context:
 
     def request_save(self):
         self._singleton_data._state.handle_save()
+    
+    def request_string(self):
+        self._singleton_data._state.handle_to_string()
 
 
 class DataState(ABC):
@@ -134,17 +156,6 @@ class DataState(ABC):
     associated with the State. This backreference can be used by States to
     transition the Context to another State.
     """
-
-    def __init__(self, state_name):
-        self._state_name = state_name
-
-    @property
-    def state_name(self):
-        return self._state_name
-
-    @state_name.setter
-    def state_name(self, value):
-        self._state_name = value
 
     @property
     def context(self) -> Context:
@@ -166,6 +177,11 @@ class DataState(ABC):
     def handle_save(self) -> None:
         pass
 
+    @abstractmethod
+    def handle_to_string(self) -> None:
+        pass
+
+
 
 """
 Concrete States implement various behaviors, associated with a state of the
@@ -174,8 +190,6 @@ Context.
 
 
 class RawState(DataState):
-    def __init__(self):
-        super().__init__("RawState")
 
     def handle_import(self) -> None:
         print("RawState wants to change the state of the context.")
@@ -194,15 +208,16 @@ class RawState(DataState):
         data = {
             "name": context._singleton_data._patient._name,
             "age": context._singleton_data._patient._age,
-            "state": context._state.state_name,
+            "state": context._state.handle_to_string(),
         }
         with open(os.path.join(folder, "data.json"), "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
 
+    def handle_to_string(self) -> str:
+        return "RawState"
+
 
 class SegmentState(DataState):
-    def __init__(self):
-        super().__init__("SegmentState")
 
     def handle_import(self) -> None:
         print("RawState wants to change the state of the context.")
@@ -215,11 +230,12 @@ class SegmentState(DataState):
     def handle_save(self) -> None:
         print("RawState wants to change the state of the context.")
         self.context.transition_to(SegmentState())
+
+    def handle_to_string(self) -> str:
+        return "SegmentState"
 
 
 class CalibrationState(DataState):
-    def __init__(self):
-        super().__init__("CalibrationState")
 
     def handle_import(self) -> None:
         print("RawState wants to change the state of the context.")
@@ -232,11 +248,12 @@ class CalibrationState(DataState):
     def handle_save(self) -> None:
         print("RawState wants to change the state of the context.")
         self.context.transition_to(SegmentState())
+
+    def handle_to_string(self) -> str:
+        return "CalibrationState"
 
 
 class RegistrationState(DataState):
-    def __init__(self):
-        super().__init__("RegistrationState")
 
     def handle_import(self) -> None:
         print("RawState wants to change the state of the context.")
@@ -249,11 +266,12 @@ class RegistrationState(DataState):
     def handle_save(self) -> None:
         print("RawState wants to change the state of the context.")
         self.context.transition_to(SegmentState())
+    
+    def handle_to_string(self) -> str:
+        return "RegistrationState"
 
 
 class ReferenceSysState(DataState):
-    def __init__(self):
-        super().__init__("ReferenceSysState")
 
     def handle_import(self) -> None:
         print("RawState wants to change the state of the context.")
@@ -266,11 +284,12 @@ class ReferenceSysState(DataState):
     def handle_save(self) -> None:
         print("RawState wants to change the state of the context.")
         self.context.transition_to(SegmentState())
+
+    def handle_to_string(self) -> str:
+        return "ReferenceSysState"
 
 
 class MotionState(DataState):
-    def __init__(self):
-        super().__init__("MotionState")
 
     def handle_import(self) -> None:
         print("RawState wants to change the state of the context.")
@@ -283,11 +302,12 @@ class MotionState(DataState):
     def handle_save(self) -> None:
         print("RawState wants to change the state of the context.")
         self.context.transition_to(SegmentState())
+
+    def handle_to_string(self) -> str:
+        return "MotionState"
 
 
 class VisualState(DataState):
-    def __init__(self):
-        super().__init__("VisualState")
 
     def handle_import(self) -> None:
         print("RawState wants to change the state of the context.")
@@ -300,6 +320,9 @@ class VisualState(DataState):
     def handle_save(self) -> None:
         print("RawState wants to change the state of the context.")
         self.context.transition_to(SegmentState())
+
+    def handle_to_string(self) -> str:
+        return "VisualState"
 
 # if __name__ == "__main__":
 #     # The client code.
