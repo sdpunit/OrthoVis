@@ -98,7 +98,7 @@ def make_slider(label, vmin, vmax, init, xpos):
 
 # Wrapper for each quadrant viewer
 class SliceViewer:
-    def __init__(self, vtk_img, arr, orientation, viewport, name, render_window):
+    def __init__(self, vtk_img, arr, orientation, viewport, name, render_window, mask_colors, dims):
         self.name = name
         self.viewport = viewport
         # Set up vtkImageViewer2
@@ -122,6 +122,12 @@ class SliceViewer:
         renderer.SetBackground(0, 0, 0)
         render_window.AddRenderer(renderer)
         self.viewer.SetRenderWindow(render_window)
+        self.dims = dims
+        self.mask_actor = vtk.vtkImageActor()
+        self.mask_actor.GetMapper().SetInputConnection(mask_colors.GetOutputPort())
+        self.mask_actor.GetProperty().SetOpacity(0.3)
+        renderer.AddActor(self.mask_actor)
+        self.update_mask_slice()
         # Slice counter text
         text_prop = vtkTextProperty()
         text_prop.SetFontSize(14)
@@ -143,11 +149,23 @@ class SliceViewer:
             self.slice = new_slice
             self.viewer.SetSlice(self.slice)
             self.update_label()
+            self.update_mask_slice()
         self.viewer.Render()
 
     def contains(self, xn, yn):
         x0, y0, x1, y1 = self.viewport
         return x0 <= xn <= x1 and y0 <= yn <= y1
+
+    def update_mask_slice(self):
+        X, Y, Z = self.dims
+        if self.name == 'Axial':
+            ext = (0, X-1, 0, Y-1, self.slice, self.slice)
+        elif self.name == 'Coronal':
+            ext = (0, X-1, self.slice, self.slice, 0, Z-1)
+        else:  # Sagittal
+            ext = (self.slice, self.slice, 0, Y-1, 0, Z-1)
+        self.mask_actor.SetDisplayExtent(*ext)
+
 
 # Draw gold crosshair overlay
 
@@ -273,9 +291,58 @@ class QuadStyle(vtkInteractorStyleImage):
 
 # Main entrypoint
 
-def main(ct_path: str):
+def main(ct_path: str, mask_path: str):
+     # 1. Load CT and mask
     img = cache_ct(ct_path)
+    mask_sitk = sitk.ReadImage(mask_path)
+
+   # Create a resampler
+    resampler = sitk.ResampleImageFilter()
+    resampler.SetReferenceImage(img)   # Use CT image as reference space
+    resampler.SetInterpolator(sitk.sitkNearestNeighbor)  # Use nearest-neighbor interpolation to preserve label values
+    resampler.SetOutputPixelType(mask_sitk.GetPixelID())  # Keep the mask’s data type
+    
+    # Perform the resampling
+    mask_resampled_sitk = resampler.Execute(mask_sitk)
+    
+
+    # 2. Convert SimpleITK images to VTK images
+    # Note: now use the resampled mask (mask_resampled_sitk)
     vtk_img, arr = sitk_to_vtk(img)
+    mask_vtk, _ = sitk_to_vtk(mask_resampled_sitk) 
+
+   # —————————— Debugging: inspect mask contents ——————————
+    import numpy as np
+    mask_array = sitk.GetArrayFromImage(mask_resampled_sitk)
+
+    print("--- Mask Data Check ---")
+    print(f"Mask array shape: {mask_array.shape}")
+    print(f"Data type: {mask_array.dtype}")
+
+    unique_values = np.unique(mask_array)
+    print(f"Unique values in array: {unique_values}")
+
+    if np.any(mask_array):
+        print("Check result: mask contains non-zero values. ✅")
+    else:
+        print("Check result: warning! all mask values are zero. ❌")
+
+    print("----------------------")
+    # ——————————————————————————————————————————————————
+
+
+    # Create a semi-transparent red LUT
+    lut = vtk.vtkLookupTable()
+    lut.SetNumberOfTableValues(2)
+    lut.SetTableValue(0, 0,0,0, 0.0)
+    lut.SetTableValue(1, 1,0,0, 1.0)
+    lut.Build()
+    mask_colors = vtk.vtkImageMapToColors()
+    mask_colors.SetLookupTable(lut)
+    mask_colors.SetInputData(mask_vtk)
+    mask_colors.Update()
+    dims = (arr.shape[2], arr.shape[1], arr.shape[0])  # X, Y, Z
+
 
     render_window = vtkRenderWindow()
     render_window.SetSize(900, 900)
@@ -291,8 +358,19 @@ def main(ct_path: str):
     # Create viewers for each quadrant
     viewers = []
     for name, vp in quads.items():
-        sv = SliceViewer(vtk_img, arr, name.lower(), vp, name, render_window)
+        # name.lower() 作为 orientation，vp 作为 viewport
+        sv = SliceViewer(
+            vtk_img,
+            arr,
+            name.lower(),  # orientation: "axial"/"coronal"/"sagittal"
+            vp,            # viewport tuple
+            name,
+            render_window,
+            mask_colors,
+            dims
+        )
         viewers.append(sv)
+
 
     # Add crosshair overlay
     overlay_renderer = add_crosshair(render_window)
@@ -364,7 +442,7 @@ def main(ct_path: str):
     interactor.Start()
 
 if __name__ == '__main__':
-    if len(sys.argv) != 2:
-        print(f"Usage: {sys.argv[0]} <CT_directory_or_file>")
+    if len(sys.argv) != 3:
+        print(f"Usage: {sys.argv[0]} <CT_directory_or_file> <mask_file.nii>")
         sys.exit(1)
-    main(sys.argv[1])
+    main(sys.argv[1], sys.argv[2])
