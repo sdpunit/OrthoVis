@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'segmentation_windowaFCRjt.ui'
+## Form generated from reading UI file 'segmentation_windowgoHazJ.ui'
 ##
 ## Created by: Qt User Interface Compiler version 6.9.0
 ##
@@ -16,8 +16,8 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QApplication, QFormLayout, QFrame, QGraphicsView,
-    QHBoxLayout, QLabel, QPushButton, QSizePolicy,
-    QVBoxLayout, QWidget)
+    QHBoxLayout, QLabel, QProgressBar, QPushButton,
+    QSizePolicy, QVBoxLayout, QWidget)
 
 from widgets.sidebar.sidebar import Sidebar
 from widgets.titlebar.titlebar import Titlebar
@@ -77,30 +77,61 @@ class Ui_Form(object):
 
         self.horizontalLayout_2.addWidget(self.VTK_display)
 
-        self.details = QFrame(self.mainpanel)
+        self.details = QWidget(self.mainpanel)
         self.details.setObjectName(u"details")
-        self.details.setFrameShape(QFrame.Shape.StyledPanel)
-        self.details.setFrameShadow(QFrame.Shadow.Raised)
         self.verticalLayout_2 = QVBoxLayout(self.details)
+        self.verticalLayout_2.setSpacing(0)
         self.verticalLayout_2.setObjectName(u"verticalLayout_2")
+        self.verticalLayout_2.setContentsMargins(0, 0, 0, 0)
         self.info = QFormLayout()
         self.info.setObjectName(u"info")
+        self.info.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)
+        self.info.setContentsMargins(9, 9, 6, 6)
         self.group_lbl = QLabel(self.details)
         self.group_lbl.setObjectName(u"group_lbl")
-        self.group_lbl.setStyleSheet(u"font: 12pt \"Segoe UI\";")
+        self.group_lbl.setStyleSheet(u"font: 600 14pt \"Segoe UI\";")
 
         self.info.setWidget(0, QFormLayout.ItemRole.LabelRole, self.group_lbl)
 
         self.patient_lbl = QLabel(self.details)
         self.patient_lbl.setObjectName(u"patient_lbl")
-        self.patient_lbl.setStyleSheet(u"font: 12pt \"Segoe UI\";")
+        self.patient_lbl.setStyleSheet(u"font: 600 14pt \"Segoe UI\";")
 
         self.info.setWidget(1, QFormLayout.ItemRole.LabelRole, self.patient_lbl)
+
+        self.label = QLabel(self.details)
+        self.label.setObjectName(u"label")
+        self.label.setStyleSheet(u"font: 12pt \"Segoe UI\";")
+
+        self.info.setWidget(0, QFormLayout.ItemRole.FieldRole, self.label)
+
+        self.label_2 = QLabel(self.details)
+        self.label_2.setObjectName(u"label_2")
+        self.label_2.setStyleSheet(u"font: 12pt \"Segoe UI\";")
+
+        self.info.setWidget(1, QFormLayout.ItemRole.FieldRole, self.label_2)
 
 
         self.verticalLayout_2.addLayout(self.info)
 
-        self.segment_btn = QPushButton(self.details)
+        self.progress_wdg = QWidget(self.details)
+        self.progress_wdg.setObjectName(u"progress_wdg")
+        self.verticalLayout_3 = QVBoxLayout(self.progress_wdg)
+        self.verticalLayout_3.setObjectName(u"verticalLayout_3")
+        self.progress_bar = QProgressBar(self.progress_wdg)
+        self.progress_bar.setObjectName(u"progress_bar")
+        self.progress_bar.setValue(0)
+
+        self.verticalLayout_3.addWidget(self.progress_bar)
+
+
+        self.verticalLayout_2.addWidget(self.progress_wdg)
+
+        self.button_wdg = QWidget(self.details)
+        self.button_wdg.setObjectName(u"button_wdg")
+        self.horizontalLayout_3 = QHBoxLayout(self.button_wdg)
+        self.horizontalLayout_3.setObjectName(u"horizontalLayout_3")
+        self.segment_btn = QPushButton(self.button_wdg)
         self.segment_btn.setObjectName(u"segment_btn")
         self.segment_btn.setMinimumSize(QSize(0, 40))
         self.segment_btn.setStyleSheet(u"background-color: rgb(255, 215, 0);\n"
@@ -109,10 +140,14 @@ class Ui_Form(object):
 "font: 600 12pt \"Segoe UI\";\n"
 "")
 
-        self.verticalLayout_2.addWidget(self.segment_btn)
+        self.horizontalLayout_3.addWidget(self.segment_btn)
+
+
+        self.verticalLayout_2.addWidget(self.button_wdg)
 
         self.verticalLayout_2.setStretch(0, 3)
-        self.verticalLayout_2.setStretch(1, 1)
+        self.verticalLayout_2.setStretch(1, 2)
+        self.verticalLayout_2.setStretch(2, 1)
 
         self.horizontalLayout_2.addWidget(self.details)
 
@@ -136,6 +171,8 @@ class Ui_Form(object):
         Form.setWindowTitle(QCoreApplication.translate("Form", u"Form", None))
         self.group_lbl.setText(QCoreApplication.translate("Form", u"Group:", None))
         self.patient_lbl.setText(QCoreApplication.translate("Form", u"Patient:", None))
+        self.label.setText("")
+        self.label_2.setText("")
         self.segment_btn.setText(QCoreApplication.translate("Form", u"Segment CT", None))
     # retranslateUi
 
