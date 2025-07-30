@@ -191,15 +191,20 @@ def add_crosshair(render_window):
     return overlay
 
 class QuadStyle(vtkInteractorStyleImage):
-    def __init__(self, viewers):
+    def __init__(self, viewers, probe_mapper, arr, origin, spacing):
         super().__init__()
         self.viewers = viewers
+        self.probe_mapper = probe_mapper
+        self.arr          = arr
+        self.origin       = origin
+        self.spacing      = spacing
         # Remove default wheel observers
         self.RemoveObservers('MouseWheelForwardEvent')
         self.RemoveObservers('MouseWheelBackwardEvent')
         # Add our custom wheel handlers
         self.AddObserver('MouseWheelForwardEvent', self.wheel_forward)
         self.AddObserver('MouseWheelBackwardEvent', self.wheel_backward)
+        self.AddObserver('MouseMoveEvent', self.on_mouse_move) # 新增：鼠标移动事件
 
     def pick_viewer(self):
         x, y = self.GetInteractor().GetEventPosition()
@@ -243,6 +248,37 @@ class QuadStyle(vtkInteractorStyleImage):
             sv.move(-1)
 
         self.GetInteractor().GetRenderWindow().Render()
+    
+    def on_mouse_move(self, obj, event):
+        x, y = self.GetInteractor().GetEventPosition()
+        sv = self.pick_viewer()
+        if not sv:
+            return
+        ren = sv.viewer.GetRenderer()
+
+        ren.SetDisplayPoint(x, y, 0)
+        ren.DisplayToWorld()
+        world = ren.GetWorldPoint()
+        if world[3] == 0:
+            return
+        Xw, Yw, Zw = [c/world[3] for c in world[:3]]
+
+        i = int(round((Xw - self.origin[0]) / self.spacing[0]))
+        j = int(round((Yw - self.origin[1]) / self.spacing[1]))
+        k = int(round((Zw - self.origin[2]) / self.spacing[2]))
+
+        Z, Y, X = self.arr.shape
+        if not (0 <= i < X and 0 <= j < Y and 0 <= k < Z):
+            return
+
+        val = self.arr[k, j, i]
+
+        text = (
+            f"World (mm): X={Xw:.1f}, Y={Yw:.1f}, Z={Zw:.1f}\n"
+            f"IJK: i={i}, j={j}, k={k}   Value: {val}"
+        )
+        self.probe_mapper.SetInput(text)
+        self.GetInteractor().GetRenderWindow().Render()
 
 # Main entrypoint
 
@@ -270,10 +306,40 @@ def main(ct_path: str):
     # Add crosshair overlay
     overlay_renderer = add_crosshair(render_window)
 
+    # Add Data Probe
+    probe_text_prop = vtkTextProperty()
+    probe_text_prop.SetFontSize(12)
+    probe_text_prop.SetColor(1, 1, 1)
+    probe_text_prop.SetJustificationToLeft()
+    probe_text_prop.SetVerticalJustificationToTop()
+
+    probe_mapper = vtkTextMapper()
+    probe_mapper.SetTextProperty(probe_text_prop)
+    probe_actor = vtkActor2D()
+    probe_actor.SetMapper(probe_mapper)
+   
+    w, h = render_window.GetSize()
+    probe_actor.SetPosition(10, h - 10)
+
+    overlay_renderer.AddActor2D(probe_actor)
+   
+
     # Create interactor and style
     interactor = vtkRenderWindowInteractor()
     interactor.SetRenderWindow(render_window)
-    interactor.SetInteractorStyle(QuadStyle(viewers))
+   
+    origin  = img.GetOrigin()
+    spacing = img.GetSpacing()
+
+    interactor.SetInteractorStyle(
+        QuadStyle(
+            viewers,
+            probe_mapper,
+            arr,
+            origin,
+            spacing
+        )
+    )
 
     # Window/Level sliders on right
     hu_min, hu_max = int(arr.min()), int(arr.max())
