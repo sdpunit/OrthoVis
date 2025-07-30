@@ -36,14 +36,15 @@ class ProjectSetup(QWidget):
 
     def handleSave(self):
         projectName = self.ui.projectNameInput.text()
+        projectDesc = self.ui.projectDesInput.toPlainText()
         # Initialize a new patient and context
         #print(f"Item: {model.itemFromIndex(0)}")
         idx = model.index(0, 0)
         path = model.itemFromIndex(idx).text()
-        print(f"{path}")
-        context = initialize_project(projectName, 24, path)
+        context = initialize_project(projectName, projectDesc, path)
+        patient = context._singleton_data.get_instance()
         #Test for simple save function
-        save_patient_data_to_file(context, projectName)
+        context.request_save(patient)
         self.parent().setCurrentIndex(2)
     
     def handleImportCT(self):

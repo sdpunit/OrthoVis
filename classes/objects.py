@@ -8,9 +8,9 @@ import SimpleITK as sitk
 
 
 class Patient:
-    def __init__(self, name: str, age: int, CT: str):
+    def __init__(self, name: str, description: str, CT: str):
         self.name = name
-        self.age = age
+        self.description = description
         st_path = os.path.abspath(CT)
         if not os.path.exists(st_path):
             raise FileNotFoundError(f"❌ path dose not exist: {st_path}")
@@ -51,15 +51,15 @@ class Patient:
 
     @name.setter
     def name(self, value):
-        self._name = value.upper()
+        self._name = value
 
     @property
-    def age(self):
-        return self._age
+    def description(self):
+        return self._description
 
-    @age.setter
-    def age(self, value):
-        self._age = value
+    @description.setter
+    def description(self, value):
+        self._description = value
 
     @property
     def CT(self):
@@ -78,7 +78,7 @@ class Patient:
         self._fluoroscopy = value
 
     def to_string(self):
-        return "Name: " + self.name + "\n Age: " + str(self.age) + "\n CT: " + str(self.CT) + "\n Flurocopy: " + str(
+        return "Name: " + self.name + "\n"+ "Description: " + self.description + "\n CT: " + str(self.CT) + "\n Flurocopy: " + str(
             self.fluoroscopy)
 
 
@@ -88,10 +88,10 @@ class SingletonPatient:
     _state = None
 
     @staticmethod
-    def get_instance(name: str = "", age: int = 0, CT: str = "") -> SingletonPatient:
+    def get_instance(name: str = "", description: str = "", CT: str = "") -> SingletonPatient:
         if SingletonPatient._instance is None:
             SingletonPatient._instance = SingletonPatient()
-            SingletonPatient._patient = Patient(name, age, CT)
+            SingletonPatient._patient = Patient(name, description, CT)
         return SingletonPatient._instance
 
     @property
@@ -142,8 +142,8 @@ class Context:
     def request_process(self):
         self._singleton_data._state.handle_process()
 
-    def request_save(self):
-        self._singleton_data._state.handle_save()
+    def request_save(self, patient: SingletonPatient):
+        self._singleton_data._state.handle_save(patient)
     
     def request_string(self):
         self._singleton_data._state.handle_to_string()
@@ -174,7 +174,7 @@ class DataState(ABC):
         pass
 
     @abstractmethod
-    def handle_save(self) -> None:
+    def handle_save(self, patient: SingletonPatient) -> None:
         pass
 
     @abstractmethod
@@ -199,16 +199,20 @@ class RawState(DataState):
         print("RawState wants to change the state of the context.")
         self.context.transition_to(SegmentState())
 
-    def handle_save(self, context: Context) -> None:
+    def handle_save(self, patient: SingletonPatient) -> None:
         print("RawState wants to save the context to local space.")
+        name = patient._patient._name
+        desc = patient._patient._description
+        state = patient._state.handle_to_string()
+
         current_dir = Path(__file__).resolve().parent
         parent_dir = current_dir.parent
-        folder = parent_dir / "Projects" / context.patient.name
+        folder = parent_dir / "Projects" / name
         folder.mkdir(parents=True, exist_ok=True)
         data = {
-            "name": context._singleton_data._patient._name,
-            "age": context._singleton_data._patient._age,
-            "state": context._state.handle_to_string(),
+            "name": name,
+            "description": desc,
+            "state": state,
         }
         with open(os.path.join(folder, "data.json"), "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
