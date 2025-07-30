@@ -14,8 +14,7 @@ class Sidebar(QWidget):
         self.ui.project_setup.clicked.connect(self.select_project_setup)
         self.ui.segmentation.clicked.connect(self.select_segmentation)
 
-        # These pages haven't been created yet
-        # self.ui.calibration.clicked.connect(self.select_calibration)
+        self.ui.calibration.clicked.connect(self.select_calibration)
         # self.ui.define_axis.clicked.connect(self.select_define_axis)
         # self.ui.registration.clicked.connect(self.select_registration)
         # self.ui.visualisation.clicked.connect(self.select_visualisation)
@@ -26,3 +25,12 @@ class Sidebar(QWidget):
 
     def select_segmentation(self):
         self.parent().parent().setCurrentIndex(2)
+
+    def select_calibration(self):
+        self.parent().parent().setCurrentIndex(3)
+
+    # def select_define_axis(self):
+    #     self.parent().parent().setCurrentIndex(4)
+
+    # def select_visualisation(self):
+    #     self.parent().parent().setCurrentIndex(5)
