@@ -18,7 +18,7 @@ def save_patient_data_to_file(context, file_name):
     data = {
         "name": context._singleton_data.patient.name,
         "age": context._singleton_data.patient.age,
-        "state":context._singleton_data.state.state_name,
+        "state":context._singleton_data.state.handle_to_string(),
     }
     with open(os.path.join(folder, "data.json"), "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
