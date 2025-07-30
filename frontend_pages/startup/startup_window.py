@@ -1,6 +1,7 @@
 # Startup window on opening of the application
 from PySide6.QtWidgets import QWidget
 from frontend_pages.startup.ui_startup_window import Ui_HomePage
+from frontend_pages.project_setup.project_setup_window import ProjectSetup
 from PySide6.QtWidgets import QFileDialog
 
 class HomePage(QWidget):
@@ -42,8 +43,11 @@ class HomePage(QWidget):
             self,
             "Select the CT sequence folder (e.g. SE000000)"
         )
-
+        
         if folder_path:
             print(f"Selected folder: {folder_path}")
+            name = folder_path.split("/")[-1]
             self.selected_ct_folder = folder_path
-
+            projectsetup = self.parent().widget(1)
+            projectsetup.changeName(name)
+            self.parent().setCurrentIndex(1)

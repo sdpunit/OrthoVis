@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'sidebarBIGugz.ui'
+## Form generated from reading UI file 'sidebaryYsKCv.ui'
 ##
 ## Created by: Qt User Interface Compiler version 6.9.0
 ##
@@ -22,7 +22,7 @@ class Ui_Form(object):
     def setupUi(self, Form):
         if not Form.objectName():
             Form.setObjectName(u"Form")
-        Form.resize(300, 599)
+        Form.resize(300, 593)
         sizePolicy = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         sizePolicy.setHorizontalStretch(1)
         sizePolicy.setVerticalStretch(1)
@@ -62,7 +62,7 @@ class Ui_Form(object):
         self.logo.setObjectName(u"logo")
         sizePolicy1.setHeightForWidth(self.logo.sizePolicy().hasHeightForWidth())
         self.logo.setSizePolicy(sizePolicy1)
-        self.logo.setPixmap(QPixmap(u"assets/logo_small.png"))
+        self.logo.setPixmap(QPixmap(u"../../assets/logo_small.png"))
         self.logo.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.horizontalLayout.addWidget(self.logo)
@@ -91,15 +91,12 @@ class Ui_Form(object):
         sizePolicy1.setHeightForWidth(self.project_setup.sizePolicy().hasHeightForWidth())
         self.project_setup.setSizePolicy(sizePolicy1)
         font1 = QFont()
-        font1.setPointSize(19)
+        font1.setPointSize(18)
         font1.setBold(True)
         font1.setKerning(True)
         self.project_setup.setFont(font1)
-        self.project_setup.setStyleSheet(u"color: white;\n"
-"background-color: #1D3461;\n"
-"border: none;\n"
-"padding: 10px 25px;      \n"
-"text-align: center;")
+        self.project_setup.setStyleSheet(u"QPushButton { color: white; background-color: #1D3461; border: none; padding: 10px 25px;  text-align: center;}               \n"
+"QPushButton:hover { background-color: #6f8ab7; font-size: 20pt;}")
 
         self.verticalLayout_2.addWidget(self.project_setup)
 
@@ -111,11 +108,8 @@ class Ui_Form(object):
         font2.setPointSize(19)
         font2.setBold(True)
         self.segmentation.setFont(font2)
-        self.segmentation.setStyleSheet(u"color: white;\n"
-"background-color: #1D3461;\n"
-"border: none;\n"
-"padding: 10px 25px;      \n"
-"text-align: center;")
+        self.segmentation.setStyleSheet(u"QPushButton { color: white; background-color: #1D3461; border: none; padding: 10px 25px;  text-align: center;}               \n"
+"QPushButton:hover { background-color: #6f8ab7; font-size: 20pt;}")
 
         self.verticalLayout_2.addWidget(self.segmentation)
 
@@ -124,11 +118,8 @@ class Ui_Form(object):
         sizePolicy1.setHeightForWidth(self.calibration.sizePolicy().hasHeightForWidth())
         self.calibration.setSizePolicy(sizePolicy1)
         self.calibration.setFont(font2)
-        self.calibration.setStyleSheet(u"color: white;\n"
-"background-color: #1D3461;\n"
-"border: none;\n"
-"padding: 10px 25px;      \n"
-"text-align: center;")
+        self.calibration.setStyleSheet(u"QPushButton { color: white; background-color: #1D3461; border: none; padding: 10px 25px;  text-align: center;}               \n"
+"QPushButton:hover { background-color: #6f8ab7; font-size: 20pt;}")
 
         self.verticalLayout_2.addWidget(self.calibration)
 
@@ -137,11 +128,8 @@ class Ui_Form(object):
         sizePolicy1.setHeightForWidth(self.define_axis.sizePolicy().hasHeightForWidth())
         self.define_axis.setSizePolicy(sizePolicy1)
         self.define_axis.setFont(font2)
-        self.define_axis.setStyleSheet(u"color: white;\n"
-"background-color: #1D3461;\n"
-"border: none;\n"
-"padding: 10px 25px;      \n"
-"text-align: center;")
+        self.define_axis.setStyleSheet(u"QPushButton { color: white; background-color: #1D3461; border: none; padding: 10px 25px;  text-align: center;}               \n"
+"QPushButton:hover { background-color: #6f8ab7; font-size: 20pt;}")
 
         self.verticalLayout_2.addWidget(self.define_axis)
 
@@ -150,26 +138,21 @@ class Ui_Form(object):
         sizePolicy1.setHeightForWidth(self.registration.sizePolicy().hasHeightForWidth())
         self.registration.setSizePolicy(sizePolicy1)
         self.registration.setFont(font2)
-        self.registration.setStyleSheet(u"color: white;\n"
-"background-color: #1D3461;\n"
-"border: none;\n"
-"padding: 10px 25px;      \n"
-"text-align: center;")
+        self.registration.setStyleSheet(u"QPushButton { color: white; background-color: #1D3461; border: none; padding: 10px 25px;  text-align: center;}               \n"
+"QPushButton:hover { background-color: #6f8ab7; font-size: 20pt;}")
+        self.registration.setFlat(False)
 
         self.verticalLayout_2.addWidget(self.registration)
 
-        self.visualisaiton = QPushButton(self.background)
-        self.visualisaiton.setObjectName(u"visualisaiton")
-        sizePolicy1.setHeightForWidth(self.visualisaiton.sizePolicy().hasHeightForWidth())
-        self.visualisaiton.setSizePolicy(sizePolicy1)
-        self.visualisaiton.setFont(font2)
-        self.visualisaiton.setStyleSheet(u"color: white;\n"
-"background-color: #1D3461;\n"
-"border: none;\n"
-"padding: 10px 25px;      \n"
-"text-align: center;")
+        self.visualisation = QPushButton(self.background)
+        self.visualisation.setObjectName(u"visualisation")
+        sizePolicy1.setHeightForWidth(self.visualisation.sizePolicy().hasHeightForWidth())
+        self.visualisation.setSizePolicy(sizePolicy1)
+        self.visualisation.setFont(font2)
+        self.visualisation.setStyleSheet(u"QPushButton { color: white; background-color: #1D3461; border: none; padding: 10px 25px;  text-align: center;}               \n"
+"QPushButton:hover { background-color: #6f8ab7; font-size: 20pt;}")
 
-        self.verticalLayout_2.addWidget(self.visualisaiton)
+        self.verticalLayout_2.addWidget(self.visualisation)
 
         self.verticalLayout_2.setStretch(0, 1)
         self.verticalLayout_2.setStretch(1, 1)
@@ -184,6 +167,9 @@ class Ui_Form(object):
 
         self.retranslateUi(Form)
 
+        self.project_setup.setDefault(False)
+
+
         QMetaObject.connectSlotsByName(Form)
     # setupUi
 
@@ -196,6 +182,6 @@ class Ui_Form(object):
         self.calibration.setText(QCoreApplication.translate("Form", u"Calibration", None))
         self.define_axis.setText(QCoreApplication.translate("Form", u"Define Axis", None))
         self.registration.setText(QCoreApplication.translate("Form", u"Registration", None))
-        self.visualisaiton.setText(QCoreApplication.translate("Form", u"Visualisation", None))
+        self.visualisation.setText(QCoreApplication.translate("Form", u"Visualisation", None))
     # retranslateUi
 
