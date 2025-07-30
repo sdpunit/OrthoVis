@@ -36,12 +36,12 @@ class Patient:
     def _load_series(self, series_path,is_ct: bool = False):
         files = sorted([os.path.join(series_path, f) for f in os.listdir(series_path)])
         if is_ct:
-            # 多切片的 CT 用 3D volume 读取
+            # For CT, we can read a series of images
             reader = sitk.ImageSeriesReader()
             reader.SetFileNames(files)
             return reader.Execute()
         else:
-            # fluoroscopy 返回单张或多张2D图像列表
+            # For fluoroscopy, we can read multiple images or a single image
             images = [sitk.ReadImage(f) for f in files]
             return images if len(images) > 1 else images[0]
 
