@@ -1,51 +1,57 @@
 #!/usr/bin/env python3
 """
-2D CT Quad-Viewer with Segmentation Mask Overlays
-Supports loading CT as a DICOM folder or single file, plus interactive mask toggles.
+2D CT Quad-Viewer (Axial/Coronal/Sagittal) with Per-Quadrant Scrolling, Ctrl-Zoom,
+Gold Crosshair, and Modern Window/Level Sliders
+
+Features:
+ 1. Single RenderWindow split into 3 active viewports (axial, coronal, sagittal) and
+    crosshair overlay in a reserved top-right quadrant.
+ 2. Mouse wheel scrolls slices in the quadrant under the cursor; Ctrl + wheel zooms.
+ 3. Persistent slice count labels in each quadrant showing "<View>\nSlice: X/N".
+ 4. Gold crosshair overlay across all quadrants.
+ 5. Global Window/Level sliders rendered on the right edge with slim bars and jump mode.
 """
-import os, sys, glob
-import numpy as np
+import os
+import sys
 import SimpleITK as sitk
 import vtk
 from vtkmodules.vtkInteractionStyle import vtkInteractorStyleImage
 from vtkmodules.vtkInteractionImage import vtkImageViewer2
 from vtkmodules.vtkRenderingCore import (
-    vtkRenderWindow, vtkRenderer, vtkRenderWindowInteractor,
-    vtkActor2D, vtkTextMapper, vtkTextProperty, vtkTextActor,
-    vtkImageActor
+    vtkRenderWindow,
+    vtkRenderer,
+    vtkRenderWindowInteractor,
+    vtkActor2D,
+    vtkTextMapper,
+    vtkTextProperty,
+    vtkPolyDataMapper2D
 )
+from vtkmodules.vtkCommonDataModel import vtkPolyData, vtkCellArray
+from vtkmodules.vtkCommonCore import vtkPoints
 from vtkmodules.util import numpy_support
+from totalseg import load_ct
 
-# -- CT loading -------------------------------------------------------------
-def load_ct(path):
-    if os.path.isdir(path):
-        reader = sitk.ImageSeriesReader()
-        series = reader.GetGDCMSeriesFileNames(path)
-        if not series:
-            raise RuntimeError(f"No DICOM series in {path}")
-        reader.SetFileNames(series)
-        return reader.Execute()
-    else:
-        return sitk.ReadImage(path)
+# Caching directory
+CACHE_DIR = os.path.expanduser('~/.cache/renderer')
+os.makedirs(CACHE_DIR, exist_ok=True)
 
-# -- Caching ---------------------------------------------------------------
-def cache_ct(path):
-    cache_dir = os.path.expanduser('~/.cache/renderer')
-    os.makedirs(cache_dir, exist_ok=True)
-    name = os.path.basename(path.rstrip(os.sep)) + '.mha'
-    dst = os.path.join(cache_dir, name)
-    if os.path.exists(dst):
-        return sitk.ReadImage(dst)
+# Helper: cache or load CT image
+
+def cache_ct(path: str):
+    cache_file = os.path.join(CACHE_DIR, os.path.basename(path.rstrip(os.sep)) + '.mha')
+    if os.path.exists(cache_file):
+        return sitk.ReadImage(cache_file)
     img = load_ct(path)
-    sitk.WriteImage(img, dst)
+    sitk.WriteImage(img, cache_file)
     return img
 
-# -- Convert to VTK --------------------------------------------------------
+# Convert SimpleITK image to vtkImageData
+
 def sitk_to_vtk(img):
     arr = sitk.GetArrayFromImage(img)
-    z, y, x = arr.shape
+    Z, Y, X = arr.shape
     vtk_img = vtk.vtkImageData()
-    vtk_img.SetDimensions(x, y, z)
+    vtk_img.SetDimensions(X, Y, Z)
     vtk_img.SetSpacing(img.GetSpacing())
     vtk_img.SetOrigin(img.GetOrigin())
     vtk_arr = numpy_support.numpy_to_vtk(
@@ -55,182 +61,310 @@ def sitk_to_vtk(img):
     vtk_img.GetPointData().SetScalars(vtk_arr)
     return vtk_img, arr
 
-# -- Slider creation --------------------------------------------------------
-def make_slider(vmin, vmax, init, xpos):
+# Create a thin vertical slider with jump animation
+
+def make_slider(label, vmin, vmax, init, xpos):
     rep = vtk.vtkSliderRepresentation2D()
     rep.SetMinimumValue(vmin)
     rep.SetMaximumValue(vmax)
     rep.SetValue(init)
+    
+    # Slider positioning (vertical line)
     rep.GetPoint1Coordinate().SetCoordinateSystemToNormalizedDisplay()
-    rep.GetPoint1Coordinate().SetValue(xpos, 0.1)
+    rep.GetPoint1Coordinate().SetValue(xpos, 0.15)  # Bottom position
     rep.GetPoint2Coordinate().SetCoordinateSystemToNormalizedDisplay()
-    rep.GetPoint2Coordinate().SetValue(xpos, 0.4)
-    rep.SetSliderLength(0.008)
-    rep.SetSliderWidth(0.008)
-    rep.SetTubeWidth(0.002)
-    rep.ShowSliderLabelOff()
-    rep.SetEndCapLength(0)
-    rep.GetSliderProperty().SetColor(1, 1, 0)
-    rep.GetSelectedProperty().SetColor(1, 1, 0)
-    rep.GetTubeProperty().SetColor(0.4, 0.4, 0.4)
+    rep.GetPoint2Coordinate().SetValue(xpos, 0.85)  # Top position
+    
+    # Slider appearance
+    rep.SetSliderLength(0.008)  # Slider handle size
+    rep.SetSliderWidth(0.008)   # Slider handle size 
+    rep.SetTubeWidth(0.002)     # Track line thickness
+    
+    # Remove all decorations
+    rep.ShowSliderLabelOff()    # Remove value text
+    rep.SetEndCapLength(0.0)    # Remove end caps
+    
+    # Critical: Disable all highlighting that causes traces
+    rep.GetSliderProperty().SetColor(1, 1, 0)  # Yellow slider
+    rep.GetSelectedProperty().SetColor(1, 1, 0)  # Same yellow when selected
+    rep.GetTubeProperty().SetColor(0.4, 0.4, 0.4)  # Dark gray track
+    
+    # Eliminate trace artifacts completely
+    rep.GetSliderProperty().SetOpacity(1.0)
+    rep.GetSelectedProperty().SetOpacity(1.0)
+    rep.GetTubeProperty().SetOpacity(1.0)
+    
     return rep
 
-# -- Mask overlay ----------------------------------------------------------
-class MaskOverlay:
-    def __init__(self, mask, spacing, origin, color, opacity=0.4):
-        img = vtk.vtkImageData()
-        z, y, x = mask.shape
-        img.SetDimensions(x, y, z)
-        img.SetSpacing(spacing)
-        img.SetOrigin(origin)
-        flat = (mask.astype(np.uint8) * 255).ravel()
-        scalars = numpy_support.numpy_to_vtk(flat, deep=True, array_type=vtk.VTK_UNSIGNED_CHAR)
-        img.GetPointData().SetScalars(scalars)
-        cmap = vtk.vtkImageMapToColors()
-        cmap.SetInputData(img)
-        lut = vtk.vtkLookupTable()
-        lut.SetNumberOfTableValues(2)
-        lut.Build()
-        lut.SetTableValue(0, 0, 0, 0, 0)
-        lut.SetTableValue(1, *color, opacity)
-        cmap.SetLookupTable(lut)
-        self.actor = vtkImageActor()
-        self.actor.GetMapper().SetInputConnection(cmap.GetOutputPort())
-    def add_to(self, renderer):
-        renderer.AddActor(self.actor)
-    def visible(self, flag):
-        self.actor.SetVisibility(1 if flag else 0)
-
-# -- Slice viewer & interactor --------------------------------------------
+# Wrapper for each quadrant viewer
 class SliceViewer:
-    def __init__(self, vtk_img, arr, orientation, viewport, title, rw):
-        self.title = title
+    def __init__(self, vtk_img, arr, orientation, viewport, name, render_window):
+        self.name = name
+        self.viewport = viewport
+        # Set up vtkImageViewer2
         self.viewer = vtkImageViewer2()
         self.viewer.SetInputData(vtk_img)
-        axis = {'axial':0, 'coronal':1, 'sagittal':2}[orientation]
-        if orientation == 'coronal': self.viewer.SetSliceOrientationToXZ()
-        if orientation == 'sagittal': self.viewer.SetSliceOrientationToYZ()
-        self.min_slice = 0
-        self.max_slice = arr.shape[axis] - 1
-        self.slice = self.max_slice // 2
+        # Choose orientation
+        axis = 0
+        if orientation == 'coronal':
+            self.viewer.SetSliceOrientationToXZ()
+            axis = 1
+        elif orientation == 'sagittal':
+            self.viewer.SetSliceOrientationToYZ()
+            axis = 2
+        # Slice range
+        self.min_slice, self.max_slice = 0, arr.shape[axis] - 1
+        self.slice = arr.shape[axis] // 2
         self.viewer.SetSlice(self.slice)
-        ren = self.viewer.GetRenderer()
-        ren.SetViewport(*viewport)
-        ren.SetBackground(0, 0, 0)
-        rw.AddRenderer(ren)
-        self.viewer.SetRenderWindow(rw)
-        tp = vtkTextProperty(); tp.SetFontSize(18); tp.SetColor(1,1,1)
-        self.mapper = vtkTextMapper(); self.mapper.SetTextProperty(tp)
-        actor = vtkActor2D(); actor.SetMapper(self.mapper); actor.SetPosition(5,5); ren.AddActor2D(actor)
+        # Renderer configuration
+        renderer = self.viewer.GetRenderer()
+        renderer.SetViewport(*viewport)
+        renderer.SetBackground(0, 0, 0)
+        render_window.AddRenderer(renderer)
+        self.viewer.SetRenderWindow(render_window)
+        # Slice counter text
+        text_prop = vtkTextProperty()
+        text_prop.SetFontSize(14)
+        text_prop.SetColor(1, 1, 1)
+        self.mapper = vtkTextMapper()
+        self.mapper.SetTextProperty(text_prop)
+        self.actor = vtkActor2D()
+        self.actor.SetMapper(self.mapper)
+        self.actor.SetPosition(5, 5)
+        renderer.AddActor2D(self.actor)
         self.update_label()
+
     def update_label(self):
-        self.mapper.SetInput(f"{self.title}\nSlice: {self.slice+1}/{self.max_slice+1}")
+        self.mapper.SetInput(f"{self.name}\nSlice: {self.slice+1}/{self.max_slice+1}")
+
     def move(self, delta):
-        new = np.clip(self.slice + delta, self.min_slice, self.max_slice)
-        if new != self.slice:
-            self.slice = new; self.viewer.SetSlice(new); self.update_label()
+        new_slice = min(max(self.min_slice, self.slice + delta), self.max_slice)
+        if new_slice != self.slice:
+            self.slice = new_slice
+            self.viewer.SetSlice(self.slice)
+            self.update_label()
         self.viewer.Render()
+
     def contains(self, xn, yn):
-        x0, y0, x1, y1 = self.viewer.GetRenderer().GetViewport()
+        x0, y0, x1, y1 = self.viewport
         return x0 <= xn <= x1 and y0 <= yn <= y1
 
+# Draw gold crosshair overlay
+
+def add_crosshair(render_window):
+    overlay = vtkRenderer()
+    overlay.SetLayer(1)
+    overlay.InteractiveOff()
+    overlay.SetViewport(0.0, 0.0, 1.0, 1.0)
+    pts = vtkPoints()
+    pts.InsertNextPoint(0, 0.5, 0)
+    pts.InsertNextPoint(1, 0.5, 0)
+    pts.InsertNextPoint(0.5, 0, 0)
+    pts.InsertNextPoint(0.5, 1, 0)
+    lines = vtkCellArray()
+    lines.InsertNextCell(2)
+    lines.InsertCellPoint(0)
+    lines.InsertCellPoint(1)
+    lines.InsertNextCell(2)
+    lines.InsertCellPoint(2)
+    lines.InsertCellPoint(3)
+    pd = vtkPolyData()
+    pd.SetPoints(pts)
+    pd.SetLines(lines)
+    mapper = vtkPolyDataMapper2D()
+    mapper.SetInputData(pd)
+    actor = vtkActor2D()
+    actor.SetMapper(mapper)
+    actor.GetProperty().SetColor(1, 0.84, 0)
+    actor.GetProperty().SetLineWidth(1)
+    overlay.AddActor2D(actor)
+    render_window.AddRenderer(overlay)
+    return overlay
+
 class QuadStyle(vtkInteractorStyleImage):
-    def __init__(self, viewers):
-        super().__init__(); self.viewers = viewers
-        self.RemoveObservers('MouseWheelForwardEvent'); self.RemoveObservers('MouseWheelBackwardEvent')
-        self.AddObserver('MouseWheelForwardEvent', self.on_wheel_forward)
-        self.AddObserver('MouseWheelBackwardEvent', self.on_wheel_backward)
-    def pick(self):
-        x,y=self.GetInteractor().GetEventPosition(); w,h=self.GetInteractor().GetRenderWindow().GetSize()
-        xn,yn=x/w,y/h
+    def __init__(self, viewers, probe_mapper, arr, origin, spacing):
+        super().__init__()
+        self.viewers = viewers
+        self.probe_mapper = probe_mapper
+        self.arr          = arr
+        self.origin       = origin
+        self.spacing      = spacing
+        # Remove default wheel observers
+        self.RemoveObservers('MouseWheelForwardEvent')
+        self.RemoveObservers('MouseWheelBackwardEvent')
+        # Add our custom wheel handlers
+        self.AddObserver('MouseWheelForwardEvent', self.wheel_forward)
+        self.AddObserver('MouseWheelBackwardEvent', self.wheel_backward)
+        self.AddObserver('MouseMoveEvent', self.on_mouse_move) # Mouse listener 
+
+    def pick_viewer(self):
+        x, y = self.GetInteractor().GetEventPosition()
+        w, h = self.GetInteractor().GetRenderWindow().GetSize()
+        xn, yn = x / w, y / h
         for sv in self.viewers:
-            if sv.contains(xn,yn): return sv
+            if sv.contains(xn, yn):
+                return sv
         return None
-    def on_wheel_forward(self,obj,event):
-        sv=self.pick();
-        if not sv: return
+
+    def wheel_forward(self, obj, event):
+        sv = self.pick_viewer()
+        if not sv:
+            return
+
         if self.GetInteractor().GetControlKey():
-            cam=sv.viewer.GetRenderer().GetActiveCamera(); cam.ParallelProjectionOn(); cam.Zoom(1.1)
-        else: sv.move(1)
-        self.GetInteractor().GetRenderWindow().Render()
-    def on_wheel_backward(self,obj,event):
-        sv=self.pick();
-        if not sv: return
-        if self.GetInteractor().GetControlKey():
-            cam=sv.viewer.GetRenderer().GetActiveCamera(); cam.ParallelProjectionOn(); cam.Zoom(0.9)
-        else: sv.move(-1)
+            # —— ZOOM IN ——
+            cam = sv.viewer.GetRenderer().GetActiveCamera()
+            cam.ParallelProjectionOn()
+            cam.Zoom(1.1)
+            sv.viewer.Render()
+        else:
+            # —— SLICE UP ——
+            sv.move(1)
+
         self.GetInteractor().GetRenderWindow().Render()
 
-# -- Main ------------------------------------------------------------------
-def main(ct_path):
-    # load and cache CT
+    def wheel_backward(self, obj, event):
+        sv = self.pick_viewer()
+        if not sv:
+            return
+
+        if self.GetInteractor().GetControlKey():
+            # —— ZOOM OUT ——
+            cam = sv.viewer.GetRenderer().GetActiveCamera()
+            cam.ParallelProjectionOn()
+            cam.Zoom(0.9)
+            sv.viewer.Render()
+        else:
+            # —— SLICE DOWN ——
+            sv.move(-1)
+
+        self.GetInteractor().GetRenderWindow().Render()
+    
+    def on_mouse_move(self, obj, event):
+        x, y = self.GetInteractor().GetEventPosition()
+        sv = self.pick_viewer()
+        if not sv:
+            return
+        ren = sv.viewer.GetRenderer()
+
+        ren.SetDisplayPoint(x, y, 0)
+        ren.DisplayToWorld()
+        world = ren.GetWorldPoint()
+        if world[3] == 0:
+            return
+        Xw, Yw, Zw = [c/world[3] for c in world[:3]]
+
+        i = int(round((Xw - self.origin[0]) / self.spacing[0]))
+        j = int(round((Yw - self.origin[1]) / self.spacing[1]))
+        k = int(round((Zw - self.origin[2]) / self.spacing[2]))
+
+        Z, Y, X = self.arr.shape
+        if not (0 <= i < X and 0 <= j < Y and 0 <= k < Z):
+            return
+
+        val = self.arr[k, j, i]
+
+        text = (
+            f"World (mm): X={Xw:.1f}, Y={Yw:.1f}, Z={Zw:.1f}\n"
+            f"IJK: i={i}, j={j}, k={k}   Value: {val}"
+        )
+        self.probe_mapper.SetInput(text)
+        self.GetInteractor().GetRenderWindow().Render()
+
+# Main entrypoint
+
+def main(ct_path: str):
     img = cache_ct(ct_path)
+    vtk_img, arr = sitk_to_vtk(img)
+
+    render_window = vtkRenderWindow()
+    render_window.SetSize(900, 900)
+    render_window.SetNumberOfLayers(2)
+
+    # Define quadrants (axial, coronal, sagittal)
+    quads = {
+        'Axial':    (0.0, 0.5, 0.5, 1.0),
+        'Coronal':  (0.0, 0.0, 0.5, 0.5),
+        'Sagittal': (0.5, 0.0, 1.0, 0.5)
+    }
+
+    # Create viewers for each quadrant
+    viewers = []
+    for name, vp in quads.items():
+        sv = SliceViewer(vtk_img, arr, name.lower(), vp, name, render_window)
+        viewers.append(sv)
+
+    # Add crosshair overlay
+    overlay_renderer = add_crosshair(render_window)
+
+    # Add Data Probe
+    probe_text_prop = vtkTextProperty()
+    probe_text_prop.SetFontSize(12)
+    probe_text_prop.SetColor(1, 1, 1)
+    probe_text_prop.SetJustificationToLeft()
+    probe_text_prop.SetVerticalJustificationToTop()
+
+    probe_mapper = vtkTextMapper()
+    probe_mapper.SetTextProperty(probe_text_prop)
+    probe_actor = vtkActor2D()
+    probe_actor.SetMapper(probe_mapper)
+   
+    w, h = render_window.GetSize()
+    probe_actor.SetPosition(10, h - 10)
+
+    overlay_renderer.AddActor2D(probe_actor)
+   
+
+    # Create interactor and style
+    interactor = vtkRenderWindowInteractor()
+    interactor.SetRenderWindow(render_window)
+   
+    origin  = img.GetOrigin()
     spacing = img.GetSpacing()
-    origin = img.GetOrigin()
-    arr_ct = sitk.GetArrayFromImage(img)
 
-    # find masks
-    base = os.path.dirname(ct_path)
-    mask_files = glob.glob(os.path.join(base, '*.nii.gz'))
-    masks = []
-    for i, mf in enumerate(mask_files):
-        label = os.path.splitext(os.path.basename(mf))[0]
-        arr = sitk.GetArrayFromImage(sitk.ReadImage(mf))
-        masks.append({'label': label, 'array': arr})
+    interactor.SetInteractorStyle(
+        QuadStyle(
+            viewers,
+            probe_mapper,
+            arr,
+            origin,
+            spacing
+        )
+    )
 
-    # launch Qt+VTK window
-    from vtkmodules.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
-    from PyQt5 import QtWidgets, QtCore
+    # Window/Level sliders on right
+    hu_min, hu_max = int(arr.min()), int(arr.max())
+    win_rep = make_slider('W', 1, hu_max - hu_min, hu_max - hu_min, 0.96)
+    lvl_rep = make_slider('L', hu_min, hu_max, (hu_max + hu_min)//2, 0.92)
 
-    class AppWindow(QtWidgets.QMainWindow):
-        def __init__(self, ct_img_arr, spacing, origin, masks):
-            super().__init__()
-            self.setWindowTitle('CT Quad Viewer with Masks')
-            self.ct_arr = ct_img_arr
-            self.spacing = spacing
-            self.origin = origin
-            # VTK widget
-            self.frame = QtWidgets.QFrame()
-            self.layout = QtWidgets.QHBoxLayout()
-            self.vtk_widget = QVTKRenderWindowInteractor(self.frame)
-            self.layout.addWidget(self.vtk_widget, stretch=4)
-            # sidebar
-            self.sidebar = QtWidgets.QVBoxLayout()
-            self.checks = {}
-            for m in masks:
-                cb = QtWidgets.QCheckBox(m['label'])
-                cb.setChecked(True)
-                cb.stateChanged.connect(lambda s,lab=m['label']: self.toggle_mask(lab, s))
-                self.sidebar.addWidget(cb)
-                self.checks[m['label']] = cb
-            side_w = QtWidgets.QWidget()
-            side_w.setLayout(self.sidebar)
-            self.layout.addWidget(side_w, stretch=1)
-            self.frame.setLayout(self.layout)
-            self.setCentralWidget(self.frame)
-            # set up VTK scene
-            self._init_vtk()
-            self.show()
-            self.vtk_widget.Initialize()
+    win_wid = vtk.vtkSliderWidget()
+    lvl_wid = vtk.vtkSliderWidget()
 
-        def _init_vtk(self):
-            rw = self.vtk_widget.GetRenderWindow()
-            # same SliceViewer + QuadStyle setup here, using self.ct_arr, spacing, origin
-            # add each mask via MaskOverlay, store overlays in dict
-            self.overlays = {}
-            # ... (same as above but preserved labels)
+    for wid, rep in ((win_wid, win_rep), (lvl_wid, lvl_rep)):
+        wid.SetInteractor(interactor)
+        wid.SetRepresentation(rep)
+        wid.SetAnimationModeToJump()
+        wid.SetCurrentRenderer(overlay_renderer)
+        wid.EnabledOn()
 
-        def toggle_mask(self, label, state):
-            vis = (state == QtCore.Qt.Checked)
-            self.overlays[label].visible(vis)
-            self.vtk_widget.GetRenderWindow().Render()
+    def wl_callback(obj, event):
+        w = int(round(win_rep.GetValue()))
+        l = int(round(lvl_rep.GetValue()))
+        for sv in viewers:
+            sv.viewer.SetColorWindow(w)
+            sv.viewer.SetColorLevel(l)
+        render_window.Render()
 
-    app = QtWidgets.QApplication(sys.argv)
-    win = AppWindow(arr_ct, spacing, origin, masks)
-    sys.exit(app.exec_())
+    win_wid.AddObserver('InteractionEvent', wl_callback)
+    lvl_wid.AddObserver('InteractionEvent', wl_callback)
+
+    # Start interaction
+    render_window.Render()
+    interactor.Initialize()
+    interactor.Start()
 
 if __name__ == '__main__':
     if len(sys.argv) != 2:
-        print(f"Usage: {sys.argv[0]} <CT_folder_or_file>")
+        print(f"Usage: {sys.argv[0]} <CT_directory_or_file>")
         sys.exit(1)
     main(sys.argv[1])
