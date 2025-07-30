@@ -7,7 +7,7 @@ Features:
  1. Single RenderWindow split into 3 active viewports (axial, coronal, sagittal) and
     crosshair overlay in a reserved top-right quadrant.
  2. Mouse wheel scrolls slices in the quadrant under the cursor; Ctrl + wheel zooms.
- 3. Persistent slice count labels in each quadrant showing "<View> Slice: X/N".
+ 3. Persistent slice count labels in each quadrant showing "<View>\nSlice: X/N".
  4. Gold crosshair overlay across all quadrants.
  5. Global Window/Level sliders rendered on the right edge with slim bars and jump mode.
 """
@@ -68,42 +68,33 @@ def make_slider(label, vmin, vmax, init, xpos):
     rep.SetMinimumValue(vmin)
     rep.SetMaximumValue(vmax)
     rep.SetValue(init)
-
-    # Position the slider track from y=0.1 up to y=0.9
+    
+    # Slider positioning (vertical line)
     rep.GetPoint1Coordinate().SetCoordinateSystemToNormalizedDisplay()
-    rep.GetPoint1Coordinate().SetValue(xpos, 0.10)  # bottom of track
+    rep.GetPoint1Coordinate().SetValue(xpos, 0.15)  # Bottom position
     rep.GetPoint2Coordinate().SetCoordinateSystemToNormalizedDisplay()
-    rep.GetPoint2Coordinate().SetValue(xpos, 0.90)  # top of track
-
+    rep.GetPoint2Coordinate().SetValue(xpos, 0.85)  # Top position
+    
     # Slider appearance
-    rep.SetSliderLength(0.02)
-    rep.SetSliderWidth(0.02)
-    rep.SetTubeWidth(0.005)
-
-    # Hide the numeric value label
-    rep.ShowSliderLabelOff()
-
-    # Title text (the “W” or “L”)
-    rep.SetTitleText(label)
-    title_prop = rep.GetTitleProperty()
-    title_prop.SetFontSize(14)
-    title_prop.SetColor(1, 1, 1)
-    title_prop.SetJustificationToCentered()
-    title_prop.SetVerticalJustificationToTop()  # anchor at top of text box
-
-    # Make the title box tall enough so it stays above the bar
-    rep.SetTitleHeight(0.06)
-
-    # Disable highlight artifacts
-    rep.GetSliderProperty().SetColor(1, 1, 0)
-    rep.GetSelectedProperty().SetColor(1, 1, 0)
-    rep.GetTubeProperty().SetColor(0.4, 0.4, 0.4)
+    rep.SetSliderLength(0.008)  # Slider handle size
+    rep.SetSliderWidth(0.008)   # Slider handle size 
+    rep.SetTubeWidth(0.002)     # Track line thickness
+    
+    # Remove all decorations
+    rep.ShowSliderLabelOff()    # Remove value text
+    rep.SetEndCapLength(0.0)    # Remove end caps
+    
+    # Critical: Disable all highlighting that causes traces
+    rep.GetSliderProperty().SetColor(1, 1, 0)  # Yellow slider
+    rep.GetSelectedProperty().SetColor(1, 1, 0)  # Same yellow when selected
+    rep.GetTubeProperty().SetColor(0.4, 0.4, 0.4)  # Dark gray track
+    
+    # Eliminate trace artifacts completely
     rep.GetSliderProperty().SetOpacity(1.0)
     rep.GetSelectedProperty().SetOpacity(1.0)
     rep.GetTubeProperty().SetOpacity(1.0)
-
+    
     return rep
-
 
 # Wrapper for each quadrant viewer
 class SliceViewer:
@@ -191,15 +182,20 @@ def add_crosshair(render_window):
     return overlay
 
 class QuadStyle(vtkInteractorStyleImage):
-    def __init__(self, viewers):
+    def __init__(self, viewers, probe_mapper, arr, origin, spacing):
         super().__init__()
         self.viewers = viewers
+        self.probe_mapper = probe_mapper
+        self.arr          = arr
+        self.origin       = origin
+        self.spacing      = spacing
         # Remove default wheel observers
         self.RemoveObservers('MouseWheelForwardEvent')
         self.RemoveObservers('MouseWheelBackwardEvent')
         # Add our custom wheel handlers
         self.AddObserver('MouseWheelForwardEvent', self.wheel_forward)
         self.AddObserver('MouseWheelBackwardEvent', self.wheel_backward)
+        self.AddObserver('MouseMoveEvent', self.on_mouse_move) # Mouse listener 
 
     def pick_viewer(self):
         x, y = self.GetInteractor().GetEventPosition()
@@ -243,6 +239,37 @@ class QuadStyle(vtkInteractorStyleImage):
             sv.move(-1)
 
         self.GetInteractor().GetRenderWindow().Render()
+    
+    def on_mouse_move(self, obj, event):
+        x, y = self.GetInteractor().GetEventPosition()
+        sv = self.pick_viewer()
+        if not sv:
+            return
+        ren = sv.viewer.GetRenderer()
+
+        ren.SetDisplayPoint(x, y, 0)
+        ren.DisplayToWorld()
+        world = ren.GetWorldPoint()
+        if world[3] == 0:
+            return
+        Xw, Yw, Zw = [c/world[3] for c in world[:3]]
+
+        i = int(round((Xw - self.origin[0]) / self.spacing[0]))
+        j = int(round((Yw - self.origin[1]) / self.spacing[1]))
+        k = int(round((Zw - self.origin[2]) / self.spacing[2]))
+
+        Z, Y, X = self.arr.shape
+        if not (0 <= i < X and 0 <= j < Y and 0 <= k < Z):
+            return
+
+        val = self.arr[k, j, i]
+
+        text = (
+            f"World (mm): X={Xw:.1f}, Y={Yw:.1f}, Z={Zw:.1f}\n"
+            f"IJK: i={i}, j={j}, k={k}   Value: {val}"
+        )
+        self.probe_mapper.SetInput(text)
+        self.GetInteractor().GetRenderWindow().Render()
 
 # Main entrypoint
 
@@ -250,13 +277,9 @@ def main(ct_path: str):
     img = cache_ct(ct_path)
     vtk_img, arr = sitk_to_vtk(img)
 
-    # 1) Create a 3-layer window: 
-    #    layer 0 = image viewers, 
-    #    layer 1 = crosshair overlay, 
-    #    layer 2 = sliders
     render_window = vtkRenderWindow()
     render_window.SetSize(900, 900)
-    render_window.SetNumberOfLayers(3)
+    render_window.SetNumberOfLayers(2)
 
     # Define quadrants (axial, coronal, sagittal)
     quads = {
@@ -265,36 +288,64 @@ def main(ct_path: str):
         'Sagittal': (0.5, 0.0, 1.0, 0.5)
     }
 
-    # 2) Create the three image viewers on layer 0
+    # Create viewers for each quadrant
     viewers = []
     for name, vp in quads.items():
         sv = SliceViewer(vtk_img, arr, name.lower(), vp, name, render_window)
         viewers.append(sv)
 
-    # 3) Crosshair on layer 1
-    #    (your existing add_crosshair() adds a vtkRenderer at layer 1)
+    # Add crosshair overlay
     overlay_renderer = add_crosshair(render_window)
 
-    # 4) Slider container on layer 2
-    slider_renderer = vtkRenderer()
-    slider_renderer.SetLayer(2)
-    slider_renderer.InteractiveOff()
-    slider_renderer.SetViewport(0.0, 0.0, 1.0, 1.0)
-    render_window.AddRenderer(slider_renderer)
+    # Add Data Probe
+    probe_text_prop = vtkTextProperty()
+    probe_text_prop.SetFontSize(12)
+    probe_text_prop.SetColor(1, 1, 1)
+    probe_text_prop.SetJustificationToLeft()
+    probe_text_prop.SetVerticalJustificationToTop()
 
-    # 5) Interactor + style
+    probe_mapper = vtkTextMapper()
+    probe_mapper.SetTextProperty(probe_text_prop)
+    probe_actor = vtkActor2D()
+    probe_actor.SetMapper(probe_mapper)
+   
+    w, h = render_window.GetSize()
+    probe_actor.SetPosition(10, h - 10)
+
+    overlay_renderer.AddActor2D(probe_actor)
+   
+
+    # Create interactor and style
     interactor = vtkRenderWindowInteractor()
     interactor.SetRenderWindow(render_window)
-    interactor.SetInteractorStyle(QuadStyle(viewers))
+   
+    origin  = img.GetOrigin()
+    spacing = img.GetSpacing()
 
-    # 6) Build Window/Level sliders, pointing them at layer-2 renderer
-    # Window/Level sliders on layer-2 renderer
+    interactor.SetInteractorStyle(
+        QuadStyle(
+            viewers,
+            probe_mapper,
+            arr,
+            origin,
+            spacing
+        )
+    )
+
+    # Window/Level sliders on right
     hu_min, hu_max = int(arr.min()), int(arr.max())
     win_rep = make_slider('W', 1, hu_max - hu_min, hu_max - hu_min, 0.96)
     lvl_rep = make_slider('L', hu_min, hu_max, (hu_max + hu_min)//2, 0.92)
 
     win_wid = vtk.vtkSliderWidget()
     lvl_wid = vtk.vtkSliderWidget()
+
+    for wid, rep in ((win_wid, win_rep), (lvl_wid, lvl_rep)):
+        wid.SetInteractor(interactor)
+        wid.SetRepresentation(rep)
+        wid.SetAnimationModeToJump()
+        wid.SetCurrentRenderer(overlay_renderer)
+        wid.EnabledOn()
 
     def wl_callback(obj, event):
         w = int(round(win_rep.GetValue()))
@@ -304,30 +355,13 @@ def main(ct_path: str):
             sv.viewer.SetColorLevel(l)
         render_window.Render()
 
-    for wid, rep in ((win_wid, win_rep), (lvl_wid, lvl_rep)):
-        wid.SetInteractor(interactor)
-        wid.SetRepresentation(rep)
-        wid.SetAnimationModeToJump()
-        wid.SetCurrentRenderer(slider_renderer)
+    win_wid.AddObserver('InteractionEvent', wl_callback)
+    lvl_wid.AddObserver('InteractionEvent', wl_callback)
 
-        # → Remove the widget’s internal render calls so it doesn't paint ghost handles
-        wid.RemoveObservers("StartInteractionEvent")
-        wid.RemoveObservers("InteractionEvent")
-        wid.RemoveObservers("EndInteractionEvent")
-
-        # → Only our callback will trigger a full render
-        wid.AddObserver("InteractionEvent", wl_callback)
-
-        wid.EnabledOn()
-
-    #win_wid.AddObserver('InteractionEvent', wl_callback)
-    #lvl_wid.AddObserver('InteractionEvent', wl_callback)
-
-    # 8) Launch
+    # Start interaction
     render_window.Render()
     interactor.Initialize()
     interactor.Start()
-
 
 if __name__ == '__main__':
     if len(sys.argv) != 2:
