@@ -16,12 +16,37 @@ def save_patient_data_to_file(context, file_name):
     folder = parent_dir / "Projects"/ file_name
     folder.mkdir(parents=True, exist_ok=True)
     data = {
-        "name": context.patient.name,
-        "age": context.patient.age,
-        "state":context.state.state_name,
+        "name": context._singleton_data.patient.name,
+        "age": context._singleton_data.patient.age,
+        "state":context._singleton_data.state.state_name,
     }
     with open(os.path.join(folder, "data.json"), "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
+
+    #Save CT
+    CT_num_slices = context._singleton_data.patient.CT.GetDepth()
+    CT_folder = folder / "CT"
+    CT_folder.mkdir(parents=True, exist_ok=True)
+    for i in range(CT_num_slices):
+        slice_i = context._singleton_data.patient.CT[:, :, i]
+        filename = f"IN{i+1:06d}.dcm"
+
+        filepath = os.path.join( CT_folder, filename)
+        sitk.WriteImage(slice_i, filepath)
+    print(f"✅ all CT slices be saved")
+    print(f"✅ all segmentedCT slices be saved")
+
+    # Save fluoroscopy
+    fluoroscopy_num_slices = context._singleton_data.patient.fluoroscopy.GetDepth()
+    for i in range(fluoroscopy_num_slices):
+        slice_i = context._singleton_data.patient.fluoroscopy[:, :, i]
+        filename = f"SE{i:06d}.dcm"
+        filepath = os.path.join(parent_dir / "Projects" / file_name / "fluoroscopy", filename)
+        sitk.WriteImage(slice_i, filepath)
+    print(f"✅ all fluoroscopy slices be saved")
+
+
+
 
 def read_patient_data_from_file(file_path):
     """
@@ -41,7 +66,7 @@ def read_patient_data_from_file(file_path):
     state_instance = switcher[state]
 
 
-def loading_project(Name: str = "", Age: int = 0, ct_path: str = "", fluoro_path: str = "", segmented_path: str = "",) -> Context:
+def loading_project(Name: str = "", Age: int = 0, ct_path: str = "", fluoro_path: str = "") -> Context:
     """Initialize a new patient and set the initial state."""
     patient = SingletonPatient.get_instance()
     patient.patient.name = Name
@@ -49,4 +74,23 @@ def loading_project(Name: str = "", Age: int = 0, ct_path: str = "", fluoro_path
     context = Context(RawState(), patient)
     return context
 
+def initialize_project(name:str , age : int, CT_path: str, fluoro_path: str = "") -> Context:
+    """
+    Initialize a new patient and set the initial state.
+    :param name: name of the patient
+    :param age: age of the patient
+    :param CT_path: path to the CT image
+    :param fluoro_path: path to the fluoroscopy image
+    :param segmented_path: path to the segmented CT image
+    :return: Context object with the initialized patient and state
+    """
+    patient = SingletonPatient.get_instance(name, age, CT_path, fluoro_path)
+    context = Context(RawState(), patient)
+    return context
+if __name__ == '__main__':
+    # Example usage of the functions
+    # Initialize a new patient and context
+    context = initialize_project("Pench", 24, "/Users/apple/PycharmProjects/OrthoVis/classes/Data/DICOM/P0000001/ST000001/SE000003")
+    #Test for simple save function
+    save_patient_data_to_file(context,"PROJECT_1")
 
