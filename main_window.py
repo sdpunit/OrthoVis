@@ -5,12 +5,10 @@ from PySide6.QtWidgets import QMainWindow, QStackedWidget, QPushButton, QWidget,
 from frontend_pages.startup.startup_window import HomePage
 from frontend_pages.project_setup.project_setup_window import ProjectSetup
 from frontend_pages.segmentation.segmentation_window import Segmentation
-
-# Imports for Widgets that are yet to be created...
-# from frontend_pages.calibration_window import Calibration
-# from frontend_pages.axis_window import DefineAxis
-# from frontend_pages.visualisation_window import Visualisation
-
+from frontend_pages.calibration.calibration_window import Calibration
+from frontend_pages.define_axis.define_axis_window import DefineAxis
+from frontend_pages.registration.registration_window import Registration
+from frontend_pages.visualisation.visualisation_window import Visualisation
 
 
 # This file manages the actual display window and handles the logic to decide which page to show.
@@ -30,15 +28,16 @@ class MainWindow(QMainWindow):
         self.segmentation = Segmentation()
         
         # Calibrate the fluroscopy 
-        # self.calibration = Calibration()
+        self.calibration = Calibration()
 
         # Define the Axis
-        # self.defineaxis = DefineAxis()
+        self.defineaxis = DefineAxis()
 
-        # ** Perfom registration... can be just a button on the axis widget? **
+        # Perform Registratioin
+        self.registration = Registration()
         
         # Visualise the end result of the applicaton
-        #self.visualisation = Visualisation()
+        self.visualisation = Visualisation()
 
         self.stack = QStackedWidget()
 
@@ -46,9 +45,10 @@ class MainWindow(QMainWindow):
         self.stack.addWidget(self.homepage)       # index 0
         self.stack.addWidget(self.projectsetup)     # index 1
         self.stack.addWidget(self.segmentation)   # index 2
-        # self.stack.addWidget(self.calibration)       # index 3
-        # self.stack.addWidget(self.defineaxis)     # index 4
-        # self.stack.addWidget(self.visualisation)   # index 5
+        self.stack.addWidget(self.calibration)       # index 3
+        self.stack.addWidget(self.defineaxis)     # index 4
+        self.stack.addWidget(self.registration)   # index 5
+        self.stack.addWidget(self.visualisation)   # index 6
 
         self.setCentralWidget(self.stack)
 
