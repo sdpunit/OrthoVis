@@ -1,4 +1,4 @@
-from classes.objects import SingletonPatient, RawState, Context
+from classes.objects import SingletonPatient, RawState, Context, DataState
 import os
 import json
 import SimpleITK as sitk
@@ -64,14 +64,17 @@ def read_patient_data_from_file(file_path):
         # Add other states here as needed
     }
     state_instance = switcher[state]
+    if state == "RawState":
+        ct_path = os.path.join(file_path, "CT")
+        return loading_project(Name=name, Age=age, ct_path=ct_path, state=state_instance)
+    else:
+        ct_path = os.path.join(file_path, "segmentCT")
+        return loading_project(Name=name, Age=age, ct_path=os.path, state = state_instance)
 
-
-def loading_project(Name: str = "", Age: int = 0, ct_path: str = "", fluoro_path: str = "") -> Context:
+def loading_project(Name: str = "", Age: int = 0, ct_path: str = "", state : DataState = RawState()) -> Context:
     """Initialize a new patient and set the initial state."""
-    patient = SingletonPatient.get_instance()
-    patient.patient.name = Name
-    patient.patient.age = Age
-    context = Context(RawState(), patient)
+    patient = SingletonPatient.get_instance(Name, Age, ct_path)
+    context = Context(state, patient)
     return context
 
 def initialize_project(name:str , age : int, CT_path: str, fluoro_path: str = "") -> Context:
@@ -90,7 +93,14 @@ def initialize_project(name:str , age : int, CT_path: str, fluoro_path: str = ""
 if __name__ == '__main__':
     # Example usage of the functions
     # Initialize a new patient and context
-    context = initialize_project("Pench", 24, "/Users/apple/PycharmProjects/OrthoVis/classes/Data/DICOM/P0000001/ST000001/SE000003")
+    #context = initialize_project("Pench", 24, "/Users/apple/PycharmProjects/OrthoVis/classes/Data/DICOM/P0000001/ST000001/SE000003")
     #Test for simple save function
-    save_patient_data_to_file(context,"PROJECT_1")
+    #save_patient_data_to_file(context,"PROJECT_1")
+    context = read_patient_data_from_file("/Users/apple/PycharmProjects/OrthoVis/Projects/PROJECT_1")
+
+    print(context._singleton_data.patient.name)
+    print(context._singleton_data.patient.age)
+    print(context._singleton_data.state.state_name)
+    print(context._singleton_data.patient.CT)
+
 
