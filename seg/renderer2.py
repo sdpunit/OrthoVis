@@ -343,7 +343,7 @@ def main(ct_path: str, mask_paths: list[str]):
         lut = vtk.vtkLookupTable()
         lut.SetNumberOfTableValues(2)
         lut.SetTableValue(0, 0,0,0, 0.0)   # background transparent
-        lut.SetTableValue(1, 1,0,0, 0.3)   # red @30% opacity
+        lut.SetTableValue(1, 1,0,0, 0.6)   # red @60% opacity
         lut.Build()
 
         cmap = vtk.vtkImageMapToColors()
