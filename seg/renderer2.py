@@ -226,7 +226,7 @@ class QuadStyle(vtkInteractorStyleImage):
         # Add our custom wheel handlers
         self.AddObserver('MouseWheelForwardEvent', self.wheel_forward)
         self.AddObserver('MouseWheelBackwardEvent', self.wheel_backward)
-        self.AddObserver('MouseMoveEvent', self.on_mouse_move) # Mouse listener 
+        # self.AddObserver('MouseMoveEvent', self.on_mouse_move) # Mouse listener 
 
     def pick_viewer(self):
         x, y = self.GetInteractor().GetEventPosition()
@@ -452,5 +452,5 @@ if __name__ == '__main__':
         print(f"Usage: {sys.argv[0]} <CT_directory_or_file> <mask1.nii> [mask2.nii ...]")
         sys.exit(1)
     ct_path    = sys.argv[1]
-    mask_paths = sys.argv[2:]      # 把第2个开始的所有参数都当作 mask
+    mask_paths = sys.argv[2:]     
     main(ct_path, mask_paths)
