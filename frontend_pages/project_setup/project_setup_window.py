@@ -3,7 +3,7 @@ from PySide6.QtWidgets import QWidget
 from PySide6.QtGui import QStandardItemModel, QStandardItem
 from frontend_pages.project_setup.ui_project_setup_window import Ui_Form
 from PySide6.QtWidgets import QFileDialog
-from classes.test import *
+from test import *
 
 name = ""
 model = QStandardItemModel()
@@ -45,18 +45,7 @@ class ProjectSetup(QWidget):
         #Test for simple save function
         context.request_save(patient)
         self.parent().setCurrentIndex(2)
-    
-    # def handleImportCT(self):
-    #     folder_path = QFileDialog.getExistingDirectory(
-    #         self,
-    #         "Select the CT sequence folder (e.g. SE000000)"
-    #     )
-        
-    #     if folder_path:
-    #         item = QStandardItem(folder_path)
-    #         model.appendRow(item)
 
-    #         print(f"Selected folder: {folder_path}")
 
 
     def handleImportFluoro(self):
