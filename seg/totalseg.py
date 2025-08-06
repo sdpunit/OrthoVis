@@ -17,9 +17,9 @@ import subprocess
 # totalseg_download_weights -t appendicular_bones [patella, tibia, fibula]
 
 # Input and output directories
-ct_dir = "/Users/liruohua/Desktop/OrthoVis/PI201/DICOM/P0000001/ST000001/SE000003"  # Input CT directory 
-seg_dir = "/Users/liruohua/Desktop/OrthoVis/segmentation_masks"  # Output segmentation masks directory
-roi = ["femur_left", "femur_right", "fibula", "patella", "tibia"] # ROIs 
+ct_dir = "/mnt/c/users/avery/Desktop/PI201/DICOM/P0000001/ST000001/SE000003"  # Input CT directory 
+seg_dir = "/mnt/c/users/avery/Desktop/segmentation_masks"  # Output segmentation masks directory
+roi = ["femur_right", "fibula", "patella", "tibia"] # ROIs 
 
 def run_totalseg(ct_dir: str, seg_dir: str): 
     # TotalSegmentator segmentation 
@@ -43,9 +43,10 @@ def run_totalseg(ct_dir: str, seg_dir: str):
         print(result_appendicular.stderr)
     print("Finished '--ta appendicular_bones' segmentation./n")
     
+    rois = {f'{bone}.nii.gz' for bone in roi}
     for f in os.listdir(seg_dir):
-        if f not in [bone + ".nii.gz" for bone in roi]:
-            os.remove(f"{seg_dir}/{f}")  
+        if f not in rois:
+            os.remove(os.path.join(seg_dir, f))  
     print(f"TotalSegmentator masks successfully saved to: {seg_dir}")
 
 
@@ -158,9 +159,10 @@ def refine_mask_adaptive_otsu(mask_path: str, ct_path: str, output_path: str,
     # --- Step 5: Save output ---
     final_img = sitk.GetImageFromArray(final_combined.astype(np.uint8))
     final_img.CopyInformation(mask)
-    sitk.WriteImage(final_img, output_path)
+    sitk.WriteImage(final_img, output_path) 
 
     print(f"Hybrid Otsu-adaptive refined mask saved to: {output_path}")
+
 
 
 if __name__ == "__main__":
@@ -169,3 +171,6 @@ if __name__ == "__main__":
         print(f"Post-processing {m} mask...")
         refine_mask_adaptive_otsu(f"{seg_dir}/{m}.nii.gz", ct_dir, f"{seg_dir}/{m}_otsu.nii.gz")
         print(f"Successfully saved refined {m} mask to: {seg_dir}/{m}_otsu.nii.gz")
+    for f in os.listdir(seg_dir):
+        if "_otsu" not in f:
+            os.remove(os.path.join(seg_dir, f)) 

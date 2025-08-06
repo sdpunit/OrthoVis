@@ -3,8 +3,7 @@ import SimpleITK as sitk
 import os
 import pickle
 
-from classes.singleton import SingletonPatient
-from classes.states import Context
+from classes.objects import Context
 
 
 def initialize(ct_dir, fluoro_dir) -> classes.states.Context:
@@ -44,7 +43,6 @@ def save_context(context: Context, folder="saved_context"):
     # save matadata
     metadata = {
         "state_class": context._state.__class__.__name__,
-        "description": context._description,
         "name": patient.name,
         "age": patient.age,
         "ct_path": ct_path if patient.CT else None,
@@ -86,7 +84,7 @@ def load_context(folder="saved_context") -> Context:
 
 
     # loading context
-    context = Context(state=state_instance, patient=singleton_patient, data["description"])
+    context = Context(state=state_instance, patient=singleton_patient)
     return context
 
 

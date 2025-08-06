@@ -1,251 +1,302 @@
 #!/usr/bin/env python3
 """
-2D Axial CT Slice Viewer with Caching, Integer Slider, Fixed Plane, and Window/Level Controls
+2D CT Quad-Viewer (Axial/Coronal/Sagittal) with Per-Quadrant Scrolling, Ctrl-Zoom,
+Gold Crosshair, and Modern Window/Level Sliders
 
 Features:
- 1. Load CT (DICOM folder or NIfTI) via `totalseg.load_ct`, cached to `.mha` for fast reloads.
- 2. Display axial (XY) slices in a 2D VTK viewer (vtkImageViewer2), keeping the image fixed in the plane.
- 3. Slice navigation:
-    - Mouse wheel scrolls through slices (no zoom out/in).
-    - Draggable slider moves in integer steps, reflects and controls the current slice.
-    - On-screen "Slice: X/N" label updates in real time.
- 4. Window/Level control via two sliders (window width, level center) affecting the 2D viewer.
-
-Usage:
-    python axial_viewer2d.py <CT_source>
+ 1. Single RenderWindow split into 3 active viewports (axial, coronal, sagittal) and
+    crosshair overlay in a reserved top-right quadrant.
+ 2. Mouse wheel scrolls slices in the quadrant under the cursor; Ctrl + wheel zooms.
+ 3. Persistent slice count labels in each quadrant showing "<View>\nSlice: X/N".
+ 4. Gold crosshair overlay across all quadrants.
+ 5. Global Window/Level sliders rendered on the right edge with slim bars and jump mode.
 """
-import sys
 import os
+import sys
 import SimpleITK as sitk
 import vtk
+from vtkmodules.vtkInteractionStyle import vtkInteractorStyleImage
+from vtkmodules.vtkInteractionImage import vtkImageViewer2
+from vtkmodules.vtkRenderingCore import (
+    vtkRenderWindow,
+    vtkRenderer,
+    vtkRenderWindowInteractor,
+    vtkActor2D,
+    vtkTextMapper,
+    vtkTextProperty,
+    vtkPolyDataMapper2D,
+    vtkTextActor
+)
+from vtkmodules.vtkCommonDataModel import vtkPolyData, vtkCellArray
+from vtkmodules.vtkCommonCore import vtkPoints
 from vtkmodules.util import numpy_support
-from totalseg import load_ct
+from seg.totalseg import load_ct
 
-# --- Configuration ---
+# Caching directory
 CACHE_DIR = os.path.expanduser('~/.cache/renderer')
-if not os.path.exists(CACHE_DIR):
-    os.makedirs(CACHE_DIR, exist_ok=True)
+os.makedirs(CACHE_DIR, exist_ok=True)
 
-# --- Helpers ---
-def get_cache_path(ct_source: str) -> str:
-    base = os.path.basename(ct_source.rstrip(os.sep)).replace(' ', '_')
-    return os.path.join(CACHE_DIR, f"{base}.mha")
+# Helper: cache or load CT image
 
-def load_cached_ct(ct_source: str) -> sitk.Image:
-    cache = get_cache_path(ct_source)
-    if os.path.exists(cache):
-        print(f"Loading CT from cache: {cache}")
-        return sitk.ReadImage(cache)
-    print(f"Loading CT from source: {ct_source}")
-    img = load_ct(ct_source)
-    print(f"Caching CT to: {cache}")
-    sitk.WriteImage(img, cache)
+def cache_ct(path: str):
+    cache_file = os.path.join(CACHE_DIR, os.path.basename(path.rstrip(os.sep)) + '.mha')
+    if os.path.exists(cache_file):
+        return sitk.ReadImage(cache_file)
+    img = load_ct(path)
+    sitk.WriteImage(img, cache_file)
     return img
 
-# Convert SimpleITK to vtkImageData
-def sitk_to_vtk(sitk_img):
-    arr = sitk.GetArrayFromImage(sitk_img)  # shape (Z, Y, X)
+# Convert SimpleITK image to vtkImageData
+
+def sitk_to_vtk(img):
+    arr = sitk.GetArrayFromImage(img)
     Z, Y, X = arr.shape
     vtk_img = vtk.vtkImageData()
     vtk_img.SetDimensions(X, Y, Z)
-    vtk_img.SetExtent(0, X-1, 0, Y-1, 0, Z-1)
-    vtk_img.SetSpacing(sitk_img.GetSpacing())
-    vtk_img.SetOrigin(sitk_img.GetOrigin())
-    vtk_arr = numpy_support.numpy_to_vtk(arr.ravel(order='C'), deep=True,
-        array_type=numpy_support.get_vtk_array_type(arr.dtype))
+    vtk_img.SetSpacing(img.GetSpacing())
+    vtk_img.SetOrigin(img.GetOrigin())
+    vtk_arr = numpy_support.numpy_to_vtk(
+        arr.ravel(), deep=True,
+        array_type=numpy_support.get_vtk_array_type(arr.dtype)
+    )
     vtk_img.GetPointData().SetScalars(vtk_arr)
     return vtk_img, arr
 
-# Slider factory for 2D UI
-def make_slider(title, mn, mx, init, p1, p2):
+# Create a thin vertical slider with jump animation
+
+def make_slider(vmin, vmax, init, xpos):
     rep = vtk.vtkSliderRepresentation2D()
-    rep.SetTitleText(title)
-    rep.SetMinimumValue(mn)
-    rep.SetMaximumValue(mx)
+    rep.SetMinimumValue(vmin)
+    rep.SetMaximumValue(vmax)
     rep.SetValue(init)
+    
+    # Slider positioning (vertical)
     rep.GetPoint1Coordinate().SetCoordinateSystemToNormalizedDisplay()
-    rep.GetPoint1Coordinate().SetValue(*p1)
+    rep.GetPoint1Coordinate().SetValue(xpos, 0.1)  # Bottom position
     rep.GetPoint2Coordinate().SetCoordinateSystemToNormalizedDisplay()
-    rep.GetPoint2Coordinate().SetValue(*p2)
-    rep.SetSliderLength(0.02)
-    rep.SetSliderWidth(0.03)
-    rep.SetTubeWidth(0.005)
+    rep.GetPoint2Coordinate().SetValue(xpos, 0.4)  # Top position
+    
+    # Slider appearance
+    rep.SetSliderLength(0.008)  # Slider handle size
+    rep.SetSliderWidth(0.008)   # Slider handle size 
+    rep.SetTubeWidth(0.002)     # Track line thickness
+    
+    # Remove all decorations
+    rep.ShowSliderLabelOff()    # Remove value text
+    rep.SetEndCapLength(0.0)    # Remove end caps
+    
+    rep.GetSliderProperty().SetColor(1, 1, 0)  # Yellow slider
+    rep.GetSelectedProperty().SetColor(1, 1, 0)  # Same yellow when selected
+    rep.GetTubeProperty().SetColor(0.4, 0.4, 0.4)  # Dark gray track
+    
+    # Eliminate trace artifacts completely
+    rep.GetSliderProperty().SetOpacity(1.0)
+    rep.GetSelectedProperty().SetOpacity(1.0)
+    rep.GetTubeProperty().SetOpacity(1.0)
+    
     return rep
 
+# Wrapper for each quadrant viewer
+class SliceViewer:
+    def __init__(self, vtk_img, arr, orientation, viewport, name, render_window):
+        self.name = name
+        self.viewport = viewport
+        # Set up vtkImageViewer2
+        self.viewer = vtkImageViewer2()
+        self.viewer.SetInputData(vtk_img)
+        # Choose orientation
+        axis = 0
+        if orientation == 'coronal':
+            self.viewer.SetSliceOrientationToXZ()
+            axis = 1
+        elif orientation == 'sagittal':
+            self.viewer.SetSliceOrientationToYZ()
+            axis = 2
+        # Slice range
+        self.min_slice, self.max_slice = 0, arr.shape[axis] - 1
+        self.slice = arr.shape[axis] // 2
+        self.viewer.SetSlice(self.slice)
+        # Renderer configuration
+        renderer = self.viewer.GetRenderer()
+        renderer.SetViewport(*viewport)
+        renderer.SetBackground(0, 0, 0)
+        render_window.AddRenderer(renderer)
+        self.viewer.SetRenderWindow(render_window)
+        # Slice counter text
+        text_prop = vtkTextProperty()
+        text_prop.SetFontSize(18)
+        text_prop.SetColor(1, 1, 1)
+        self.mapper = vtkTextMapper()
+        self.mapper.SetTextProperty(text_prop)
+        self.actor = vtkActor2D()
+        self.actor.SetMapper(self.mapper)
+        self.actor.SetPosition(5, 5)
+        renderer.AddActor2D(self.actor)
+        self.update_label()
 
-# Main viewer
-def main(ct_source):
-    # Load and cache CT volume
-    sitk_img = load_cached_ct(ct_source)
-    vtk_img, arr = sitk_to_vtk(sitk_img)
+    def update_label(self):
+        self.mapper.SetInput(f"{self.name}\nSlice: {self.slice+1}/{self.max_slice+1}")
 
-    num_slices = arr.shape[0]
+    def move(self, delta):
+        new_slice = min(max(self.min_slice, self.slice + delta), self.max_slice)
+        if new_slice != self.slice:
+            self.slice = new_slice
+            self.viewer.SetSlice(self.slice)
+            self.update_label()
+        self.viewer.Render()
+
+    def contains(self, xn, yn):
+        x0, y0, x1, y1 = self.viewport
+        return x0 <= xn <= x1 and y0 <= yn <= y1
+
+class QuadStyle(vtkInteractorStyleImage):
+    def __init__(self, viewers):
+        super().__init__()
+        self.viewers = viewers
+        # Remove default wheel observers
+        self.RemoveObservers('MouseWheelForwardEvent')
+        self.RemoveObservers('MouseWheelBackwardEvent')
+        # Add our custom wheel handlers
+        self.AddObserver('MouseWheelForwardEvent', self.wheel_forward)
+        self.AddObserver('MouseWheelBackwardEvent', self.wheel_backward)
+
+    def pick_viewer(self):
+        x, y = self.GetInteractor().GetEventPosition()
+        w, h = self.GetInteractor().GetRenderWindow().GetSize()
+        xn, yn = x / w, y / h
+        for sv in self.viewers:
+            if sv.contains(xn, yn):
+                return sv
+        return None
+
+    def wheel_forward(self, obj, event):
+        sv = self.pick_viewer()
+        if not sv:
+            return
+
+        if self.GetInteractor().GetControlKey():
+            # —— ZOOM IN ——
+            cam = sv.viewer.GetRenderer().GetActiveCamera()
+            cam.ParallelProjectionOn()
+            cam.Zoom(1.1)
+            sv.viewer.Render()
+        else:
+            # —— SLICE UP ——
+            sv.move(1)
+
+        self.GetInteractor().GetRenderWindow().Render()
+
+    def wheel_backward(self, obj, event):
+        sv = self.pick_viewer()
+        if not sv:
+            return
+
+        if self.GetInteractor().GetControlKey():
+            # —— ZOOM OUT ——
+            cam = sv.viewer.GetRenderer().GetActiveCamera()
+            cam.ParallelProjectionOn()
+            cam.Zoom(0.9)
+            sv.viewer.Render()
+        else:
+            # —— SLICE DOWN ——
+            sv.move(-1)
+
+        self.GetInteractor().GetRenderWindow().Render()
+
+# Main entry point
+
+def main(img):
+    #img = cache_ct(ct_path)
+    vtk_img, arr = sitk_to_vtk(img)
+
+    render_window = vtkRenderWindow()
+    render_window.SetAlphaBitPlanes(1)
+    render_window.SetSize(900, 900)
+    render_window.SetNumberOfLayers(3)
+
+    # Define quadrants (axial, coronal, sagittal)
+    quads = {
+        'Axial':    (0.0, 0.5, 0.5, 1.0),
+        'Coronal':  (0.0, 0.0, 0.5, 0.5),
+        'Sagittal': (0.5, 0.0, 1.0, 0.5)
+    }
+
+    # Create viewers for each quadrant
+    viewers = []
+    for name, vp in quads.items():
+        sv = SliceViewer(vtk_img, arr, name.lower(), vp, name, render_window)
+        viewers.append(sv)
+
+    # Create interactor and style
+    interactor = vtkRenderWindowInteractor()
+    interactor.SetRenderWindow(render_window)
+    interactor.SetInteractorStyle(QuadStyle(viewers))
+
+
+    # Reset each camera so the slice fills the quadrant
+    for sv in viewers:
+        ren = sv.viewer.GetRenderer()
+        ren.ResetCamera()             # zoom so image fills viewport
+        ren.ResetCameraClippingRange()
+        cam = ren.GetActiveCamera()
+        cam.Zoom(1.4)
+
+    # Window/Level sliders on right (in their own layer)
+    slider_renderer = vtkRenderer()
+    slider_renderer.SetLayer(2)
+    slider_renderer.InteractiveOff()
+    slider_renderer.SetViewport(0.0, 0.0, 1.0, 1.0)
+    render_window.AddRenderer(slider_renderer)
+
     hu_min, hu_max = int(arr.min()), int(arr.max())
-    init_slice = num_slices // 2
-    init_window = 5.7e3
-    init_level = 1.98e3
+    win_rep = make_slider(1, hu_max - hu_min, hu_max - hu_min, 0.97)
+    lvl_rep = make_slider(hu_min, hu_max, (hu_max + hu_min)//2, 0.94)
 
-    # VTK 2D viewer setup
-    viewer = vtk.vtkImageViewer2()
-    viewer.SetInputData(vtk_img)
-    viewer.SetSlice(init_slice)
-    ren_win = viewer.GetRenderWindow()
-    ren = viewer.GetRenderer()
-    iren = vtk.vtkRenderWindowInteractor()
-    viewer.SetupInteractor(iren)
+    win_wid = vtk.vtkSliderWidget()
+    lvl_wid = vtk.vtkSliderWidget()
 
-    ren.ResetCamera()
-    ren_win.SetSize(600, 600)
-
-    # On-screen slice counter
-    text_actor = vtk.vtkTextActor()
-    tp = text_actor.GetTextProperty()
-    tp.SetFontSize(24)
-    tp.BoldOn()
-    text_actor.SetPosition(10, 10)
-    ren.AddActor2D(text_actor)
-    text_actor.SetInput(f"Slice: {init_slice+1}/{num_slices}")
-
-    # Slider for slice index
-    slice_rep = make_slider("Slice", 0, num_slices-1, init_slice, (0.1, 0.05), (0.9, 0.05))
-    slice_slider = vtk.vtkSliderWidget()
-    slice_slider.SetInteractor(iren)
-    slice_slider.SetRepresentation(slice_rep)
-    slice_slider.SetAnimationModeToJump()
-    slice_slider.EnabledOn()
-
-    # new
-    info_actor = vtk.vtkTextActor()
-    tp = info_actor.GetTextProperty()
-    tp.SetFontSize(20)
-    tp.BoldOn()
-    info_actor.SetPosition(10, 90)  
-    ren.AddActor2D(info_actor)
-
-
-    def on_slice(obj, event):
-        val = int(round(obj.GetRepresentation().GetValue()))
-        viewer.SetSlice(val)
-        text_actor.SetInput(f"Slice: {val+1}/{num_slices}")
-        slice_rep.SetValue(val)
-        ren_win.Render()
-    slice_slider.AddObserver("EndInteractionEvent", on_slice)
-
-    # Mouse wheel integration
-    def wheel_forward(obj, event):
-        current = viewer.GetSlice()
-        val = min(num_slices-1, current+1)
-        viewer.SetSlice(val)
-        text_actor.SetInput(f"Slice: {val+1}/{num_slices}")
-        slice_rep.SetValue(val)
-        ren_win.Render()
-
-    def wheel_backward(obj, event):
-        current = viewer.GetSlice()
-        val = max(0, current-1)
-        viewer.SetSlice(val)
-        text_actor.SetInput(f"Slice: {val+1}/{num_slices}")
-        slice_rep.SetValue(val)
-        ren_win.Render()
-
-    iren.AddObserver("MouseWheelForwardEvent", wheel_forward)
-    iren.AddObserver("MouseWheelBackwardEvent", wheel_backward)
-
-    # Window/Level sliders
-    win_rep = make_slider("Window", 1, hu_max - hu_min, init_window, (0.1, 0.9), (0.4, 0.9))
-    lvl_rep = make_slider("Level", hu_min, hu_max, init_level, (0.6, 0.9), (0.9, 0.9))
-    win_slider = vtk.vtkSliderWidget(); win_slider.SetInteractor(iren);
-    win_slider.SetRepresentation(win_rep); win_slider.SetAnimationModeToJump(); win_slider.EnabledOn()
-    lvl_slider = vtk.vtkSliderWidget(); lvl_slider.SetInteractor(iren);
-    lvl_slider.SetRepresentation(lvl_rep); lvl_slider.SetAnimationModeToJump(); lvl_slider.EnabledOn()
-
-    def on_win(obj, event):
-        w = int(round(obj.GetRepresentation().GetValue()))
-        l = int(round(lvl_rep.GetValue()))
-        viewer.SetColorWindow(w)
-        viewer.SetColorLevel(l)
-        ren_win.Render()
-
-    def on_lvl(obj, event):
+    def wl_callback(obj, event):
         w = int(round(win_rep.GetValue()))
-        l = int(round(obj.GetRepresentation().GetValue()))
-        viewer.SetColorWindow(w)
-        viewer.SetColorLevel(l)
-        ren_win.Render()
+        l = int(round(lvl_rep.GetValue()))
+        for sv in viewers:
+            sv.viewer.SetColorWindow(w)
+            sv.viewer.SetColorLevel(l)
+        render_window.Render()
 
-    win_slider.AddObserver("InteractionEvent", on_win)
-    lvl_slider.AddObserver("InteractionEvent", on_lvl)
+    for wid, rep in ((win_wid, win_rep), (lvl_wid, lvl_rep)):
+        wid.SetInteractor(interactor)
+        wid.SetRepresentation(rep)
+        wid.SetAnimationModeToJump()
+        wid.SetCurrentRenderer(slider_renderer)
+        # strip out VTK’s incremental redraws
+        wid.RemoveObservers("StartInteractionEvent")
+        wid.RemoveObservers("InteractionEvent")
+        wid.RemoveObservers("EndInteractionEvent")
+        # attach only our full-render callback
+        wid.AddObserver("InteractionEvent", wl_callback)
+        wid.EnabledOn()
 
-    # mouse move listener
-    def on_mouse_move(obj, event):
-        x, y = iren.GetEventPosition()
-        #picker = vtk.vtkPropPicker()
-        picker = vtk.vtkCellPicker()
-        picker.SetTolerance(0.005)  
-        picker.Pick(x, y, 0, ren)
-        pos = picker.GetPickPosition()
-        i = int(round(pos[0]))
-        j = int(round(pos[1]))
-        k = viewer.GetSlice()
+    # Add "W" and "L" text actors above each slider
+    for label, xpos in (("L", 0.937), ("W", 0.967)):
+        txt = vtkTextActor()
+        txt.SetInput(label)
+        tp = txt.GetTextProperty()
+        tp.SetFontSize(16)
+        tp.BoldOn()
+        tp.SetColor(1, 1, 1)
+        coord = txt.GetPositionCoordinate()
+        coord.SetCoordinateSystemToNormalizedDisplay()
+        coord.SetValue(xpos, 0.335) 
+        slider_renderer.AddActor2D(txt)
 
-        if 0 <= k < arr.shape[0] and 0 <= j < arr.shape[1] and 0 <= i < arr.shape[2]:
-            value = int(arr[k, j, i])
+    # Start interaction
+    render_window.Render()
+    interactor.Initialize()
+    interactor.Start()
 
-            # segment label 
-            label_text = ""
-            if 'label_arr' in globals():
-                label = label_arr[k, j, i]
-                label_name = label_map.get(label, f"Label {label}") if label > 0 else "None"
-                label_text = f"\nLabel: {label_name}"
-            else:
-                label_text = ""
-
-            
-            plane_name = "Axial"  
-            plane_color = "Red"  # need to be changed
-
-            # get RAS coord
-            ras_x = round(pos[0], 1)
-            ras_y = round(pos[1], 1)
-            ras_z = round(pos[2], 1)
-
-            # get spacing
-            spacing = sitk_img.GetSpacing()
-            spacing_text = f"{plane_name} Sp: {spacing[2]:.1f}"  # axial--- spacing[2]
-
-            # label info
-            if 'label_arr' in globals():
-                label = label_arr[k, j, i]
-                label_name = label_map.get(label, f"Label {label}") if label > 0 else "None"
-                label_rgb = (256, 214, 120)  
-                label_text = f"B {label}: {label_name} {label_rgb} {value}"
-            else:
-                label_text = f"B None {value}"
-
-            # Compose final display text
-            display_text = f"""{plane_color}       (R {ras_x}, A {ras_y}, S {ras_z})
-            {spacing_text}
-
-            L None
-            F None
-            {label_text}
-            """
-            info_actor.SetInput(display_text)
-            ren_win.Render()
-
-            
-
-    iren.AddObserver("MouseMoveEvent", on_mouse_move)
-
-
-    # Initialize and start
-    ren_win.Render()
-    iren.Initialize()
-    print("Starting 2D axial CT viewer...")
-    iren.Start()
 
 if __name__ == '__main__':
     if len(sys.argv) != 2:
-        print(f"Usage: {os.path.basename(sys.argv[0])} <CT_source>")
+        print(f"Usage: {sys.argv[0]} <CT_directory_or_file>")
         sys.exit(1)
     main(sys.argv[1])
