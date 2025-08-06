@@ -33,7 +33,7 @@ def run_totalseg(ct_dir: str, seg_dir: str):
     if result_total.stderr:
         print("Errors:")
         print(result_total.stderr)
-    print("Finished '--ta total' segmentation./n")
+    print("Finished '--ta total' segmentation.")
 
     # Run second command (patella, tibia, fibula)
     print("Running segmentation with '--ta appendicular_bones'...")
@@ -41,7 +41,7 @@ def run_totalseg(ct_dir: str, seg_dir: str):
     if result_appendicular.stderr:
         print("Errors:")
         print(result_appendicular.stderr)
-    print("Finished '--ta appendicular_bones' segmentation./n")
+    print("Finished '--ta appendicular_bones' segmentation.")
     
     rois = {f'{bone}.nii.gz' for bone in roi}
     for f in os.listdir(seg_dir):
