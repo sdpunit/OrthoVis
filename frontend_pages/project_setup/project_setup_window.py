@@ -36,13 +36,13 @@ class ProjectSetup(QWidget):
 
 
     def handleSave(self):
-        msg = QMessageBox(self)
-        msg.setWindowTitle("Import Data")
-        msg.setText('<div align="center"> Data is being loaded! </div>')
-        msg.setStandardButtons(QMessageBox.NoButton)
-        msg.setModal(False)
-        msg.show()
-        QApplication.processEvents()
+        # msg = QMessageBox(self)
+        # msg.setWindowTitle("Import Data")
+        # msg.setText('<div align="center"> Data is being loaded! </div>')
+        # msg.setStandardButtons(QMessageBox.NoButton)
+        # msg.setModal(False)
+        # msg.show()
+        # QApplication.processEvents()
         projectName = self.ui.projectNameInput.text()
         if not projectName:
             self.show_error("Project name cannot be empty.")
@@ -61,12 +61,21 @@ class ProjectSetup(QWidget):
             se3_path = os.path.join(path, "SE000003")
             if not os.path.exists(se1_path) or not os.path.exists(se3_path):
                 raise FileNotFoundError("Required SE000001 or SE000003 folders are missing.")
+            msg = QMessageBox(self)
+            msg.setWindowTitle("Import Data")
+            msg.setText('<div align="center"> Data is being loaded! </div>')
+            msg.setStandardButtons(QMessageBox.NoButton)
+            msg.setModal(False)
+            msg.show()
+            QApplication.processEvents()
             context = initialize_project(projectName, projectDesc, path)
             patient = context._singleton_data.get_instance()
             #Test for simple save function
             context.request_save(patient)
 
             self.parent().setCurrentIndex(2)
+            msg.done(0)
+            msg.close()
 
 
         except FileNotFoundError as e:
