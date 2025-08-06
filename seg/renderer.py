@@ -487,6 +487,26 @@ def main(ct_path: str, mask_paths: list[str]):
         wid.AddObserver("InteractionEvent", wl_callback)
         wid.EnabledOn()
 
+
+    # ———————— Translucency (Opacity) slider ————————
+    opa_rep = make_slider(0.0, 1.0, 0.6, 0.907)
+    opa_wid = vtk.vtkSliderWidget()
+    opa_wid.SetInteractor(interactor)
+    opa_wid.SetRepresentation(opa_rep)
+    opa_wid.SetAnimationModeToJump()
+    opa_wid.SetCurrentRenderer(slider_renderer)
+    opa_wid.RemoveObservers("StartInteractionEvent")
+    opa_wid.RemoveObservers("InteractionEvent")
+    opa_wid.RemoveObservers("EndInteractionEvent")
+    def opacity_callback(obj, event):
+        o = opa_rep.GetValue()
+        for sv in viewers:
+            for actor in sv.mask_actors:
+                actor.GetProperty().SetOpacity(o)
+        render_window.Render()
+        opa_wid.AddObserver("InteractionEvent", opacity_callback)
+        opa_wid.EnabledOn()
+
     # Add "W" and "L" text actors above each slider
     for label, xpos in (("L", 0.937), ("W", 0.967)):
         txt = vtkTextActor()
@@ -499,6 +519,47 @@ def main(ct_path: str, mask_paths: list[str]):
         coord.SetCoordinateSystemToNormalizedDisplay()
         coord.SetValue(xpos, 0.335)
         slider_renderer.AddActor2D(txt)
+
+    # Add "O" text actor above the opacity slider
+    o_txt = vtkTextActor()
+    o_txt.SetInput("O")
+    tp_o = o_txt.GetTextProperty()
+    tp_o.SetFontSize(16)
+    tp_o.BoldOn()
+    tp_o.SetColor(1, 1, 1)
+    coord_o = o_txt.GetPositionCoordinate()
+    coord_o.SetCoordinateSystemToNormalizedDisplay()
+    coord_o.SetValue(0.907, 0.335)
+    slider_renderer.AddActor2D(o_txt)
+
+    # —————— Now move all three sliders (and their labels) next to the legend ——————
+    # Legend lives at normalized viewport (0.65,0.65)-(0.85,0.85)
+    slider_bottom, slider_top = 0.65, 0.85
+    label_top = 0.87
+    # new X positions for L, W, and O
+    lvl_x, win_x, opa_x = 0.88, 0.915, 0.95
+
+    # slide bars
+    lvl_rep.GetPoint1Coordinate().SetValue(lvl_x, slider_bottom)
+    lvl_rep.GetPoint2Coordinate().SetValue(lvl_x, slider_top)
+    win_rep.GetPoint1Coordinate().SetValue(win_x, slider_bottom)
+    win_rep.GetPoint2Coordinate().SetValue(win_x, slider_top)
+    opa_rep.GetPoint1Coordinate().SetValue(opa_x, slider_bottom)
+    opa_rep.GetPoint2Coordinate().SetValue(opa_x, slider_top)
+
+    # labels
+    actors = slider_renderer.GetActors2D()
+    actors.InitTraversal()
+    for _ in range(actors.GetNumberOfItems()):
+        actor = actors.GetNextActor2D()
+        if isinstance(actor, vtkTextActor):
+            txt = actor.GetInput()
+            if txt == "L":
+                actor.GetPositionCoordinate().SetValue(lvl_x, label_top)
+            elif txt == "W":
+                actor.GetPositionCoordinate().SetValue(win_x, label_top)
+            elif txt == "O":
+                actor.GetPositionCoordinate().SetValue(opa_x, label_top)
 
 
     # 10. Start interaction
