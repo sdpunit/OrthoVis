@@ -114,8 +114,9 @@ class ProjectSetup(QWidget):
 
 
 
-        btn_delete = QPushButton("Delete")
+        btn_delete = QPushButton("X")
         btn_delete.clicked.connect(lambda: self.delete_item(list_item))
+        btn_delete.setFixedWidth(15)
         layout.addWidget(btn_delete)
 
 
