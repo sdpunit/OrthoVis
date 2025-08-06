@@ -5,6 +5,7 @@ from PySide6.QtGui import QStandardItemModel, QStandardItem
 from frontend_pages.project_setup.ui_project_setup_window import Ui_Form
 from PySide6.QtWidgets import QFileDialog
 from test import *
+from PySide6.QtWidgets import QWidget, QLabel, QPushButton, QHBoxLayout, QListWidgetItem, QMessageBox
 
 name = ""
 model = QStandardItemModel()
@@ -41,7 +42,7 @@ class ProjectSetup(QWidget):
         msg.setStandardButtons(QMessageBox.NoButton)
         msg.setModal(False)
         msg.show()
-        QApplication.processEvents()       
+        QApplication.processEvents()
         projectName = self.ui.projectNameInput.text()
         if not projectName:
             self.show_error("Project name cannot be empty.")
@@ -49,15 +50,27 @@ class ProjectSetup(QWidget):
         projectDesc = self.ui.projectDesInput.toPlainText()
         # Initialize a new patient and context
         #print(f"Item: {model.itemFromIndex(0)}")
-        idx = model.index(0, 0)
-        path = model.itemFromIndex(idx).text()
-        context = initialize_project(projectName, projectDesc, path)
-        patient = context._singleton_data.get_instance()
-        #Test for simple save function
-        context.request_save(patient)
-        self.parent().setCurrentIndex(2)
-        msg.done(0)
-        msg.close()
+        #idx = model.index(0, 0)
+        #path = model.itemFromIndex(idx).text()
+        if not path_list:
+            self.show_error("Please import at least one CT sequence folder.")
+            return
+        path = path_list[0]
+        try:
+            se1_path = os.path.join(path, "SE000001")
+            se3_path = os.path.join(path, "SE000003")
+            if not os.path.exists(se1_path) or not os.path.exists(se3_path):
+                raise FileNotFoundError("Required SE000001 or SE000003 folders are missing.")
+            context = initialize_project(projectName, projectDesc, path)
+            patient = context._singleton_data.get_instance()
+            #Test for simple save function
+            context.request_save(patient)
+
+            self.parent().setCurrentIndex(2)
+
+
+        except FileNotFoundError as e:
+            self.show_error(f"File not found, make sure you select file with CT file(SE000003) and Fluoroscopy file(SE000001) in the same folder.")
     
     # def handleImportCT(self):
     #     folder_path = QFileDialog.getExistingDirectory(

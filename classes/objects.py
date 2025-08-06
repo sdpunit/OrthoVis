@@ -124,6 +124,7 @@ class Context:
     _singleton_data = None
     # _name = None
     # _description = None
+    _masks_folder = None
     """
     A reference to the current state of the Context.
     """
@@ -154,10 +155,11 @@ class Context:
         self._singleton_data._state.handle_process()
 
     def request_save(self, patient: SingletonPatient):
-        self._singleton_data._state.handle_save(patient)
+        self._masks_folder = self._singleton_data._state.handle_save(patient)
     
     def request_string(self):
         self._singleton_data._state.handle_to_string()
+
 
 
 class DataState(ABC):
@@ -257,6 +259,11 @@ class RawState(DataState):
             os.makedirs(os.path.dirname(filepath), exist_ok=True)
             sitk.WriteImage(fluoro, filepath)
         print(f"✅ all fluoroscopy slices be saved")
+
+        #add masks file:
+        masks_folder = folder / "seg-masks"
+        masks_folder.mkdir(parents=True, exist_ok=True)
+        return masks_folder
 
     def handle_to_string(self) -> str:
         return "RawState"
