@@ -15,6 +15,7 @@ import os
 import sys
 import SimpleITK as sitk
 import vtk
+import glob
 from vtkmodules.vtkInteractionStyle import vtkInteractorStyleImage
 from vtkmodules.vtkInteractionImage import vtkImageViewer2
 from vtkmodules.vtkRenderingCore import (
@@ -24,7 +25,8 @@ from vtkmodules.vtkRenderingCore import (
     vtkActor2D,
     vtkTextMapper,
     vtkTextProperty,
-    vtkPolyDataMapper2D
+    vtkPolyDataMapper2D,
+    vtkTextActor
 )
 from vtkmodules.vtkCommonDataModel import vtkPolyData, vtkCellArray
 from vtkmodules.vtkCommonCore import vtkPoints
@@ -63,17 +65,17 @@ def sitk_to_vtk(img):
 
 # Create a thin vertical slider with jump animation
 
-def make_slider(label, vmin, vmax, init, xpos):
+def make_slider(vmin, vmax, init, xpos):
     rep = vtk.vtkSliderRepresentation2D()
     rep.SetMinimumValue(vmin)
     rep.SetMaximumValue(vmax)
     rep.SetValue(init)
     
-    # Slider positioning (vertical line)
+    # Slider positioning (vertical)
     rep.GetPoint1Coordinate().SetCoordinateSystemToNormalizedDisplay()
-    rep.GetPoint1Coordinate().SetValue(xpos, 0.15)  # Bottom position
+    rep.GetPoint1Coordinate().SetValue(xpos, 0.1)  # Bottom position
     rep.GetPoint2Coordinate().SetCoordinateSystemToNormalizedDisplay()
-    rep.GetPoint2Coordinate().SetValue(xpos, 0.85)  # Top position
+    rep.GetPoint2Coordinate().SetValue(xpos, 0.4)  # Top position
     
     # Slider appearance
     rep.SetSliderLength(0.008)  # Slider handle size
@@ -84,7 +86,6 @@ def make_slider(label, vmin, vmax, init, xpos):
     rep.ShowSliderLabelOff()    # Remove value text
     rep.SetEndCapLength(0.0)    # Remove end caps
     
-    # Critical: Disable all highlighting that causes traces
     rep.GetSliderProperty().SetColor(1, 1, 0)  # Yellow slider
     rep.GetSelectedProperty().SetColor(1, 1, 0)  # Same yellow when selected
     rep.GetTubeProperty().SetColor(0.4, 0.4, 0.4)  # Dark gray track
@@ -306,17 +307,30 @@ class QuadStyle(vtkInteractorStyleImage):
 
 def main(ct_path: str, mask_paths: list[str]):
     # 1. Load CT
+    # 支持传入单个 mask 目录：如果只有一个参数且它是目录，则把该目录下所有 .nii 文件都当作 mask
+    if len(mask_paths)==1 and os.path.isdir(mask_paths[0]):
+        folder = mask_paths[0]
+        mask_paths = sorted(glob.glob(os.path.join(folder, '*.nii')))
     img = cache_ct(ct_path)
     vtk_img, arr = sitk_to_vtk(img)
 
     # 2. Batch load, resample and convert each mask → VTK → color-map
     mask_colors_list = []
+    legend_labels = []
     colors = [
-    (1.0, 0.0, 0.0),  # red
-    (0.0, 1.0, 0.0),  # green
-    (0.0, 0.0, 1.0),  # blue
+        (1.0, 0.0, 0.0),  # red
+        (0.0, 1.0, 0.0),  # green
+        (0.0, 0.0, 1.0),  # blue
+        (1.0, 1.0, 0.0),  # yellow
+        (0.0, 1.0, 1.0),  # cyan
+        (1.0, 0.0, 1.0),  # magenta
     ]
     for idx, mask_path in enumerate(mask_paths):
+        # --- Generate clean label from filename ---
+        label_text = os.path.basename(mask_path).split('.')[0]
+        label_text = label_text.replace('_', ' ').replace('otsu', '').strip().title()
+        legend_labels.append(label_text)
+
         # 2.1 Read mask
         mask_sitk = sitk.ReadImage(mask_path)
 
@@ -368,7 +382,7 @@ def main(ct_path: str, mask_paths: list[str]):
     # 4. Create render window
     render_window = vtkRenderWindow()
     render_window.SetSize(900, 900)
-    render_window.SetNumberOfLayers(2)
+    render_window.SetNumberOfLayers(3)
 
     # 5. Define viewports and create SliceViewers
     quads = {
@@ -391,6 +405,26 @@ def main(ct_path: str, mask_paths: list[str]):
 
     # 6. Add crosshair overlay
     overlay_renderer = add_crosshair(render_window)
+
+    # 6.1 添加骨头颜色图例（Legend）
+    legend = vtk.vtkLegendBoxActor()
+    legend.SetNumberOfEntries(len(legend_labels))
+    # 右上角归一化显示坐标
+    legend.GetPositionCoordinate().SetCoordinateSystemToNormalizedViewport()
+    legend.GetPositionCoordinate().SetValue(0.65, 0.65)
+    legend.SetWidth(0.2)
+    legend.SetHeight(0.2)
+
+    for i, label in enumerate(legend_labels):
+        cube = vtk.vtkCubeSource()
+        cube.SetXLength(1)
+        cube.SetYLength(1)
+        cube.SetZLength(1)
+        cube.Update()
+        legend.SetEntry(i, cube.GetOutput(), label, colors[i % len(colors)])
+
+    overlay_renderer.AddActor(legend)
+
 
     # 7. Add data probe text
     probe_text_prop = vtkTextProperty()
@@ -417,18 +451,20 @@ def main(ct_path: str, mask_paths: list[str]):
     )
 
     # 9. Window/Level sliders
+    slider_renderer = vtkRenderer()
+    slider_renderer.SetLayer(2)
+    slider_renderer.InteractiveOff()
+    slider_renderer.SetViewport(0.0, 0.0, 1.0, 1.0)
+    render_window.AddRenderer(slider_renderer)
+
     hu_min, hu_max = int(arr.min()), int(arr.max())
-    win_rep = make_slider('W', 1,     hu_max - hu_min, hu_max - hu_min, 0.96)
-    lvl_rep = make_slider('L', hu_min, hu_max,           (hu_max + hu_min)//2, 0.92)
+    # 注意这里 make_slider 的 signature: make_slider(vmin, vmax, init, xpos)
+    # xpos 取 0.967 和 0.937 保持和 renderer.py 一致
+    win_rep = make_slider(1, hu_max - hu_min, hu_max - hu_min, 0.967)
+    lvl_rep = make_slider(hu_min, hu_max,           (hu_max + hu_min)//2, 0.937)
+
     win_wid = vtk.vtkSliderWidget()
     lvl_wid = vtk.vtkSliderWidget()
-
-    for wid, rep in ((win_wid, win_rep), (lvl_wid, lvl_rep)):
-        wid.SetInteractor(interactor)
-        wid.SetRepresentation(rep)
-        wid.SetAnimationModeToJump()
-        wid.SetCurrentRenderer(overlay_renderer)
-        wid.EnabledOn()
 
     def wl_callback(obj, event):
         w = int(round(win_rep.GetValue()))
@@ -438,8 +474,32 @@ def main(ct_path: str, mask_paths: list[str]):
             sv.viewer.SetColorLevel(l)
         render_window.Render()
 
-    win_wid.AddObserver('InteractionEvent', wl_callback)
-    lvl_wid.AddObserver('InteractionEvent', wl_callback)
+    for wid, rep in ((win_wid, win_rep), (lvl_wid, lvl_rep)):
+        wid.SetInteractor(interactor)
+        wid.SetRepresentation(rep)
+        wid.SetAnimationModeToJump()
+        wid.SetCurrentRenderer(slider_renderer)
+        # strip out VTK’s incremental redraws
+        wid.RemoveObservers("StartInteractionEvent")
+        wid.RemoveObservers("InteractionEvent")
+        wid.RemoveObservers("EndInteractionEvent")
+        # attach only our full-render callback
+        wid.AddObserver("InteractionEvent", wl_callback)
+        wid.EnabledOn()
+
+    # Add "W" and "L" text actors above each slider
+    for label, xpos in (("L", 0.937), ("W", 0.967)):
+        txt = vtkTextActor()
+        txt.SetInput(label)
+        tp = txt.GetTextProperty()
+        tp.SetFontSize(16)
+        tp.BoldOn()
+        tp.SetColor(1, 1, 1)
+        coord = txt.GetPositionCoordinate()
+        coord.SetCoordinateSystemToNormalizedDisplay()
+        coord.SetValue(xpos, 0.335)
+        slider_renderer.AddActor2D(txt)
+
 
     # 10. Start interaction
     render_window.Render()
@@ -455,10 +515,3 @@ if __name__ == '__main__':
     mask_paths = sys.argv[2:]
     main(ct_path, mask_paths)
 
-if __name__ == '__main__':
-    if len(sys.argv) < 3:
-        print(f"Usage: {sys.argv[0]} <CT_directory_or_file> <mask1.nii> [mask2.nii ...]")
-        sys.exit(1)
-    ct_path    = sys.argv[1]
-    mask_paths = sys.argv[2:]     
-    main(ct_path, mask_paths)
