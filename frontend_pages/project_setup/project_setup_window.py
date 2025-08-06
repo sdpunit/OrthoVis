@@ -4,7 +4,7 @@ from PySide6.QtCore import QTimer
 from PySide6.QtGui import QStandardItemModel, QStandardItem
 from frontend_pages.project_setup.ui_project_setup_window import Ui_Form
 from PySide6.QtWidgets import QFileDialog
-from classes.test import *
+from test import *
 
 name = ""
 model = QStandardItemModel()

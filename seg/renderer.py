@@ -30,7 +30,7 @@ from vtkmodules.vtkRenderingCore import (
 from vtkmodules.vtkCommonDataModel import vtkPolyData, vtkCellArray
 from vtkmodules.vtkCommonCore import vtkPoints
 from vtkmodules.util import numpy_support
-from totalseg import load_ct
+from seg.totalseg import load_ct
 
 # Caching directory
 CACHE_DIR = os.path.expanduser('~/.cache/renderer')
@@ -205,8 +205,8 @@ class QuadStyle(vtkInteractorStyleImage):
 
 # Main entry point
 
-def main(ct_path: str):
-    img = cache_ct(ct_path)
+def main(img):
+    #img = cache_ct(ct_path)
     vtk_img, arr = sitk_to_vtk(img)
 
     render_window = vtkRenderWindow()
