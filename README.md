@@ -25,8 +25,7 @@ Contains SVG diagrams illustrating key workflows such as projection, segmentatio
 
 ### 📁 `classes/`
 Core logic and reusable components:
-- `singleton.py`: Implements `SingletonPatient`, a singleton object managing user/project state.
-- `states.py`: Defines `Context` and `State` classes for UI flow management.
+- `objects.py`: Implements `Singleton`, `State` design pattern and other useful data structures.
 - `lib.py`: Common utility functions.
 
 ### 📁 `frontend_pages/`
@@ -39,6 +38,7 @@ Each folder contains `.ui` (Qt Designer), `ui_*.py` (generated), and functional 
 ### 📁 `widgets/`
 Reusable subcomponents, like:
 - `sidebar/`: Sidebar navigation widget with its own `.ui` and `.py`.
+- `titlebar/`: Title bar widget for consistent UI across pages.
 
 ### 📁 `seg/`
 CT segmentation and 3D data processing scripts:
