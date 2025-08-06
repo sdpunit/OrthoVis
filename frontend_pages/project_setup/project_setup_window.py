@@ -47,7 +47,6 @@ class ProjectSetup(QWidget):
         self.parent().setCurrentIndex(2)
 
 
-
     def handleImportFluoro(self):
         folder_path = QFileDialog.getExistingDirectory(
             self,
