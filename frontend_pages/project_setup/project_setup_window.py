@@ -6,6 +6,8 @@ from PySide6.QtWidgets import QFileDialog
 from test import *
 
 name = ""
+description = ""
+CT = ""
 model = QStandardItemModel()
 
 class ProjectSetup(QWidget):
@@ -59,6 +61,12 @@ class ProjectSetup(QWidget):
             print(f"Selected folder: {folder_path}")
     
 
-    def changeName(self, new_name):
-        name = new_name
+    def updateData(self, data):
+        name = data["name"]
+        description = data["description"]
+        CT = data["CT"]
+        path = QStandardItem(CT)
+
         self.ui.projectNameInput.setText(name)
+        self.ui.projectDesInput.setText(description)
+        model.appendRow(path)
