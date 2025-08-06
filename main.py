@@ -2,7 +2,6 @@
 
 import sys
 from PySide6.QtWidgets import QApplication
-
 from main_window import MainWindow # Main GUI logic
 
 # Initiate the application
@@ -10,4 +9,5 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = MainWindow()
     window.show()
-    sys.exit(app.exec()) 
+    sys.exit(app.exec())
+

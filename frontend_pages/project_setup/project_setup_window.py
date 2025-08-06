@@ -22,7 +22,7 @@ class ProjectSetup(QWidget):
         self.ui.projectNameInput.setText(name)
         self.ui.importFluoro.clicked.connect(self.handleImportFluoro)
         self.ui.save.clicked.connect(self.handleSave)
-        
+
         self.ui.sidebar.ui.project_setup.setStyleSheet(
         """
             QPushButton { 
@@ -47,6 +47,18 @@ class ProjectSetup(QWidget):
         #Test for simple save function
         context.request_save(patient)
         self.parent().setCurrentIndex(2)
+    
+    # def handleImportCT(self):
+    #     folder_path = QFileDialog.getExistingDirectory(
+    #         self,
+    #         "Select the CT sequence folder (e.g. SE000000)"
+    #     )
+        
+    #     if folder_path:
+    #         item = QStandardItem(folder_path)
+    #         model.appendRow(item)
+
+    #         print(f"Selected folder: {folder_path}")
 
 
     def handleImportFluoro(self):
@@ -61,12 +73,6 @@ class ProjectSetup(QWidget):
             print(f"Selected folder: {folder_path}")
     
 
-    def updateData(self, data):
-        name = data["name"]
-        description = data["description"]
-        CT = data["CT"]
-        path = QStandardItem(CT)
-
+    def changeName(self, new_name):
+        name = new_name
         self.ui.projectNameInput.setText(name)
-        self.ui.projectDesInput.setText(description)
-        model.appendRow(path)
