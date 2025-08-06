@@ -20,3 +20,6 @@ pyside_env/
 
 # Environment variable files
 .env
+
+# Project folders
+Projects/
