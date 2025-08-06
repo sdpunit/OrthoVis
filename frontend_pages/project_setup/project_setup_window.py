@@ -1,7 +1,7 @@
 # This file can open pop up for importing both CT and Fluroscopy
 from PySide6.QtWidgets import QWidget, QMessageBox, QApplication
-from PySide6.QtCore import QTimer
-from PySide6.QtGui import QStandardItemModel, QStandardItem
+from PySide6.QtGui import QStandardItemModel
+from PySide6.QtWidgets import (QApplication, QHBoxLayout, QLabel, QPushButton, QWidget, QListWidgetItem)
 from frontend_pages.project_setup.ui_project_setup_window import Ui_Form
 from PySide6.QtWidgets import QFileDialog
 from test import *
