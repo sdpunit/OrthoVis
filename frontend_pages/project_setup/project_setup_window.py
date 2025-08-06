@@ -1,7 +1,7 @@
 # This file can open pop up for importing both CT and Fluroscopy
 from PySide6.QtWidgets import QWidget, QMessageBox, QApplication
-from PySide6.QtCore import QTimer
-from PySide6.QtGui import QStandardItemModel, QStandardItem
+from PySide6.QtGui import QStandardItemModel
+from PySide6.QtWidgets import (QApplication, QHBoxLayout, QLabel, QPushButton, QWidget, QListWidgetItem)
 from frontend_pages.project_setup.ui_project_setup_window import Ui_Form
 from PySide6.QtWidgets import QFileDialog
 from test import *
@@ -23,6 +23,11 @@ class ProjectSetup(QWidget):
         self.ui.importFluoro.clicked.connect(self.handleImportFluoro)
         self.ui.save.clicked.connect(self.handleSave)
 
+        # Enable Save button only when there are changes to save
+        self.ui.save.setEnabled(False)
+        self.ui.projectNameInput.textChanged.connect(self.handle_text_change)
+        self.ui.projectDesInput.textChanged.connect(self.handle_text_change)
+
         self.ui.sidebar.ui.project_setup.setStyleSheet(
         """
             QPushButton { 
@@ -36,22 +41,12 @@ class ProjectSetup(QWidget):
 
 
     def handleSave(self):
-        # msg = QMessageBox(self)
-        # msg.setWindowTitle("Import Data")
-        # msg.setText('<div align="center"> Data is being loaded! </div>')
-        # msg.setStandardButtons(QMessageBox.NoButton)
-        # msg.setModal(False)
-        # msg.show()
-        # QApplication.processEvents()
         projectName = self.ui.projectNameInput.text()
         if not projectName:
             self.show_error("Project name cannot be empty.")
             return
         projectDesc = self.ui.projectDesInput.toPlainText()
         # Initialize a new patient and context
-        #print(f"Item: {model.itemFromIndex(0)}")
-        #idx = model.index(0, 0)
-        #path = model.itemFromIndex(idx).text()
         if not path_list:
             self.show_error("Please import at least one CT sequence folder.")
             return
@@ -63,7 +58,7 @@ class ProjectSetup(QWidget):
                 raise FileNotFoundError("Required SE000001 or SE000003 folders are missing.")
             msg = QMessageBox(self)
             msg.setWindowTitle("Import Data")
-            msg.setText('<div align="center"> Data is being loaded! </div>')
+            msg.setText("Data is being loaded!   ")
             msg.setStandardButtons(QMessageBox.NoButton)
             msg.setModal(False)
             msg.show()
@@ -72,6 +67,7 @@ class ProjectSetup(QWidget):
             patient = context._singleton_data.get_instance()
             #Test for simple save function
             context.request_save(patient)
+            self.ui.save.setEnabled(False)
 
             self.parent().setCurrentIndex(2)
             msg.done(0)
@@ -104,6 +100,7 @@ class ProjectSetup(QWidget):
             self.add_import_item(folder_path)
             path_list.append(folder_path)
             print(f"Selected folder: {folder_path}")
+            self.ui.save.setEnabled(True)
 
     def add_import_item(self, path):
 
@@ -117,8 +114,9 @@ class ProjectSetup(QWidget):
 
 
 
-        btn_delete = QPushButton("Delete")
+        btn_delete = QPushButton("X")
         btn_delete.clicked.connect(lambda: self.delete_item(list_item))
+        btn_delete.setFixedWidth(15)
         layout.addWidget(btn_delete)
 
 
@@ -147,3 +145,6 @@ class ProjectSetup(QWidget):
         msg.setWindowTitle("Error")
         msg.setText(message)
         msg.exec()
+
+    def handle_text_change(self):
+        self.ui.save.setEnabled(True)
