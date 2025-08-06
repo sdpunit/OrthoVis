@@ -226,7 +226,7 @@ class QuadStyle(vtkInteractorStyleImage):
         # Add our custom wheel handlers
         self.AddObserver('MouseWheelForwardEvent', self.wheel_forward)
         self.AddObserver('MouseWheelBackwardEvent', self.wheel_backward)
-        self.AddObserver('MouseMoveEvent', self.on_mouse_move) # Mouse listener 
+        # self.AddObserver('MouseMoveEvent', self.on_mouse_move) # Mouse listener 
 
     def pick_viewer(self):
         x, y = self.GetInteractor().GetEventPosition()
@@ -311,7 +311,12 @@ def main(ct_path: str, mask_paths: list[str]):
 
     # 2. Batch load, resample and convert each mask → VTK → color-map
     mask_colors_list = []
-    for mask_path in mask_paths:
+    colors = [
+    (1.0, 0.0, 0.0),  # red
+    (0.0, 1.0, 0.0),  # green
+    (0.0, 0.0, 1.0),  # blue
+    ]
+    for idx, mask_path in enumerate(mask_paths):
         # 2.1 Read mask
         mask_sitk = sitk.ReadImage(mask_path)
 
@@ -342,13 +347,16 @@ def main(ct_path: str, mask_paths: list[str]):
         # 2.4 Build a semi‑transparent red LUT
         lut = vtk.vtkLookupTable()
         lut.SetNumberOfTableValues(2)
-        lut.SetTableValue(0, 0,0,0, 0.0)   # background transparent
-        lut.SetTableValue(1, 1,0,0, 0.3)   # red @30% opacity
+        lut.SetTableValue(0, 0,0,0,    0.0)   
+
+        r, g, b = colors[idx % len(colors)]
+        lut.SetTableValue(1, r, g, b,  0.6)  
+
         lut.Build()
 
         cmap = vtk.vtkImageMapToColors()
         cmap.SetLookupTable(lut)
-        cmap.SetOutputFormatToRGBA()       # enable alpha channel
+        cmap.SetOutputFormatToRGBA()
         cmap.SetInputData(mask_vtk)
         cmap.Update()
 
@@ -452,5 +460,5 @@ if __name__ == '__main__':
         print(f"Usage: {sys.argv[0]} <CT_directory_or_file> <mask1.nii> [mask2.nii ...]")
         sys.exit(1)
     ct_path    = sys.argv[1]
-    mask_paths = sys.argv[2:]      # 把第2个开始的所有参数都当作 mask
+    mask_paths = sys.argv[2:]     
     main(ct_path, mask_paths)

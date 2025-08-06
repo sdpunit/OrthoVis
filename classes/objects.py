@@ -15,35 +15,51 @@ class Patient:
         if not os.path.exists(st_path):
             raise FileNotFoundError(f"❌ path dose not exist: {st_path}")
 
-        # 路径拼接
+        # path to the CT and fluoroscopy data
         se1_path = os.path.join(st_path, "SE000001")
         se3_path = os.path.join(st_path, "SE000003")
 
-        # 检查 CT 和 fluoroscopy 是否存在
+        # check CT 和 fluoroscopy if exist
         if not os.path.exists(se1_path):
-            raise FileNotFoundError(f"❌ Fluoroscopy path dose not exist: {se1_path}")
+            raise FileNotFoundError(f"❌ Fluoroscopy path does not exist: {se1_path}")
         if not os.path.exists(se3_path):
-            raise FileNotFoundError(f"❌ CT path dose not exist: {se3_path}")
+            raise FileNotFoundError(f"❌ CT path does not exist: {se3_path}")
 
-        # 加载 fluoroscopy (SE000001)
-        self.fluoroscopy = self._load_series(se1_path)
+        # loading fluoroscopy (SE000001)
+        images = [sitk.ReadImage(f) for f in sorted([os.path.join(se1_path, f) for f in os.listdir(se1_path)])] 
+        self.fluoroscopy = images if len(images) > 1 else images[0]
         print(f"✅ loading fluoroscopy data (SE000001)")
 
-        # 加载 CT (SE000003)
+        # loading CT (SE000003)
         self.CT = self._load_series(se3_path,True)
         print(f"✅ loading CT data (SE000003)")
 
-    def _load_series(self, series_path,is_ct: bool = False):
-        files = sorted([os.path.join(series_path, f) for f in os.listdir(series_path)])
+    def _load_series(self, ct_source, is_ct: bool = False):
+        
+        """
         if is_ct:
             # For CT, we can read a series of images
             reader = sitk.ImageSeriesReader()
-            reader.SetFileNames(files)
+            reader.SetFileNames(series_path)
             return reader.Execute()
         else:
             # For fluoroscopy, we can read multiple images or a single image
-            images = [sitk.ReadImage(f) for f in files]
+            images = [sitk.ReadImage(f) for f in series_path]
             return images if len(images) > 1 else images[0]
+        """
+
+        if os.path.isdir(ct_source):
+            reader = sitk.ImageSeriesReader()
+            series_ids = reader.GetGDCMSeriesIDs(ct_source)
+            if not series_ids:
+                raise RuntimeError(f"No DICOM series found in {ct_source}")
+            # Pick the first series
+            file_names = reader.GetGDCMSeriesFileNames(ct_source, series_ids[0])
+            reader.SetFileNames(file_names)
+            return reader.Execute()
+        else:
+            return sitk.ReadImage(ct_source)
+    
 
     @property
     def name(self):
@@ -216,6 +232,34 @@ class RawState(DataState):
         }
         with open(os.path.join(folder, "data.json"), "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
+        # Save CT
+        CT_num_slices = patient._patient.CT.GetDepth()
+        print(patient._patient.CT.GetDepth())
+        CT_folder = folder / "SE000003"
+        CT_folder.mkdir(parents=True, exist_ok=True)
+        for i in range(CT_num_slices):
+            slice_i = patient._patient.CT[:, :, i]
+            filename = f"IN{i + 1:06d}.dcm"
+
+            filepath = os.path.join(CT_folder, filename)
+            sitk.WriteImage(slice_i, filepath)
+
+
+        # Save fluoroscopy
+        fluoro = patient._patient.fluoroscopy
+
+        if isinstance(fluoro, list):
+            for i, slice_i in enumerate(fluoro):
+                filename = f"IN{i + 1:06d}.dcm"
+                filepath = os.path.join(parent_dir, "Projects", name, "SE000001", filename)
+                os.makedirs(os.path.dirname(filepath), exist_ok=True)
+                sitk.WriteImage(slice_i, filepath)
+        else:
+            filename = "IN000001.dcm"
+            filepath = os.path.join(parent_dir, "Projects", name, "SE000001", filename)
+            os.makedirs(os.path.dirname(filepath), exist_ok=True)
+            sitk.WriteImage(fluoro, filepath)
+        print(f"✅ all fluoroscopy slices be saved")
 
     def handle_to_string(self) -> str:
         return "RawState"
