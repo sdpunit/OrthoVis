@@ -38,6 +38,7 @@ class HomePage(QWidget):
     def handle_new_project(self):
         # Jump to the new project page
         self.parent().setCurrentIndex(1)
+        
     def handle_open_project(self):
         folder_path = QFileDialog.getExistingDirectory(
             self,
