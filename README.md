@@ -25,8 +25,7 @@ Contains SVG diagrams illustrating key workflows such as projection, segmentatio
 
 ### 📁 `classes/`
 Core logic and reusable components:
-- `singleton.py`: Implements `SingletonPatient`, a singleton object managing user/project state.
-- `states.py`: Defines `Context` and `State` classes for UI flow management.
+- `objects.py`: Implements `Singleton`, `State` design pattern and other useful data structures.
 - `lib.py`: Common utility functions.
 
 ### 📁 `frontend_pages/`
@@ -39,6 +38,7 @@ Each folder contains `.ui` (Qt Designer), `ui_*.py` (generated), and functional 
 ### 📁 `widgets/`
 Reusable subcomponents, like:
 - `sidebar/`: Sidebar navigation widget with its own `.ui` and `.py`.
+- `titlebar/`: Title bar widget for consistent UI across pages.
 
 ### 📁 `seg/`
 CT segmentation and 3D data processing scripts:
@@ -72,6 +72,7 @@ Top-level file describing the project and how to use it.
    ```
 ---
 
-# 🌐 Project landing page
+- For documentation, minutes, and software engineering practices, please refer to our [Wiki](https://github.com/sdpunit/OrthoVis/wiki).
 
-https://orthovis2.wixsite.com/orthovis-2
+
+- Please look at our [Project landing page](https://orthovis2.wixsite.com/orthovis-2) to learn more about the project and our team members. 
