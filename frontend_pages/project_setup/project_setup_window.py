@@ -1,5 +1,6 @@
 # This file can open pop up for importing both CT and Fluroscopy
-from PySide6.QtWidgets import QWidget
+from PySide6.QtWidgets import QWidget, QMessageBox, QApplication
+from PySide6.QtCore import QTimer
 from PySide6.QtGui import QStandardItemModel, QStandardItem
 from frontend_pages.project_setup.ui_project_setup_window import Ui_Form
 from PySide6.QtWidgets import QFileDialog
@@ -16,7 +17,7 @@ class ProjectSetup(QWidget):
 
         self.ui.importListView.setModel(model)
 
-        self.ui.titlebar.ui.title.setText("New Project")
+        self.ui.titlebar.ui.title.setText("Project Setup")
         self.ui.projectNameInput.setText(name)
         self.ui.importFluoro.clicked.connect(self.handleImportFluoro)
         self.ui.save.clicked.connect(self.handleSave)
@@ -34,6 +35,13 @@ class ProjectSetup(QWidget):
 
 
     def handleSave(self):
+        msg = QMessageBox(self)
+        msg.setWindowTitle("Import Data")
+        msg.setText('<div align="center"> Data is being loaded! </div>')
+        msg.setStandardButtons(QMessageBox.NoButton)
+        msg.setModal(False)
+        msg.show()
+        QApplication.processEvents()       
         projectName = self.ui.projectNameInput.text()
         projectDesc = self.ui.projectDesInput.toPlainText()
         # Initialize a new patient and context
@@ -45,6 +53,8 @@ class ProjectSetup(QWidget):
         #Test for simple save function
         context.request_save(patient)
         self.parent().setCurrentIndex(2)
+        msg.done(0)
+        msg.close()
     
     # def handleImportCT(self):
     #     folder_path = QFileDialog.getExistingDirectory(
