@@ -19,11 +19,6 @@ class Patient:
         se1_path = os.path.join(st_path, "SE000001")
         se3_path = os.path.join(st_path, "SE000003")
 
-        # check CT 和 fluoroscopy if exist
-        if not os.path.exists(se1_path):
-            raise FileNotFoundError(f"❌ Fluoroscopy path does not exist: {se1_path}")
-        if not os.path.exists(se3_path):
-            raise FileNotFoundError(f"❌ CT path does not exist: {se3_path}")
 
         # loading fluoroscopy (SE000001)
         images = [sitk.ReadImage(f) for f in sorted([os.path.join(se1_path, f) for f in os.listdir(se1_path)])] 
@@ -224,18 +219,20 @@ class RawState(DataState):
         current_dir = Path(__file__).resolve().parent
         parent_dir = current_dir.parent
         folder = parent_dir / "Projects" / name
+        CT_folder = folder / "SE000003"
         folder.mkdir(parents=True, exist_ok=True)
         data = {
             "name": name,
             "description": desc,
             "state": state,
+            "CT": str(CT_folder)
         }
         with open(os.path.join(folder, "data.json"), "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
         # Save CT
         CT_num_slices = patient._patient.CT.GetDepth()
         print(patient._patient.CT.GetDepth())
-        CT_folder = folder / "SE000003"
+        patient._CT = CT_folder
         CT_folder.mkdir(parents=True, exist_ok=True)
         for i in range(CT_num_slices):
             slice_i = patient._patient.CT[:, :, i]

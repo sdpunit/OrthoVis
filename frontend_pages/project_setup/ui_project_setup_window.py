@@ -16,7 +16,7 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QApplication, QFrame, QHBoxLayout, QLabel,
-    QLineEdit, QListView, QPushButton, QSizePolicy,
+    QLineEdit, QListView, QPushButton, QSizePolicy,QListWidget,
     QTextEdit, QVBoxLayout, QWidget)
 
 from widgets.sidebar.sidebar import Sidebar
@@ -148,7 +148,7 @@ class Ui_Form(object):
 
         self.importListLayout.addWidget(self.importListLabel)
 
-        self.importListView = QListView(self.dataPanel)
+        self.importListView = QListWidget(self.dataPanel)
         self.importListView.setObjectName(u"importListView")
         self.importListView.setMaximumSize(QSize(16777215, 280))
 
