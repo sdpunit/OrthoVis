@@ -26,6 +26,7 @@ def save_patient_data_to_file(context, file_name):
 
     #Save CT
     CT_num_slices = context._singleton_data.patient.CT.GetDepth()
+    print(CT_num_slices)
     CT_folder = folder / "SE000003"
     CT_folder.mkdir(parents=True, exist_ok=True)
     for i in range(CT_num_slices):
@@ -97,10 +98,10 @@ def initialize_project(name:str , description:str, CT_path: str, fluoro_path: st
 if __name__ == '__main__':
     # Example usage of the functions
     # Initialize a new patient and context
-    #context = initialize_project("Pench", 24, "/Users/apple/PycharmProjects/OrthoVis/classes/Data/DICOM/P0000001/ST000001")
-    context = initialize_project("Pench", 24, "/mnt/c/users/avery/Desktop/PI201/DICOM/P0000001/ST000001")
+    context = initialize_project("Pench", 24, "/Users/apple/PycharmProjects/OrthoVis/classes/Data/DICOM/P0000001/ST000001")
+    #context = initialize_project("Pench", 24, "/mnt/c/users/avery/Desktop/PI201/DICOM/P0000001/ST000001")
     #Test for simple save function
-    save_patient_data_to_file(context,"PROJECT_1")
+    save_patient_data_to_file(context,"PROJECT_2")
     #context = read_patient_data_from_file("/Users/apple/PycharmProjects/OrthoVis/Projects/PROJECT_1")
 
     print(context._singleton_data.patient.name)

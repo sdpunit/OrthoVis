@@ -15,22 +15,22 @@ class Patient:
         if not os.path.exists(st_path):
             raise FileNotFoundError(f"❌ path dose not exist: {st_path}")
 
-        # 路径拼接
+        # path to the CT and fluoroscopy data
         se1_path = os.path.join(st_path, "SE000001")
         se3_path = os.path.join(st_path, "SE000003")
 
-        # 检查 CT 和 fluoroscopy 是否存在
+        # check CT 和 fluoroscopy if exist
         if not os.path.exists(se1_path):
             raise FileNotFoundError(f"❌ Fluoroscopy path does not exist: {se1_path}")
         if not os.path.exists(se3_path):
             raise FileNotFoundError(f"❌ CT path does not exist: {se3_path}")
 
-        # 加载 fluoroscopy (SE000001)
+        # loading fluoroscopy (SE000001)
         images = [sitk.ReadImage(f) for f in sorted([os.path.join(se1_path, f) for f in os.listdir(se1_path)])] 
         self.fluoroscopy = images if len(images) > 1 else images[0]
         print(f"✅ loading fluoroscopy data (SE000001)")
 
-        # 加载 CT (SE000003)
+        # loading CT (SE000003)
         self.CT = self._load_series(se3_path,True)
         print(f"✅ loading CT data (SE000003)")
 
@@ -232,6 +232,34 @@ class RawState(DataState):
         }
         with open(os.path.join(folder, "data.json"), "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
+        # Save CT
+        CT_num_slices = patient._patient.CT.GetDepth()
+        print(patient._patient.CT.GetDepth())
+        CT_folder = folder / "SE000003"
+        CT_folder.mkdir(parents=True, exist_ok=True)
+        for i in range(CT_num_slices):
+            slice_i = patient._patient.CT[:, :, i]
+            filename = f"IN{i + 1:06d}.dcm"
+
+            filepath = os.path.join(CT_folder, filename)
+            sitk.WriteImage(slice_i, filepath)
+
+
+        # Save fluoroscopy
+        fluoro = patient._patient.fluoroscopy
+
+        if isinstance(fluoro, list):
+            for i, slice_i in enumerate(fluoro):
+                filename = f"IN{i + 1:06d}.dcm"
+                filepath = os.path.join(parent_dir, "Projects", name, "SE000001", filename)
+                os.makedirs(os.path.dirname(filepath), exist_ok=True)
+                sitk.WriteImage(slice_i, filepath)
+        else:
+            filename = "IN000001.dcm"
+            filepath = os.path.join(parent_dir, "Projects", name, "SE000001", filename)
+            os.makedirs(os.path.dirname(filepath), exist_ok=True)
+            sitk.WriteImage(fluoro, filepath)
+        print(f"✅ all fluoroscopy slices be saved")
 
     def handle_to_string(self) -> str:
         return "RawState"
