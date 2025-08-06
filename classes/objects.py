@@ -19,11 +19,6 @@ class Patient:
         se1_path = os.path.join(st_path, "SE000001")
         se3_path = os.path.join(st_path, "SE000003")
 
-        # check CT 和 fluoroscopy if exist
-        if not os.path.exists(se1_path):
-            raise FileNotFoundError(f"❌ Fluoroscopy path does not exist: {se1_path}")
-        if not os.path.exists(se3_path):
-            raise FileNotFoundError(f"❌ CT path does not exist: {se3_path}")
 
         # loading fluoroscopy (SE000001)
         images = [sitk.ReadImage(f) for f in sorted([os.path.join(se1_path, f) for f in os.listdir(se1_path)])] 
