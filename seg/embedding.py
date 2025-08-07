@@ -1,28 +1,22 @@
 #!/usr/bin/env python3
 """
-2D CT Quad-Viewer
-
-Features:
- 1. Single RenderWindow split into 3 active viewports (axial, coronal, sagittal). 
- 2. Mouse wheel scrolls slices in the quadrant under the cursor; Ctrl + wheel zooms.
- 3. Slice count labels in each quadrant showing "<View> \n Slice: X/N".
- 4. Legend for segmentation masks in the top-right quadrant; default mask opacity 0.9.
+VTK Pipeline for Qt Integration
+Extracted and adapted from renderer.py to work with Qt widgets
 """
-import os, glob, argparse, vtk 
+import os, glob
+import vtk 
 import SimpleITK as sitk
 from vtkmodules.vtkInteractionStyle import vtkInteractorStyleImage
 from vtkmodules.vtkInteractionImage import vtkImageViewer2
 from vtkmodules.vtkRenderingCore import (
-    vtkRenderWindow,
     vtkRenderer,
-    vtkRenderWindowInteractor,
     vtkActor2D,
     vtkTextMapper,
     vtkTextProperty
 )
 from vtkmodules.vtkRenderingAnnotation import vtkLegendBoxActor
 from vtkmodules.util import numpy_support
-from totalseg import load_ct
+from seg.totalseg import load_ct
 
 # Caching directory
 CACHE_DIR = os.path.expanduser('~/.cache/renderer')
@@ -35,7 +29,6 @@ def cache_ct(path: str):
     img = load_ct(path)
     sitk.WriteImage(img, cache_file)
     return img
-
 
 def sitk_to_vtk(img):
     arr = sitk.GetArrayFromImage(img)
@@ -239,7 +232,18 @@ class QuadStyle(vtkInteractorStyleImage):
         self.GetInteractor().GetRenderWindow().Render()
 
 
-def main(ct_path: str, mask_dir: str):
+def create_vtk_pipeline(ct_path: str, mask_dir: str, render_window=None):
+    """
+    Create the VTK pipeline for the quad viewer.
+    Returns the interactor style that should be attached to the render window's interactor.
+    """
+    # Suppress VTK warnings and prevent automatic window creation
+    vtk.vtkObject.GlobalWarningDisplayOff()
+    
+    # Ensure we have a render window
+    if render_window is None:
+        raise ValueError("render_window must be provided for Qt integration")
+    
     img = cache_ct(ct_path)
     vtk_img, arr = sitk_to_vtk(img)
 
@@ -283,10 +287,10 @@ def main(ct_path: str, mask_dir: str):
         mask_colors_list.append(cmap)
 
     dims = (arr.shape[2], arr.shape[1], arr.shape[0])
-    render_window = vtkRenderWindow()
-    render_window.SetSize(900, 900)
+    
+    # Configure the provided render window
     render_window.SetNumberOfLayers(2)
-    render_window.SetOffScreenRendering(True) # Suppress separate window pop-ups 
+    # Don't set size here - let Qt handle it
 
     # Create quadrant slice viewers for each orientation 
     quads = {
@@ -349,21 +353,6 @@ def main(ct_path: str, mask_dir: str):
 
     legend_overlay.AddActor(legend)
 
-
-    # Switch on visible rendering
-    render_window.SetOffScreenRendering(False)
-    render_window.Render()
-
-    interactor = vtkRenderWindowInteractor()
-    interactor.SetRenderWindow(render_window)
-    interactor.SetInteractorStyle(QuadStyle(viewers, arr, img.GetOrigin(), img.GetSpacing()))
-    interactor.Initialize()
-    interactor.Start()
-
-if __name__=='__main__':
-    parser = argparse.ArgumentParser(description='CT Quad Viewer')
-    parser.add_argument('ct_file', help='Path to CT directory or file')
-    parser.add_argument('mask_dir', help='Directory of segmentation mask files')
-    args = parser.parse_args()
-    main(args.ct_file, args.mask_dir)
-
+    # Create and return the interactor style
+    interactor_style = QuadStyle(viewers, arr, img.GetOrigin(), img.GetSpacing())
+    return interactor_style
