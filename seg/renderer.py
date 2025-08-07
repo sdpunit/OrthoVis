@@ -1,21 +1,17 @@
 #!/usr/bin/env python3
 """
 2D CT Quad-Viewer (Axial/Coronal/Sagittal) with Per-Quadrant Scrolling, Ctrl-Zoom,
-Gold Crosshair, and Modern Window/Level Sliders
+Crosshair overlay and simplified legend display
 
 Features:
  1. Single RenderWindow split into 3 active viewports (axial, coronal, sagittal) and
     crosshair overlay in a reserved top-right quadrant.
  2. Mouse wheel scrolls slices in the quadrant under the cursor; Ctrl + wheel zooms.
  3. Persistent slice count labels in each quadrant showing "<View>\nSlice: X/N".
- 4. Gold crosshair overlay across all quadrants.
- 5. Global Window/Level sliders rendered on the right edge with slim bars and jump mode.
+ 4. Legend for segmentation masks in the top-right quadrant; default mask opacity 0.6.
 """
-import os
-import sys
+import os, glob, argparse, vtk 
 import SimpleITK as sitk
-import vtk
-import glob
 from vtkmodules.vtkInteractionStyle import vtkInteractorStyleImage
 from vtkmodules.vtkInteractionImage import vtkImageViewer2
 from vtkmodules.vtkRenderingCore import (
@@ -24,20 +20,15 @@ from vtkmodules.vtkRenderingCore import (
     vtkRenderWindowInteractor,
     vtkActor2D,
     vtkTextMapper,
-    vtkTextProperty,
-    vtkPolyDataMapper2D,
-    vtkTextActor
+    vtkTextProperty
 )
-from vtkmodules.vtkCommonDataModel import vtkPolyData, vtkCellArray
-from vtkmodules.vtkCommonCore import vtkPoints
+from vtkmodules.vtkRenderingAnnotation import vtkLegendBoxActor
 from vtkmodules.util import numpy_support
 from totalseg import load_ct
 
 # Caching directory
 CACHE_DIR = os.path.expanduser('~/.cache/renderer')
 os.makedirs(CACHE_DIR, exist_ok=True)
-
-# Helper: cache or load CT image
 
 def cache_ct(path: str):
     cache_file = os.path.join(CACHE_DIR, os.path.basename(path.rstrip(os.sep)) + '.mha')
@@ -47,7 +38,6 @@ def cache_ct(path: str):
     sitk.WriteImage(img, cache_file)
     return img
 
-# Convert SimpleITK image to vtkImageData
 
 def sitk_to_vtk(img):
     arr = sitk.GetArrayFromImage(img)
@@ -63,50 +53,23 @@ def sitk_to_vtk(img):
     vtk_img.GetPointData().SetScalars(vtk_arr)
     return vtk_img, arr
 
-# Create a thin vertical slider with jump animation
 
-def make_slider(vmin, vmax, init, xpos):
-    rep = vtk.vtkSliderRepresentation2D()
-    rep.SetMinimumValue(vmin)
-    rep.SetMaximumValue(vmax)
-    rep.SetValue(init)
-    
-    # Slider positioning (vertical)
-    rep.GetPoint1Coordinate().SetCoordinateSystemToNormalizedDisplay()
-    rep.GetPoint1Coordinate().SetValue(xpos, 0.1)  # Bottom position
-    rep.GetPoint2Coordinate().SetCoordinateSystemToNormalizedDisplay()
-    rep.GetPoint2Coordinate().SetValue(xpos, 0.4)  # Top position
-    
-    # Slider appearance
-    rep.SetSliderLength(0.008)  # Slider handle size
-    rep.SetSliderWidth(0.008)   # Slider handle size 
-    rep.SetTubeWidth(0.002)     # Track line thickness
-    
-    # Remove all decorations
-    rep.ShowSliderLabelOff()    # Remove value text
-    rep.SetEndCapLength(0.0)    # Remove end caps
-    
-    rep.GetSliderProperty().SetColor(1, 1, 0)  # Yellow slider
-    rep.GetSelectedProperty().SetColor(1, 1, 0)  # Same yellow when selected
-    rep.GetTubeProperty().SetColor(0.4, 0.4, 0.4)  # Dark gray track
-    
-    # Eliminate trace artifacts completely
-    rep.GetSliderProperty().SetOpacity(1.0)
-    rep.GetSelectedProperty().SetOpacity(1.0)
-    rep.GetTubeProperty().SetOpacity(1.0)
-    
-    return rep
-
-# Wrapper for each quadrant viewer
 class SliceViewer:
     def __init__(self, vtk_img, arr, orientation, viewport, name,
-             render_window, mask_colors_list, dims):
+                 render_window, mask_colors_list, dims):
+
         self.name = name
         self.viewport = viewport
-        # Set up vtkImageViewer2
+        self.dims = dims
+        self.slice = 0
+        self.min_slice = 0
+
+        # 1) Create the viewer and immediately give it *your* rw
         self.viewer = vtkImageViewer2()
+        self.viewer.SetRenderWindow(render_window)
         self.viewer.SetInputData(vtk_img)
-        # Choose orientation
+
+        # 2) Set orientation & initial slice
         axis = 0
         if orientation == 'coronal':
             self.viewer.SetSliceOrientationToXZ()
@@ -114,34 +77,32 @@ class SliceViewer:
         elif orientation == 'sagittal':
             self.viewer.SetSliceOrientationToYZ()
             axis = 2
-        # Slice range
+
         self.min_slice, self.max_slice = 0, arr.shape[axis] - 1
         self.slice = arr.shape[axis] // 2
         self.viewer.SetSlice(self.slice)
-        # Renderer configuration
+
+        # 3) Hook the shared interactor in
+        self.viewer.SetupInteractor(render_window.GetInteractor())
+
+        # 4) Tweak the renderer that vtkImageViewer2 already registered
         renderer = self.viewer.GetRenderer()
         renderer.SetViewport(*viewport)
         renderer.SetBackground(0, 0, 0)
-        render_window.AddRenderer(renderer)
-        self.viewer.SetRenderWindow(render_window)
-        # store dims
-        self.dims = dims
 
-        # for each mask color-map, create an actor
+        # 5) Add your mask actors *into* that same renderer
         self.mask_actors = []
         for cmap in mask_colors_list:
             actor = vtk.vtkImageActor()
             actor.GetMapper().SetInputConnection(cmap.GetOutputPort())
-            actor.GetProperty().SetOpacity(0.3)
+            actor.GetProperty().SetOpacity(0.9)
             renderer.AddActor(actor)
             self.mask_actors.append(actor)
-
-        # initial slice extent
         self.update_mask_slice()
 
-        # Slice counter text
+        # 6) Add your text label
         text_prop = vtkTextProperty()
-        text_prop.SetFontSize(14)
+        text_prop.SetFontSize(20)
         text_prop.SetColor(1, 1, 1)
         self.mapper = vtkTextMapper()
         self.mapper.SetTextProperty(text_prop)
@@ -175,59 +136,25 @@ class SliceViewer:
             ext = (0, X-1, self.slice, self.slice, 0, Z-1)
         else:
             ext = (self.slice, self.slice, 0, Y-1, 0, Z-1)
-
         for actor in self.mask_actors:
             actor.SetDisplayExtent(*ext)
 
+    def set_mask_opacity(self, opacity):
+        for actor in self.mask_actors:
+            actor.GetProperty().SetOpacity(opacity)
 
-
-# Draw gold crosshair overlay
-
-def add_crosshair(render_window):
-    overlay = vtkRenderer()
-    overlay.SetLayer(1)
-    overlay.InteractiveOff()
-    overlay.SetViewport(0.0, 0.0, 1.0, 1.0)
-    pts = vtkPoints()
-    pts.InsertNextPoint(0, 0.5, 0)
-    pts.InsertNextPoint(1, 0.5, 0)
-    pts.InsertNextPoint(0.5, 0, 0)
-    pts.InsertNextPoint(0.5, 1, 0)
-    lines = vtkCellArray()
-    lines.InsertNextCell(2)
-    lines.InsertCellPoint(0)
-    lines.InsertCellPoint(1)
-    lines.InsertNextCell(2)
-    lines.InsertCellPoint(2)
-    lines.InsertCellPoint(3)
-    pd = vtkPolyData()
-    pd.SetPoints(pts)
-    pd.SetLines(lines)
-    mapper = vtkPolyDataMapper2D()
-    mapper.SetInputData(pd)
-    actor = vtkActor2D()
-    actor.SetMapper(mapper)
-    actor.GetProperty().SetColor(1, 0.84, 0)
-    actor.GetProperty().SetLineWidth(1)
-    overlay.AddActor2D(actor)
-    render_window.AddRenderer(overlay)
-    return overlay
 
 class QuadStyle(vtkInteractorStyleImage):
-    def __init__(self, viewers, probe_mapper, arr, origin, spacing):
+    def __init__(self, viewers, arr, origin, spacing):
         super().__init__()
         self.viewers = viewers
-        self.probe_mapper = probe_mapper
-        self.arr          = arr
-        self.origin       = origin
-        self.spacing      = spacing
-        # Remove default wheel observers
+        self.arr = arr
+        self.origin = origin
+        self.spacing = spacing
         self.RemoveObservers('MouseWheelForwardEvent')
         self.RemoveObservers('MouseWheelBackwardEvent')
-        # Add our custom wheel handlers
         self.AddObserver('MouseWheelForwardEvent', self.wheel_forward)
         self.AddObserver('MouseWheelBackwardEvent', self.wheel_backward)
-        # self.AddObserver('MouseMoveEvent', self.on_mouse_move) # Mouse listener 
 
     def pick_viewer(self):
         x, y = self.GetInteractor().GetEventPosition()
@@ -242,130 +169,63 @@ class QuadStyle(vtkInteractorStyleImage):
         sv = self.pick_viewer()
         if not sv:
             return
-
         if self.GetInteractor().GetControlKey():
-            # —— ZOOM IN ——
             cam = sv.viewer.GetRenderer().GetActiveCamera()
             cam.ParallelProjectionOn()
             cam.Zoom(1.1)
             sv.viewer.Render()
         else:
-            # —— SLICE UP ——
             sv.move(1)
-
         self.GetInteractor().GetRenderWindow().Render()
 
     def wheel_backward(self, obj, event):
         sv = self.pick_viewer()
         if not sv:
             return
-
         if self.GetInteractor().GetControlKey():
-            # —— ZOOM OUT ——
             cam = sv.viewer.GetRenderer().GetActiveCamera()
             cam.ParallelProjectionOn()
             cam.Zoom(0.9)
             sv.viewer.Render()
         else:
-            # —— SLICE DOWN ——
             sv.move(-1)
-
-        self.GetInteractor().GetRenderWindow().Render()
-    
-    def on_mouse_move(self, obj, event):
-        x, y = self.GetInteractor().GetEventPosition()
-        sv = self.pick_viewer()
-        if not sv:
-            return
-        ren = sv.viewer.GetRenderer()
-
-        ren.SetDisplayPoint(x, y, 0)
-        ren.DisplayToWorld()
-        world = ren.GetWorldPoint()
-        if world[3] == 0:
-            return
-        Xw, Yw, Zw = [c/world[3] for c in world[:3]]
-
-        i = int(round((Xw - self.origin[0]) / self.spacing[0]))
-        j = int(round((Yw - self.origin[1]) / self.spacing[1]))
-        k = int(round((Zw - self.origin[2]) / self.spacing[2]))
-
-        Z, Y, X = self.arr.shape
-        if not (0 <= i < X and 0 <= j < Y and 0 <= k < Z):
-            return
-
-        val = self.arr[k, j, i]
-
-        text = (
-            f"World (mm): X={Xw:.1f}, Y={Yw:.1f}, Z={Zw:.1f}\n"
-            f"IJK: i={i}, j={j}, k={k}   Value: {val}"
-        )
-        self.probe_mapper.SetInput(text)
         self.GetInteractor().GetRenderWindow().Render()
 
-# Main entrypoint
 
-def main(ct_path: str, mask_paths: list[str]):
-    # 1. Load CT
-    # 支持传入单个 mask 目录：如果只有一个参数且它是目录，则把该目录下所有 .nii 文件都当作 mask
-    if len(mask_paths)==1 and os.path.isdir(mask_paths[0]):
-        folder = mask_paths[0]
-        mask_paths = sorted(glob.glob(os.path.join(folder, '*.nii.gz')))
+def main(ct_path: str, mask_dir: str):
     img = cache_ct(ct_path)
     vtk_img, arr = sitk_to_vtk(img)
 
-    # 2. Batch load, resample and convert each mask → VTK → color-map
+    mask_paths = sorted(glob.glob(os.path.join(mask_dir, '*.nii.gz')))
+    if not mask_paths:
+        mask_paths = sorted(glob.glob(os.path.join(mask_dir, '*.nii')))
+    if not mask_paths:
+        raise ValueError(f"No mask files found in directory: {mask_dir}")
+
     mask_colors_list = []
     legend_labels = []
     colors = [
-        (1.0, 0.0, 0.0),  # red
-        (0.0, 1.0, 0.0),  # green
-        (0.0, 0.0, 1.0),  # blue
-        (1.0, 1.0, 0.0),  # yellow
-        (0.0, 1.0, 1.0),  # cyan
-        (1.0, 0.0, 1.0),  # magenta
+        (1.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0),
+        (1.0, 1.0, 0.0), (0.0, 1.0, 1.0), (1.0, 0.0, 1.0),
     ]
     for idx, mask_path in enumerate(mask_paths):
-        # --- Generate clean label from filename ---
         label_text = os.path.basename(mask_path).split('.')[0]
         label_text = label_text.replace('_', ' ').replace('otsu', '').strip().title()
         legend_labels.append(label_text)
 
-        # 2.1 Read mask
         mask_sitk = sitk.ReadImage(mask_path)
-
-        # 2.2 Resample mask to CT space
         resampler = sitk.ResampleImageFilter()
         resampler.SetReferenceImage(img)
         resampler.SetInterpolator(sitk.sitkNearestNeighbor)
         resampler.SetOutputPixelType(mask_sitk.GetPixelID())
         mask_resampled = resampler.Execute(mask_sitk)
 
-        # —————————— Debugging: inspect mask contents ——————————
-        import numpy as np
-        mask_array = sitk.GetArrayFromImage(mask_resampled)
-        print(f"--- Mask Data Check: {os.path.basename(mask_path)} ---")
-        print(f" Mask shape        : {mask_array.shape}")
-        print(f" Mask dtype        : {mask_array.dtype}")
-        unique_vals = np.unique(mask_array)
-        print(f" Unique values     : {unique_vals}")
-        if np.any(mask_array):
-            print(" Check result      : mask contains non-zero values. ✅")
-        else:
-            print(" Check result      : warning! all mask values are zero. ❌")
-        print("--------------------------------------------------")
-
-        # 2.3 Convert resampled mask to VTK
         mask_vtk, _ = sitk_to_vtk(mask_resampled)
-
-        # 2.4 Build a semi‑transparent red LUT
         lut = vtk.vtkLookupTable()
         lut.SetNumberOfTableValues(2)
-        lut.SetTableValue(0, 0,0,0,    0.0)   
-
+        lut.SetTableValue(0, 0, 0, 0, 0.0)
         r, g, b = colors[idx % len(colors)]
-        lut.SetTableValue(1, r, g, b,  0.6)  
-
+        lut.SetTableValue(1, r, g, b, 0.6)
         lut.Build()
 
         cmap = vtk.vtkImageMapToColors()
@@ -373,18 +233,14 @@ def main(ct_path: str, mask_paths: list[str]):
         cmap.SetOutputFormatToRGBA()
         cmap.SetInputData(mask_vtk)
         cmap.Update()
-
         mask_colors_list.append(cmap)
 
-    # 3. Prepare dimensions
-    dims = (arr.shape[2], arr.shape[1], arr.shape[0])  # X, Y, Z
-
-    # 4. Create render window
+    dims = (arr.shape[2], arr.shape[1], arr.shape[0])
     render_window = vtkRenderWindow()
     render_window.SetSize(900, 900)
-    render_window.SetNumberOfLayers(3)
+    render_window.SetNumberOfLayers(2)
+    render_window.SetOffScreenRendering(True) # Suppress separate window pop-ups 
 
-    # 5. Define viewports and create SliceViewers
     quads = {
         'Axial':    (0.0, 0.5, 0.5, 1.0),
         'Coronal':  (0.0, 0.0, 0.5, 0.5),
@@ -392,186 +248,73 @@ def main(ct_path: str, mask_paths: list[str]):
     }
     viewers = []
     for name, vp in quads.items():
-        sv = SliceViewer(
-            vtk_img, arr,
-            name.lower(),   # orientation
-            vp,             # viewport
-            name,
-            render_window,
-            mask_colors_list,
-            dims
-        )
+        sv = SliceViewer(vtk_img, arr, name.lower(), vp, name,
+                         render_window, mask_colors_list, dims)
         viewers.append(sv)
 
-    # 6. Add crosshair overlay
-    overlay_renderer = add_crosshair(render_window)
+    overlay = vtkRenderer()
+    overlay.SetLayer(1)
+    overlay.InteractiveOff()
+    overlay.SetViewport(0.0, 0.0, 1.0, 1.0)
+    render_window.AddRenderer(overlay)
 
-    # 6.1 添加骨头颜色图例（Legend）
-    legend = vtk.vtkLegendBoxActor()
-    legend.SetNumberOfEntries(len(legend_labels))
-    # 右上角归一化显示坐标
+    # Overlay renderer for legend
+    overlay = vtkRenderer()
+    overlay.SetLayer(1)
+    overlay.InteractiveOff()
+    overlay.SetViewport(0,0,1,1)
+    render_window.AddRenderer(overlay)
+
+    # 1) LegendBoxActor with shaded background
+    legend = vtkLegendBoxActor()
+    num = len(legend_labels)
+    margin = 0.05
+    quad_h = 0.5 - 2*margin
+    legend.SetNumberOfEntries(num)
+    legend.SetWidth(0.15)
+    legend.SetHeight(quad_h)
     legend.GetPositionCoordinate().SetCoordinateSystemToNormalizedViewport()
-    legend.GetPositionCoordinate().SetValue(0.65, 0.65)
-    legend.SetWidth(0.2)
-    legend.SetHeight(0.2)
+    legend.GetPositionCoordinate().SetValue(1-0.20-margin, 0.48+margin)
+    # Enable shaded background
+    legend.UseBackgroundOn()                # background on
+    legend.SetBackgroundColor(0.1,0.1,0.1) # dark gray shade
+    legend.GetProperty().SetOpacity(0.6)   # semi-transparent
+    legend.GetProperty().SetLineWidth(0)    # no border
 
-    for i, label in enumerate(legend_labels):
+    # 2) Font size for legend labels
+    text_prop = legend.GetEntryTextProperty()
+    text_prop.SetFontSize(1) # initial label font size
+    text_prop.SetColor(1,1,1)
+    text_prop.SetVerticalJustificationToBottom()  # align text vertically with icons
+
+    # 2b) Size of colored cubes next to labels defined here:
+    cube_size = 0.05  # proposed good initial cube size
+
+    # Add each entry
+    for i, lbl in enumerate(legend_labels):
         cube = vtk.vtkCubeSource()
-        cube.SetXLength(1)
-        cube.SetYLength(1)
-        cube.SetZLength(1)
+        cube.SetXLength(cube_size)
+        cube.SetYLength(cube_size)
+        cube.SetZLength(cube_size)
         cube.Update()
-        legend.SetEntry(i, cube.GetOutput(), label, colors[i % len(colors)])
+        legend.SetEntry(i, cube.GetOutput(), lbl, colors[i % len(colors)])
 
-    overlay_renderer.AddActor(legend)
+    overlay.AddActor(legend)
 
+    # Switch on visible rendering
+    render_window.SetOffScreenRendering(False)
+    render_window.Render()
 
-    # 7. Add data probe text
-    probe_text_prop = vtkTextProperty()
-    probe_text_prop.SetFontSize(12)
-    probe_text_prop.SetColor(1, 1, 1)
-    probe_text_prop.SetJustificationToLeft()
-    probe_text_prop.SetVerticalJustificationToTop()
-
-    probe_mapper = vtkTextMapper()
-    probe_mapper.SetTextProperty(probe_text_prop)
-    probe_actor = vtkActor2D()
-    probe_actor.SetMapper(probe_mapper)
-    w, h = render_window.GetSize()
-    probe_actor.SetPosition(10, h - 10)
-    overlay_renderer.AddActor2D(probe_actor)
-
-    # 8. Create interactor with custom style
     interactor = vtkRenderWindowInteractor()
     interactor.SetRenderWindow(render_window)
-    origin  = img.GetOrigin()
-    spacing = img.GetSpacing()
-    interactor.SetInteractorStyle(
-        QuadStyle(viewers, probe_mapper, arr, origin, spacing)
-    )
-
-    # 9. Window/Level sliders
-    slider_renderer = vtkRenderer()
-    slider_renderer.SetLayer(2)
-    slider_renderer.InteractiveOff()
-    slider_renderer.SetViewport(0.0, 0.0, 1.0, 1.0)
-    render_window.AddRenderer(slider_renderer)
-
-    hu_min, hu_max = int(arr.min()), int(arr.max())
-    # 注意这里 make_slider 的 signature: make_slider(vmin, vmax, init, xpos)
-    # xpos 取 0.967 和 0.937 保持和 renderer.py 一致
-    win_rep = make_slider(1, hu_max - hu_min, hu_max - hu_min, 0.967)
-    lvl_rep = make_slider(hu_min, hu_max,           (hu_max + hu_min)//2, 0.937)
-
-    win_wid = vtk.vtkSliderWidget()
-    lvl_wid = vtk.vtkSliderWidget()
-
-    def wl_callback(obj, event):
-        w = int(round(win_rep.GetValue()))
-        l = int(round(lvl_rep.GetValue()))
-        for sv in viewers:
-            sv.viewer.SetColorWindow(w)
-            sv.viewer.SetColorLevel(l)
-        render_window.Render()
-
-    for wid, rep in ((win_wid, win_rep), (lvl_wid, lvl_rep)):
-        wid.SetInteractor(interactor)
-        wid.SetRepresentation(rep)
-        wid.SetAnimationModeToJump()
-        wid.SetCurrentRenderer(slider_renderer)
-        # strip out VTK’s incremental redraws
-        wid.RemoveObservers("StartInteractionEvent")
-        wid.RemoveObservers("InteractionEvent")
-        wid.RemoveObservers("EndInteractionEvent")
-        # attach only our full-render callback
-        wid.AddObserver("InteractionEvent", wl_callback)
-        wid.EnabledOn()
-
-
-    # ———————— Translucency (Opacity) slider ————————
-    opa_rep = make_slider(0.0, 1.0, 0.6, 0.907)
-    opa_wid = vtk.vtkSliderWidget()
-    opa_wid.SetInteractor(interactor)
-    opa_wid.SetRepresentation(opa_rep)
-    opa_wid.SetAnimationModeToJump()
-    opa_wid.SetCurrentRenderer(slider_renderer)
-    opa_wid.RemoveObservers("StartInteractionEvent")
-    opa_wid.RemoveObservers("InteractionEvent")
-    opa_wid.RemoveObservers("EndInteractionEvent")
-    def opacity_callback(obj, event):
-        o = opa_rep.GetValue()
-        for sv in viewers:
-            for actor in sv.mask_actors:
-                actor.GetProperty().SetOpacity(o)
-        render_window.Render()
-        opa_wid.AddObserver("InteractionEvent", opacity_callback)
-        opa_wid.EnabledOn()
-
-    # Add "W" and "L" text actors above each slider
-    for label, xpos in (("L", 0.937), ("W", 0.967)):
-        txt = vtkTextActor()
-        txt.SetInput(label)
-        tp = txt.GetTextProperty()
-        tp.SetFontSize(16)
-        tp.BoldOn()
-        tp.SetColor(1, 1, 1)
-        coord = txt.GetPositionCoordinate()
-        coord.SetCoordinateSystemToNormalizedDisplay()
-        coord.SetValue(xpos, 0.335)
-        slider_renderer.AddActor2D(txt)
-
-    # Add "O" text actor above the opacity slider
-    o_txt = vtkTextActor()
-    o_txt.SetInput("O")
-    tp_o = o_txt.GetTextProperty()
-    tp_o.SetFontSize(16)
-    tp_o.BoldOn()
-    tp_o.SetColor(1, 1, 1)
-    coord_o = o_txt.GetPositionCoordinate()
-    coord_o.SetCoordinateSystemToNormalizedDisplay()
-    coord_o.SetValue(0.907, 0.335)
-    slider_renderer.AddActor2D(o_txt)
-
-    # —————— Now move all three sliders (and their labels) next to the legend ——————
-    # Legend lives at normalized viewport (0.65,0.65)-(0.85,0.85)
-    slider_bottom, slider_top = 0.65, 0.85
-    label_top = 0.87
-    # new X positions for L, W, and O
-    lvl_x, win_x, opa_x = 0.88, 0.915, 0.95
-
-    # slide bars
-    lvl_rep.GetPoint1Coordinate().SetValue(lvl_x, slider_bottom)
-    lvl_rep.GetPoint2Coordinate().SetValue(lvl_x, slider_top)
-    win_rep.GetPoint1Coordinate().SetValue(win_x, slider_bottom)
-    win_rep.GetPoint2Coordinate().SetValue(win_x, slider_top)
-    opa_rep.GetPoint1Coordinate().SetValue(opa_x, slider_bottom)
-    opa_rep.GetPoint2Coordinate().SetValue(opa_x, slider_top)
-
-    # labels
-    actors = slider_renderer.GetActors2D()
-    actors.InitTraversal()
-    for _ in range(actors.GetNumberOfItems()):
-        actor = actors.GetNextActor2D()
-        if isinstance(actor, vtkTextActor):
-            txt = actor.GetInput()
-            if txt == "L":
-                actor.GetPositionCoordinate().SetValue(lvl_x, label_top)
-            elif txt == "W":
-                actor.GetPositionCoordinate().SetValue(win_x, label_top)
-            elif txt == "O":
-                actor.GetPositionCoordinate().SetValue(opa_x, label_top)
-
-
-    # 10. Start interaction
-    render_window.Render()
+    interactor.SetInteractorStyle(QuadStyle(viewers, arr, img.GetOrigin(), img.GetSpacing()))
     interactor.Initialize()
     interactor.Start()
 
+if __name__=='__main__':
+    parser = argparse.ArgumentParser(description='CT Quad Viewer')
+    parser.add_argument('ct_file', help='Path to CT directory or file')
+    parser.add_argument('mask_dir', help='Directory of segmentation mask files')
+    args = parser.parse_args()
+    main(args.ct_file, args.mask_dir)
 
-if __name__ == '__main__':
-    if len(sys.argv) < 3:
-        print(f"Usage: {sys.argv[0]} <CT_dir> <mask_dir>")
-        sys.exit(1)
-    ct_path    = sys.argv[1]
-    mask_paths = sys.argv[2:]
-    main(ct_path, mask_paths)
