@@ -47,7 +47,7 @@ def sitk_to_vtk(img):
 
 class SliceViewer:
     def __init__(self, vtk_img, arr, orientation, viewport, name,
-                 render_window, mask_colors_list, dims):
+                 render_window, mask_colors_list=None, dims=None):
 
         self.name = name
         self.viewport = viewport
@@ -81,15 +81,16 @@ class SliceViewer:
         renderer.SetViewport(*viewport)
         renderer.SetBackground(0, 0, 0)
 
-        # 5) Add your mask actors *into* that same renderer
+        # 5) Add your mask actors *into* that same renderer (if masks exist)
         self.mask_actors = []
-        for cmap in mask_colors_list:
-            actor = vtk.vtkImageActor()
-            actor.GetMapper().SetInputConnection(cmap.GetOutputPort())
-            actor.GetProperty().SetOpacity(0.9)
-            renderer.AddActor(actor)
-            self.mask_actors.append(actor)
-        self.update_mask_slice()
+        if mask_colors_list is not None:
+            for cmap in mask_colors_list:
+                actor = vtk.vtkImageActor()
+                actor.GetMapper().SetInputConnection(cmap.GetOutputPort())
+                actor.GetProperty().SetOpacity(0.9)
+                renderer.AddActor(actor)
+                self.mask_actors.append(actor)
+            self.update_mask_slice()
 
         # 6) Add your text label
         text_prop = vtkTextProperty()
@@ -112,7 +113,8 @@ class SliceViewer:
             self.slice = new_slice
             self.viewer.SetSlice(self.slice)
             self.update_label()
-            self.update_mask_slice()
+            if self.mask_actors:  # Only update masks if they exist
+                self.update_mask_slice()
         self.viewer.Render()
 
     def contains(self, xn, yn):
@@ -120,6 +122,9 @@ class SliceViewer:
         return x0 <= xn <= x1 and y0 <= yn <= y1
 
     def update_mask_slice(self):
+        if not self.mask_actors or not self.dims:  # Skip if no masks or dims
+            return
+            
         X, Y, Z = self.dims
         if self.name == 'Axial':
             ext = (0, X-1, 0, Y-1, self.slice, self.slice)
@@ -133,6 +138,27 @@ class SliceViewer:
     def set_mask_opacity(self, opacity):
         for actor in self.mask_actors:
             actor.GetProperty().SetOpacity(opacity)
+
+    def add_masks(self, mask_colors_list, dims):
+        """Add masks to existing viewer"""
+        self.dims = dims
+        renderer = self.viewer.GetRenderer()
+        
+        # Remove existing mask actors
+        for actor in self.mask_actors:
+            renderer.RemoveActor(actor)
+        self.mask_actors.clear()
+        
+        # Add new mask actors
+        for cmap in mask_colors_list:
+            actor = vtk.vtkImageActor()
+            actor.GetMapper().SetInputConnection(cmap.GetOutputPort())
+            actor.GetProperty().SetOpacity(0.9)
+            renderer.AddActor(actor)
+            self.mask_actors.append(actor)
+        
+        self.update_mask_slice()
+        self.viewer.Render()
 
 
 class QuadStyle(vtkInteractorStyleImage):
@@ -232,10 +258,15 @@ class QuadStyle(vtkInteractorStyleImage):
         self.GetInteractor().GetRenderWindow().Render()
 
 
-def create_vtk_pipeline(ct_path: str, mask_dir: str, render_window=None):
+def create_vtk_pipeline(ct_path: str, mask_dir: str = None, render_window=None):
     """
     Create the VTK pipeline for the quad viewer.
     Returns the interactor style that should be attached to the render window's interactor.
+    
+    Args:
+        ct_path: Path to CT directory
+        mask_dir: Optional path to mask directory. If None, only CT will be displayed
+        render_window: Qt render window to use
     """
     # Suppress VTK warnings and prevent automatic window creation
     vtk.vtkObject.GlobalWarningDisplayOff()
@@ -247,49 +278,51 @@ def create_vtk_pipeline(ct_path: str, mask_dir: str, render_window=None):
     img = cache_ct(ct_path)
     vtk_img, arr = sitk_to_vtk(img)
 
-    mask_paths = sorted(glob.glob(os.path.join(mask_dir, '*.nii.gz')))
-    if not mask_paths:
-        mask_paths = sorted(glob.glob(os.path.join(mask_dir, '*.nii')))
-    if not mask_paths:
-        raise ValueError(f"No mask files found in directory: {mask_dir}")
-
+    # Handle optional mask processing
     mask_colors_list = []
     legend_labels = []
     colors = [
         (1.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0),
         (1.0, 1.0, 0.0), (0.0, 1.0, 1.0), (1.0, 0.0, 1.0),
     ]
-    for idx, mask_path in enumerate(mask_paths):
-        label_text = os.path.basename(mask_path).split('.')[0]
-        label_text = label_text.replace('_', ' ').replace('otsu', '').strip().title()
-        legend_labels.append(label_text)
+    
+    if mask_dir is not None:
+        mask_paths = sorted(glob.glob(os.path.join(mask_dir, '*.nii.gz')))
+        if not mask_paths:
+            mask_paths = sorted(glob.glob(os.path.join(mask_dir, '*.nii')))
+        
+        if mask_paths:  # Only process if masks found
+            for idx, mask_path in enumerate(mask_paths):
+                label_text = os.path.basename(mask_path).split('.')[0]
+                label_text = label_text.replace('_', ' ').replace('otsu', '').strip().title()
+                legend_labels.append(label_text)
 
-        mask_sitk = sitk.ReadImage(mask_path)
-        resampler = sitk.ResampleImageFilter()
-        resampler.SetReferenceImage(img)
-        resampler.SetInterpolator(sitk.sitkNearestNeighbor)
-        resampler.SetOutputPixelType(mask_sitk.GetPixelID())
-        mask_resampled = resampler.Execute(mask_sitk)
+                mask_sitk = sitk.ReadImage(mask_path)
+                resampler = sitk.ResampleImageFilter()
+                resampler.SetReferenceImage(img)
+                resampler.SetInterpolator(sitk.sitkNearestNeighbor)
+                resampler.SetOutputPixelType(mask_sitk.GetPixelID())
+                mask_resampled = resampler.Execute(mask_sitk)
 
-        mask_vtk, _ = sitk_to_vtk(mask_resampled)
-        lut = vtk.vtkLookupTable()
-        lut.SetNumberOfTableValues(2)
-        lut.SetTableValue(0, 0, 0, 0, 0.0)
-        r, g, b = colors[idx % len(colors)]
-        lut.SetTableValue(1, r, g, b, 0.6)
-        lut.Build()
+                mask_vtk, _ = sitk_to_vtk(mask_resampled)
+                lut = vtk.vtkLookupTable()
+                lut.SetNumberOfTableValues(2)
+                lut.SetTableValue(0, 0, 0, 0, 0.0)
+                r, g, b = colors[idx % len(colors)]
+                lut.SetTableValue(1, r, g, b, 0.6)
+                lut.Build()
 
-        cmap = vtk.vtkImageMapToColors()
-        cmap.SetLookupTable(lut)
-        cmap.SetOutputFormatToRGBA()
-        cmap.SetInputData(mask_vtk)
-        cmap.Update()
-        mask_colors_list.append(cmap)
+                cmap = vtk.vtkImageMapToColors()
+                cmap.SetLookupTable(lut)
+                cmap.SetOutputFormatToRGBA()
+                cmap.SetInputData(mask_vtk)
+                cmap.Update()
+                mask_colors_list.append(cmap)
 
     dims = (arr.shape[2], arr.shape[1], arr.shape[0])
     
     # Configure the provided render window
-    render_window.SetNumberOfLayers(2)
+    render_window.SetNumberOfLayers(2 if legend_labels else 1)  # Only use 2 layers if we have legends
     # Don't set size here - let Qt handle it
 
     # Create quadrant slice viewers for each orientation 
@@ -301,58 +334,185 @@ def create_vtk_pipeline(ct_path: str, mask_dir: str, render_window=None):
     viewers = []
     for name, vp in quads.items():
         sv = SliceViewer(vtk_img, arr, name.lower(), vp, name,
-                         render_window, mask_colors_list, dims)
+                         render_window, 
+                         mask_colors_list if mask_colors_list else None, 
+                         dims if mask_colors_list else None)
         viewers.append(sv)
 
-    # 1) Create a blank layer-0 renderer to clear the top-right quadrant
-    blank_quad = vtkRenderer()
-    blank_quad.SetLayer(0)                  # non-transparent base layer
-    blank_quad.InteractiveOff()
-    blank_quad.SetViewport(0.5, 0.5, 1.0, 1.0)  # exactly the unused quadrant
-    blank_quad.SetBackground(0, 0, 0)       # same as your other viewports
-    render_window.AddRenderer(blank_quad)
+    # Only create legend and blank quad if we have masks
+    if legend_labels:
+        # 1) Create a blank layer-0 renderer to clear the top-right quadrant
+        blank_quad = vtkRenderer()
+        blank_quad.SetLayer(0)                  # non-transparent base layer
+        blank_quad.InteractiveOff()
+        blank_quad.SetViewport(0.5, 0.5, 1.0, 1.0)  # exactly the unused quadrant
+        blank_quad.SetBackground(0, 0, 0)       # same as your other viewports
+        render_window.AddRenderer(blank_quad)
 
-    # 2) Legend overlay on layer 1, full‐window viewport, no color‐clear
-    legend_overlay = vtkRenderer()
-    legend_overlay.SetLayer(1)
-    legend_overlay.InteractiveOff()
-    legend_overlay.SetViewport(0.0, 0.0, 1.0, 1.0)
-    # IMPORTANT: keep the existing imagery
-    legend_overlay.PreserveColorBufferOn()  
-    legend_overlay.EraseOff()              
-    render_window.AddRenderer(legend_overlay)
+        # 2) Legend overlay on layer 1, full‐window viewport, no color‐clear
+        legend_overlay = vtkRenderer()
+        legend_overlay.SetLayer(1)
+        legend_overlay.InteractiveOff()
+        legend_overlay.SetViewport(0.0, 0.0, 1.0, 1.0)
+        # IMPORTANT: keep the existing imagery
+        legend_overlay.PreserveColorBufferOn()  
+        legend_overlay.EraseOff()              
+        render_window.AddRenderer(legend_overlay)
 
-    # 3) Build your legend as before, using normalized coords
-    legend = vtkLegendBoxActor()
-    num    = len(legend_labels)
-    margin = 0.03
-    quad_h = 0.5 - 2*margin
+        # 3) Build your legend as before, using normalized coords
+        legend = vtkLegendBoxActor()
+        num    = len(legend_labels)
+        margin = 0.03
+        quad_h = 0.5 - 2*margin
 
-    legend.SetNumberOfEntries(num)
-    legend.SetWidth(0.15)
-    legend.SetHeight(quad_h)
-    legend.GetPositionCoordinate().SetCoordinateSystemToNormalizedViewport()
-    legend.GetPositionCoordinate().SetValue(0.8-margin, 0.48+margin)
-    legend.UseBackgroundOn()
-    legend.SetBackgroundColor(0.1, 0.1, 0.1)
-    legend.GetProperty().SetOpacity(0.6)
-    legend.GetProperty().SetLineWidth(0)
+        legend.SetNumberOfEntries(num)
+        legend.SetWidth(0.15)
+        legend.SetHeight(quad_h)
+        legend.GetPositionCoordinate().SetCoordinateSystemToNormalizedViewport()
+        legend.GetPositionCoordinate().SetValue(0.8-margin, 0.48+margin)
+        legend.UseBackgroundOn()
+        legend.SetBackgroundColor(0.1, 0.1, 0.1)
+        legend.GetProperty().SetOpacity(0.6)
+        legend.GetProperty().SetLineWidth(0)
 
-    text_prop = legend.GetEntryTextProperty()
-    text_prop.SetColor(1,1,1)
-    text_prop.SetVerticalJustificationToBottom()
+        text_prop = legend.GetEntryTextProperty()
+        text_prop.SetColor(1,1,1)
+        text_prop.SetVerticalJustificationToBottom()
 
-    cube_size = quad_h / 5.0
-    for i, lbl in enumerate(legend_labels):
-        cube = vtk.vtkCubeSource()
-        cube.SetXLength(cube_size)
-        cube.SetYLength(cube_size)
-        cube.SetZLength(cube_size)
-        cube.Update()
-        legend.SetEntry(i, cube.GetOutput(), lbl, colors[i % len(colors)])
+        cube_size = quad_h / 5.0
+        for i, lbl in enumerate(legend_labels):
+            cube = vtk.vtkCubeSource()
+            cube.SetXLength(cube_size)
+            cube.SetYLength(cube_size)
+            cube.SetZLength(cube_size)
+            cube.Update()
+            legend.SetEntry(i, cube.GetOutput(), lbl, colors[i % len(colors)])
 
-    legend_overlay.AddActor(legend)
+        legend_overlay.AddActor(legend)
 
     # Create and return the interactor style
     interactor_style = QuadStyle(viewers, arr, img.GetOrigin(), img.GetSpacing())
     return interactor_style
+
+
+def add_masks_to_pipeline(viewers, img, mask_dir, render_window):
+    """
+    Add masks to an existing VTK pipeline.
+    This function can be called after initial CT-only visualization.
+    
+    Args:
+        viewers: List of SliceViewer objects
+        img: SimpleITK image object (CT)
+        mask_dir: Directory containing mask files
+        render_window: VTK render window
+    
+    Returns:
+        Boolean indicating success
+    """
+    try:
+        mask_paths = sorted(glob.glob(os.path.join(mask_dir, '*.nii.gz')))
+        if not mask_paths:
+            mask_paths = sorted(glob.glob(os.path.join(mask_dir, '*.nii')))
+        
+        if not mask_paths:
+            print(f"No mask files found in directory: {mask_dir}")
+            return False
+
+        mask_colors_list = []
+        legend_labels = []
+        colors = [
+            (1.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0),
+            (1.0, 1.0, 0.0), (0.0, 1.0, 1.0), (1.0, 0.0, 1.0),
+        ]
+        
+        for idx, mask_path in enumerate(mask_paths):
+            label_text = os.path.basename(mask_path).split('.')[0]
+            label_text = label_text.replace('_', ' ').replace('otsu', '').strip().title()
+            legend_labels.append(label_text)
+
+            mask_sitk = sitk.ReadImage(mask_path)
+            resampler = sitk.ResampleImageFilter()
+            resampler.SetReferenceImage(img)
+            resampler.SetInterpolator(sitk.sitkNearestNeighbor)
+            resampler.SetOutputPixelType(mask_sitk.GetPixelID())
+            mask_resampled = resampler.Execute(mask_sitk)
+
+            mask_vtk, _ = sitk_to_vtk(mask_resampled)
+            lut = vtk.vtkLookupTable()
+            lut.SetNumberOfTableValues(2)
+            lut.SetTableValue(0, 0, 0, 0, 0.0)
+            r, g, b = colors[idx % len(colors)]
+            lut.SetTableValue(1, r, g, b, 0.6)
+            lut.Build()
+
+            cmap = vtk.vtkImageMapToColors()
+            cmap.SetLookupTable(lut)
+            cmap.SetOutputFormatToRGBA()
+            cmap.SetInputData(mask_vtk)
+            cmap.Update()
+            mask_colors_list.append(cmap)
+
+        # Get array dimensions for mask positioning
+        vtk_img, arr = sitk_to_vtk(img)
+        dims = (arr.shape[2], arr.shape[1], arr.shape[0])
+        
+        # Add masks to each viewer
+        for viewer in viewers:
+            viewer.add_masks(mask_colors_list, dims)
+        
+        # Update render window to use 2 layers and add legend
+        render_window.SetNumberOfLayers(2)
+        
+        # Create blank quad and legend (same as in create_vtk_pipeline)
+        blank_quad = vtkRenderer()
+        blank_quad.SetLayer(0)
+        blank_quad.InteractiveOff()
+        blank_quad.SetViewport(0.5, 0.5, 1.0, 1.0)
+        blank_quad.SetBackground(0, 0, 0)
+        render_window.AddRenderer(blank_quad)
+
+        legend_overlay = vtkRenderer()
+        legend_overlay.SetLayer(1)
+        legend_overlay.InteractiveOff()
+        legend_overlay.SetViewport(0.0, 0.0, 1.0, 1.0)
+        legend_overlay.PreserveColorBufferOn()
+        legend_overlay.EraseOff()
+        render_window.AddRenderer(legend_overlay)
+
+        legend = vtkLegendBoxActor()
+        num = len(legend_labels)
+        margin = 0.03
+        quad_h = 0.5 - 2*margin
+
+        legend.SetNumberOfEntries(num)
+        legend.SetWidth(0.15)
+        legend.SetHeight(quad_h)
+        legend.GetPositionCoordinate().SetCoordinateSystemToNormalizedViewport()
+        legend.GetPositionCoordinate().SetValue(0.8-margin, 0.48+margin)
+        legend.UseBackgroundOn()
+        legend.SetBackgroundColor(0.1, 0.1, 0.1)
+        legend.GetProperty().SetOpacity(0.6)
+        legend.GetProperty().SetLineWidth(0)
+
+        text_prop = legend.GetEntryTextProperty()
+        text_prop.SetColor(1,1,1)
+        text_prop.SetVerticalJustificationToBottom()
+
+        cube_size = quad_h / 5.0
+        for i, lbl in enumerate(legend_labels):
+            cube = vtk.vtkCubeSource()
+            cube.SetXLength(cube_size)
+            cube.SetYLength(cube_size)
+            cube.SetZLength(cube_size)
+            cube.Update()
+            legend.SetEntry(i, cube.GetOutput(), lbl, colors[i % len(colors)])
+
+        legend_overlay.AddActor(legend)
+        
+        # Render the updated window
+        render_window.Render()
+        return True
+        
+    except Exception as e:
+        print(f"Error adding masks to pipeline: {e}")
+        return False

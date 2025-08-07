@@ -6,28 +6,18 @@ from vtkmodules.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 
 # Import the UI form (like project_setup does)
 from frontend_pages.segmentation.ui_segmentation_window import Ui_Form
-
-# Import our VTK pipeline creator
-try:
-    # Try relative import from project root
-    import sys
-    import os
-    # Add the project root to Python path
-    project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-    if project_root not in sys.path:
-        sys.path.insert(0, project_root)
-    from seg.embedding import create_vtk_pipeline
-except ImportError as e:
-    print(f"Warning: Could not import create_vtk_pipeline: {e}")
-    print("Make sure embedding.py is in the seg/ folder at project root.")
-    create_vtk_pipeline = None
+from seg.embedding import create_vtk_pipeline, add_masks_to_pipeline
+from seg.totalseg import load_ct
 
 class Segmentation(QWidget):
-    def __init__(self, ct_dir: str, mask_dir: str):
+    def __init__(self, ct_dir: str, mask_dir: str = None):
         super().__init__()
         self._vtk_initialized = False
         self.ct_dir = ct_dir
         self.mask_dir = mask_dir
+        self.interactor_style = None
+        self.viewers = None
+        self.ct_img = None  # Store CT image for later mask addition
 
         # Set up UI using the form (like project_setup does)
         self.ui = Ui_Form()
@@ -84,23 +74,72 @@ class Segmentation(QWidget):
             render_window.SetOffScreenRendering(False)  # Ensure on-screen rendering
             
             # Create the VTK pipeline using our extracted function
+            # Pass mask_dir (which can be None) to the pipeline
             self.interactor_style = create_vtk_pipeline(
                 self.ct_dir, 
-                self.mask_dir, 
+                self.mask_dir,  # This can be None
                 render_window=render_window
             )
+            
+            # Store reference to viewers for potential mask addition later
+            self.viewers = self.interactor_style.viewers
+            
+            # Load and store CT image for potential mask addition later
+            if load_ct is not None:
+                self.ct_img = load_ct(self.ct_dir)
             
             # Get the interactor and set our custom style
             interactor = render_window.GetInteractor()
             interactor.SetInteractorStyle(self.interactor_style)
             
             print(f"VTK pipeline created successfully for CT: {self.ct_dir}")
-            print(f"Masks directory: {self.mask_dir}")
+            if self.mask_dir:
+                print(f"Masks directory: {self.mask_dir}")
+            else:
+                print("No masks directory provided - CT only visualization")
             
         except Exception as e:
             print(f"Error setting up VTK pipeline: {e}")
             import traceback
             traceback.print_exc()
+
+    def add_masks(self, mask_dir: str):
+        """
+        Add masks to the existing CT visualization.
+        This can be called after segmentation is complete.
+        
+        Args:
+            mask_dir: Directory containing mask files
+        
+        Returns:
+            Boolean indicating success
+        """
+        if not self.viewers or not self.ct_img or add_masks_to_pipeline is None:
+            print("Cannot add masks - VTK pipeline not properly initialized")
+            return False
+        
+        try:
+            render_window = self.vtk_widget.GetRenderWindow()
+            success = add_masks_to_pipeline(
+                self.viewers, 
+                self.ct_img, 
+                mask_dir, 
+                render_window
+            )
+            
+            if success:
+                self.mask_dir = mask_dir
+                print(f"Successfully added masks from: {mask_dir}")
+            else:
+                print(f"Failed to add masks from: {mask_dir}")
+            
+            return success
+            
+        except Exception as e:
+            print(f"Error adding masks: {e}")
+            import traceback
+            traceback.print_exc()
+            return False
 
     def showEvent(self, event):
         """Called when the widget is shown"""
