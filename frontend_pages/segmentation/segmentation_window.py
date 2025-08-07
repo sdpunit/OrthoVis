@@ -1,8 +1,11 @@
 # segmentation_window.py
 
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QFrame
+from PySide6.QtWidgets import QWidget, QVBoxLayout
 from PySide6.QtCore import QTimer
 from vtkmodules.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
+
+# Import the UI form (like project_setup does)
+from frontend_pages.segmentation.ui_segmentation_window import Ui_Form
 
 # Import our VTK pipeline creator
 try:
@@ -26,43 +29,45 @@ class Segmentation(QWidget):
         self.ct_dir = ct_dir
         self.mask_dir = mask_dir
 
-        self.setupUI()
+        # Set up UI using the form (like project_setup does)
+        self.ui = Ui_Form()
+        self.ui.setupUi(self)
+
+        # Set the title
+        self.ui.titlebar.ui.title.setText("CT Segmentation")
+
+        # Highlight the segmentation button in sidebar
+        self.ui.sidebar.ui.segmentation.setStyleSheet(
+            """
+            QPushButton { 
+                color: white; 
+                background-color: #6f8ab7; 
+                border: none; 
+                padding: 10px 25px;  
+                text-align: center;}
+            """
+        )
+
+        # Replace the VTK_display (QGraphicsView) with our VTK widget
+        self.setupVTKWidget()
         
         # Initialize VTK after UI is set up
         if create_vtk_pipeline is not None:
             self.setupVTK()
 
-    def setupUI(self):
-        """Set up the user interface"""
-        # Main layout
-        main_layout = QHBoxLayout(self)
-        main_layout.setContentsMargins(0, 0, 0, 0)
-        main_layout.setSpacing(0)
+    def setupVTKWidget(self):
+        """Replace the placeholder QGraphicsView with our VTK widget"""
+        # Remove the existing VTK_display widget
+        layout = self.ui.VTK_display.parent().layout()
+        layout.removeWidget(self.ui.VTK_display)
+        self.ui.VTK_display.deleteLater()
         
-        # VTK display frame (takes up most of the space)
-        self.vtk_frame = QFrame()
-        self.vtk_frame.setStyleSheet("QFrame { border: 1px solid gray; }")
-        vtk_layout = QVBoxLayout(self.vtk_frame)
-        vtk_layout.setContentsMargins(0, 0, 0, 0)
+        # Create and add our VTK widget in its place
+        self.vtk_widget = QVTKRenderWindowInteractor()
+        layout.addWidget(self.vtk_widget)
         
-        # Create the VTK widget
-        self.vtk_widget = QVTKRenderWindowInteractor(self.vtk_frame)
-        vtk_layout.addWidget(self.vtk_widget)
-        
-        # Add VTK frame to main layout
-        main_layout.addWidget(self.vtk_frame, stretch=3)  # 3/4 of the space
-        
-        # Right panel for controls (if needed later)
-        self.control_panel = QFrame()
-        self.control_panel.setStyleSheet("QFrame { border: 1px solid gray; background-color: #f0f0f0; }")
-        self.control_panel.setMaximumWidth(250)
-        self.control_panel.setMinimumWidth(200)
-        
-        control_layout = QVBoxLayout(self.control_panel)
-        control_layout.setContentsMargins(10, 10, 10, 10)
-        
-        # Add control panel to main layout
-        main_layout.addWidget(self.control_panel, stretch=1)  # 1/4 of the space
+        # Store reference for easy access
+        self.ui.VTK_display = self.vtk_widget
 
     def setupVTK(self):
         """Set up the VTK pipeline"""
