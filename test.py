@@ -3,7 +3,6 @@ import os
 import json
 import SimpleITK as sitk
 from pathlib import Path
-from seg.renderer import main
 
 
 def save_patient_data_to_file(context, file_name):
@@ -108,5 +107,3 @@ if __name__ == '__main__':
     print(context._singleton_data.patient.description)
     print(context._singleton_data.state.handle_to_string())
     print(context._singleton_data.patient.CT)
-    
-    main(context._singleton_data._patient.CT) 
