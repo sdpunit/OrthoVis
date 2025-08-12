@@ -17,8 +17,8 @@ import subprocess
 # totalseg_download_weights -t appendicular_bones [patella, tibia, fibula]
 
 # Input and output directories
-ct_dir = "/mnt/c/users/avery/Desktop/PI201/DICOM/P0000001/ST000001/SE000003"  # Input CT directory 
-seg_dir = "/mnt/c/users/avery/Desktop/segmentation_masks"  # Output segmentation masks directory
+ct_dir = r"C:/users/avery/Desktop/PI201/DICOM/P0000001/ST000001/SE000003"  # Input CT directory 
+seg_dir = r"C:/users/avery/Desktop/segmentation_masks"  # Output segmentation masks directory
 roi = ["femur_right", "fibula", "patella", "tibia"] # ROIs 
 
 def run_totalseg(ct_dir: str, seg_dir: str): 
@@ -33,7 +33,7 @@ def run_totalseg(ct_dir: str, seg_dir: str):
     if result_total.stderr:
         print("Errors:")
         print(result_total.stderr)
-    print("Finished '--ta total' segmentation./n")
+    print("Finished '--ta total' segmentation.")
 
     # Run second command (patella, tibia, fibula)
     print("Running segmentation with '--ta appendicular_bones'...")
@@ -41,7 +41,7 @@ def run_totalseg(ct_dir: str, seg_dir: str):
     if result_appendicular.stderr:
         print("Errors:")
         print(result_appendicular.stderr)
-    print("Finished '--ta appendicular_bones' segmentation./n")
+    print("Finished '--ta appendicular_bones' segmentation.")
     
     rois = {f'{bone}.nii.gz' for bone in roi}
     for f in os.listdir(seg_dir):
