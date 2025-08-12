@@ -25,9 +25,9 @@ class MainWindow(QMainWindow):
         self.projectsetup = ProjectSetup()
 
         # Visualise the Imported ct, start segmentation
-        self.segmentation = Segmentation()
-        
-        # Calibrate the fluroscopy 
+        self.segmentation = Segmentation(r"C:/users/avery/Desktop/PI201/DICOM/P0000001/ST000001/SE000003", r"C:/users/avery/Desktop/segmentation_masks")
+
+        # Calibrate the fluroscopy
         self.calibration = Calibration()
 
         # Define the Axis
