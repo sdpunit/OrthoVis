@@ -22,6 +22,7 @@ from PySide6.QtWidgets import (QApplication, QFormLayout, QFrame, QGraphicsView,
 from widgets.sidebar.sidebar import Sidebar
 from widgets.titlebar.titlebar import Titlebar
 
+
 class Ui_Form(object):
     def setupUi(self, Form):
         if not Form.objectName():
