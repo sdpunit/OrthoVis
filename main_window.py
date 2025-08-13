@@ -30,15 +30,14 @@ class MainWindow(QMainWindow):
         # Start up page, chose to create project or open project
         self.homepage = HomePage()
 
-        # Sets up new project, imports CT and Fluro etc
+        # Sets up new project, imports CT and fluoro etc
         self.projectsetup = ProjectSetup()
         
         # Connect project setup to context updates - IMPORTANT!
         self.projectsetup.project_saved.connect(self.on_project_saved)
         print("Connected project_saved signal to main window")
 
-        # Visualise the Imported ct, start segmentation
-        # Create without hardcoded paths - will be set dynamically from backend
+        # Visualise the imported CT, start segmentation
         self.segmentation = Segmentation()
         
         # Set initial context for segmentation page
