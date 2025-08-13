@@ -291,12 +291,12 @@
             <number>9</number>
            </property>
            <item>
-            <layout class="QHBoxLayout" name="importsLayout" stretch="1,0">
+            <layout class="QHBoxLayout" name="importsLayout" stretch="0,0,0,0">
              <property name="spacing">
               <number>20</number>
              </property>
              <item>
-              <widget class="QPushButton" name="importFluoro">
+              <widget class="QPushButton" name="importCT">
                <property name="sizePolicy">
                 <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                  <horstretch>0</horstretch>
@@ -305,7 +305,7 @@
                </property>
                <property name="minimumSize">
                 <size>
-                 <width>180</width>
+                 <width>150</width>
                  <height>40</height>
                 </size>
                </property>
@@ -330,7 +330,69 @@ font-size: 14pt;
 </string>
                </property>
                <property name="text">
-                <string>Import Data</string>
+                <string>Import CT</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="importFL">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>150</width>
+                 <height>40</height>
+                </size>
+               </property>
+               <property name="styleSheet">
+                <string notr="true">QPushButton {
+background-color: rgb(255, 215, 0);
+font: 600 12pt &quot;Segoe UI&quot;;
+border-radius: 10px;}
+
+QPushButton:hover {
+background-color: rgb(255, 230, 50);
+font-size: 14pt;
+}
+</string>
+               </property>
+               <property name="text">
+                <string>Import Fluoroscopy</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="importCG">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>150</width>
+                 <height>40</height>
+                </size>
+               </property>
+               <property name="styleSheet">
+                <string notr="true">QPushButton {
+background-color: rgb(255, 215, 0);
+font: 600 12pt &quot;Segoe UI&quot;;
+border-radius: 10px;}
+
+QPushButton:hover {
+background-color: rgb(255, 230, 50);
+font-size: 14pt;
+}
+</string>
+               </property>
+               <property name="text">
+                <string>Import Calibration Grid</string>
                </property>
               </widget>
              </item>
