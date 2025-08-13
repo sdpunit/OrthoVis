@@ -47,14 +47,21 @@ class Segmentation(QWidget):
 
     def setupVTKWidget(self):
         """Replace the placeholder QGraphicsView with our VTK widget"""
+        # Get the parent layout of VTK_display (which should be horizontalLayout_2)
+        parent_layout = self.ui.VTK_display.parent().layout()
+        
+        # Get the current position of VTK_display in the layout
+        vtk_display_index = parent_layout.indexOf(self.ui.VTK_display)
+        
         # Remove the existing VTK_display widget
-        layout = self.ui.VTK_display.parent().layout()
-        layout.removeWidget(self.ui.VTK_display)
+        parent_layout.removeWidget(self.ui.VTK_display)
         self.ui.VTK_display.deleteLater()
         
-        # Create and add our VTK widget in its place
+        # Create our VTK widget
         self.vtk_widget = QVTKRenderWindowInteractor()
-        layout.addWidget(self.vtk_widget)
+        
+        # Insert the VTK widget at the same position as the old VTK_display
+        parent_layout.insertWidget(vtk_display_index, self.vtk_widget, stretch=3)
         
         # Store reference for easy access
         self.ui.VTK_display = self.vtk_widget

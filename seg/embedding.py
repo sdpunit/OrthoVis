@@ -94,7 +94,7 @@ class SliceViewer:
 
         # 6) Add your text label
         text_prop = vtkTextProperty()
-        text_prop.SetFontSize(20)
+        text_prop.SetFontSize(16)
         text_prop.SetColor(1, 1, 1)
         self.mapper = vtkTextMapper()
         self.mapper.SetTextProperty(text_prop)
