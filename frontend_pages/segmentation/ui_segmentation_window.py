@@ -135,11 +135,16 @@ class Ui_Form(object):
         self.segment_btn = QPushButton(self.button_wdg)
         self.segment_btn.setObjectName(u"segment_btn")
         self.segment_btn.setMinimumSize(QSize(0, 40))
-        self.segment_btn.setStyleSheet(u"background-color: rgb(255, 215, 0);\n"
-"border-radius: 10px;\n"
-"border: none;\n"
-"font: 600 12pt \"Segoe UI\";\n"
-"")
+        self.segment_btn.setStyleSheet(u"QPushButton {\n"
+        "background-color: rgb(255, 215, 0);\n"
+        "border-radius: 10px;\n"
+        "border: none;\n"
+        "font: 600 12pt \"Segoe UI\";\n"
+        "}\n"
+        "QPushButton:hover {\n"
+        "background-color: rgb(255, 230, 50);\n"
+        "font-size: 18px;\n"
+        "}")
 
         self.horizontalLayout_3.addWidget(self.segment_btn)
 
