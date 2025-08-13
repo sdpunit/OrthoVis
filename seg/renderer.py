@@ -18,7 +18,8 @@ from vtkmodules.vtkRenderingCore import (
     vtkRenderWindowInteractor,
     vtkActor2D,
     vtkTextMapper,
-    vtkTextProperty
+    vtkTextProperty,
+    vtkTextActor
 )
 from vtkmodules.vtkRenderingAnnotation import vtkLegendBoxActor
 from vtkmodules.util import numpy_support
@@ -143,12 +144,15 @@ class SliceViewer:
 
 
 class QuadStyle(vtkInteractorStyleImage):
-    def __init__(self, viewers, arr, origin, spacing):
+    def __init__(self, viewers, label_actors):
         super().__init__()
         self.viewers = viewers
-        self.arr = arr
-        self.origin = origin
-        self.spacing = spacing
+        self.label_actors = label_actors      # ✅ 添加这一行
+        self.selected_idx = -1                 # ✅ 初始选中第一个 mask
+        self.edit_mode = False  # 初始为浏览模式
+        self.mode_button = None  # 用于引用按钮 actor
+        self.update_selection_visuals()       # ✅ 初始化高亮显示
+
         self.RemoveObservers('MouseWheelForwardEvent')
         self.RemoveObservers('MouseWheelBackwardEvent')
         self.AddObserver('MouseWheelForwardEvent', self.wheel_forward)
@@ -163,6 +167,71 @@ class QuadStyle(vtkInteractorStyleImage):
         self.AddObserver('MouseMoveEvent',         self.on_mouse_move)
         self.AddObserver('LeftButtonReleaseEvent', self.on_left_button_release)
 
+        self.mode_button = None  # 会在 main 里赋值
+
+    
+    def update_selection_visuals(self):
+        for sv in self.viewers:
+            if self.edit_mode == True:
+                opacities = [1.0 if i == self.selected_idx else 0.1 for i in range(len(sv.mask_actors))]
+            else:
+                opacities = [0.9] * len(sv.mask_actors)
+            for actor, op in zip(sv.mask_actors, opacities):
+                actor.GetProperty().SetOpacity(op)
+
+        for i, actor in enumerate(self.label_actors):
+            tp = actor.GetTextProperty()
+            if self.edit_mode:
+                if i == self.selected_idx:
+                    tp.SetColor(1, 1, 0)
+                    tp.SetFontSize(24)
+                else:
+                    tp.SetColor(1, 1, 1)
+                    tp.SetFontSize(18)
+            else:
+                tp.SetColor(1, 1, 1)
+                tp.SetFontSize(18)
+            actor.SetTextProperty(tp)
+
+
+    def on_left_button_press(self, obj, event):
+        x, y = self.GetInteractor().GetEventPosition()
+        w, h = self.GetInteractor().GetRenderWindow().GetSize()
+        xn, yn = x / w, y / h  # ← 使用归一化坐标判断
+
+        # 点击切换按钮
+        if self.mode_button:
+            pos = self.mode_button.GetPosition()
+            if pos[0] <= xn <= pos[0]+0.15 and pos[1] <= yn <= pos[1]+0.05:
+                self.edit_mode = not self.edit_mode
+                self.mode_button.SetInput("Mode: Edit" if self.edit_mode else "Mode: Browse")
+                self.update_selection_visuals() 
+                self.GetInteractor().GetRenderWindow().Render()
+                return
+
+        # 编辑模式下处理 mask label 点击
+        if self.edit_mode:
+            for idx, actor in enumerate(self.label_actors):
+                pos = actor.GetPosition()
+                if pos[0] <= xn <= pos[0]+0.2 and pos[1] <= yn <= pos[1]+0.05:
+                    self.selected_idx = idx
+                    self.update_selection_visuals()
+                    self.GetInteractor().GetRenderWindow().Render()
+                    return
+
+        # 浏览逻辑
+        sv = self.pick_viewer()
+        if sv is None:
+            return
+        self.active_viewer = sv
+        self.panning = True
+        cam = sv.viewer.GetRenderer().GetActiveCamera()
+        cam.ParallelProjectionOn()
+        self.SetCurrentRenderer(sv.viewer.GetRenderer())
+        self.StartPan()
+
+
+
     def pick_viewer(self):
         x, y = self.GetInteractor().GetEventPosition()
         w, h = self.GetInteractor().GetRenderWindow().GetSize()
@@ -173,24 +242,24 @@ class QuadStyle(vtkInteractorStyleImage):
         return None
     
     # pan start
-    def on_left_button_press(self, obj, event):
-        sv = self.pick_viewer()
-        if sv is None:
-            return
-        self.active_viewer = sv
-        self.panning = True
+    # def on_left_button_press(self, obj, event):
+    #     sv = self.pick_viewer()
+    #     if sv is None:
+    #         return
+    #     self.active_viewer = sv
+    #     self.panning = True
 
-        # make sure we pan in parallel projection
-        cam = sv.viewer.GetRenderer().GetActiveCamera()
-        cam.ParallelProjectionOn()
+    #     # make sure we pan in parallel projection
+    #     cam = sv.viewer.GetRenderer().GetActiveCamera()
+    #     cam.ParallelProjectionOn()
 
-        # direct all pan commands to that renderer
-        self.SetCurrentRenderer(sv.viewer.GetRenderer())
+    #     # direct all pan commands to that renderer
+    #     self.SetCurrentRenderer(sv.viewer.GetRenderer())
 
-        # begin the pan interaction
-        self.StartPan()
-        # consume the event
-        return
+    #     # begin the pan interaction
+    #     self.StartPan()
+    #     # consume the event
+    #     return
 
     # pan motion
     def on_mouse_move(self, obj, event):
@@ -286,7 +355,7 @@ def main(ct_path: str, mask_dir: str):
     render_window = vtkRenderWindow()
     render_window.SetSize(900, 900)
     render_window.SetNumberOfLayers(2)
-    render_window.SetOffScreenRendering(True) # Suppress separate window pop-ups 
+    # render_window.SetOffScreenRendering(True) # Suppress separate window pop-ups 
 
     # Create quadrant slice viewers for each orientation 
     quads = {
@@ -349,6 +418,33 @@ def main(ct_path: str, mask_dir: str):
 
     legend_overlay.AddActor(legend)
 
+    # 添加点击按钮文本
+    label_actors = []
+    width, height = render_window.GetSize()
+    for i, lbl in enumerate(legend_labels):
+        t = vtkTextActor()
+        t.SetInput(lbl)
+        prop = t.GetTextProperty()
+        prop.SetFontSize(18)
+        prop.SetColor(1,1,1)
+        t.SetTextProperty(prop)
+        pos_x = 0.5
+        pos_y = 0.75 - 0.05 * i
+        t.GetPositionCoordinate().SetCoordinateSystemToNormalizedViewport()
+        t.SetPosition(pos_x, pos_y)
+        legend_overlay.AddActor(t)
+        label_actors.append(t)
+    
+    # 添加模式切换按钮
+    mode_btn = vtkTextActor()
+    mode_btn.SetInput("Mode: Browse")
+    mode_btn.GetTextProperty().SetFontSize(20)
+    mode_btn.GetTextProperty().SetColor(0, 1, 1)
+    mode_btn.GetPositionCoordinate().SetCoordinateSystemToNormalizedViewport()
+    mode_btn.SetPosition(0.5, 0.85)  
+    legend_overlay.AddActor(mode_btn)
+
+
 
     # Switch on visible rendering
     render_window.SetOffScreenRendering(False)
@@ -356,7 +452,10 @@ def main(ct_path: str, mask_dir: str):
 
     interactor = vtkRenderWindowInteractor()
     interactor.SetRenderWindow(render_window)
-    interactor.SetInteractorStyle(QuadStyle(viewers, arr, img.GetOrigin(), img.GetSpacing()))
+    interactor.SetInteractorStyle(QuadStyle(viewers, label_actors))
+    style = QuadStyle(viewers, label_actors)
+    style.mode_button = mode_btn  # 设置按钮 actor 引用
+    interactor.SetInteractorStyle(style)
     interactor.Initialize()
     interactor.Start()
 
@@ -366,4 +465,3 @@ if __name__=='__main__':
     parser.add_argument('mask_dir', help='Directory of segmentation mask files')
     args = parser.parse_args()
     main(args.ct_file, args.mask_dir)
-
