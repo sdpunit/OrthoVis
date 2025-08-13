@@ -22,7 +22,9 @@ class ProjectSetup(QWidget):
 
         self.ui.titlebar.ui.title.setText("Project Setup")
         self.ui.projectNameInput.setText(name)
-        self.ui.importFluoro.clicked.connect(self.handleImportFluoro)
+        self.ui.importCT.clicked.connect(self.handleImportCT)
+        self.ui.importFL.clicked.connect(self.handleImportFL)
+        self.ui.importCG.clicked.connect(self.handleImportCG)
         self.ui.save.clicked.connect(self.handleSave)
 
         # Enable Save button only when there are changes to save
@@ -95,8 +97,31 @@ class ProjectSetup(QWidget):
 
     #         print(f"Selected folder: {folder_path}")
 
+    def handleImportFL(self):
+        folder_path = QFileDialog.getExistingDirectory(
+            self,
+            "Select the CT sequence folder (e.g. SE000000)"
+        )
+        
+        if folder_path:
+            self.add_import_item(folder_path, "fluoro")
+            path_list.append(folder_path)
+            print(f"Selected folder: {folder_path}")
+            self.ui.save.setEnabled(True)
 
-    def handleImportFluoro(self):
+    def handleImportCG(self):
+        folder_path = QFileDialog.getExistingDirectory(
+            self,
+            "Select the CT sequence folder (e.g. SE000000)"
+        )
+        
+        if folder_path:
+            self.add_import_item(folder_path, "caligrid")
+            path_list.append(folder_path)
+            print(f"Selected folder: {folder_path}")
+            self.ui.save.setEnabled(True)
+
+    def handleImportCT(self):
         folder_path = QFileDialog.getExistingDirectory(
             self,
             "Select the CT sequence folder (e.g. SE000000)"
@@ -121,7 +146,7 @@ class ProjectSetup(QWidget):
 
 
         btn_delete = QPushButton("X")
-        btn_delete.clicked.connect(lambda: self.delete_item(list_item))
+        btn_delete.clicked.connect(lambda: self.delete_item(list_item, label.text()))
         btn_delete.setFixedWidth(15)
         layout.addWidget(btn_delete)
 
@@ -131,21 +156,25 @@ class ProjectSetup(QWidget):
         self.ui.importListView.addItem(list_item)
         self.ui.importListView.setItemWidget(list_item, row_widget)
 
-        path_dict[key] = list_item.text()
+        path_dict[key] = label.text()
+        print(path_dict)
 
     def select_file(self, label):
         file_path, _ = QFileDialog.getOpenFileName(self, "Select a file", "", "All Files (*.*)")
         if file_path:
             label.setText(file_path)
 
-    def delete_item(self, list_item: QListWidgetItem):
+    def delete_item(self, list_item: QListWidgetItem, label: str):
         row = self.ui.importListView.row(list_item)
         self.ui.importListView.takeItem(row)
         path_list.pop(row)
 
+        key_to_remove = ""
         for key in path_dict:
-            if path_dict[key] == list_item.text():
-                del path_dict[key]
+            if path_dict[key] == label:
+                key_to_remove = key
+        del path_dict[key_to_remove]
+        print(path_dict)
 
     def changeName(self, new_name):
         name = new_name
