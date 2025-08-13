@@ -81,7 +81,7 @@ def loading_project(Name: str = "", Description: str = "", ct_path: str = "", st
     context = Context(state, patient)
     return context
 
-def initialize_project(name:str , description:str, CT_path: str, fluoro_path: str = "") -> Context:
+def initialize_project(name:str , description:str, CT_path: str, fluoro_path: str, caligrid: str) -> Context:
     """
     Initialize a new patient and set the initial state.
     :param name: name of the patient
@@ -90,8 +90,14 @@ def initialize_project(name:str , description:str, CT_path: str, fluoro_path: st
     :param segmented_path: path to the segmented CT image
     :return: Context object with the initialized patient and state
     """
-    patient = SingletonPatient.get_instance(name, description, CT_path)
-    context = Context(RawState(), patient)
+    instance = SingletonPatient.get_instance()
+    patient = instance.patient
+    patient.name = name
+    patient.description = description
+    patient.CT = CT_path
+    patient.fluoro = fluoro_path
+    patient.caligrid = caligrid
+    context = Context(RawState(), instance)
     return context
 
 if __name__ == '__main__':

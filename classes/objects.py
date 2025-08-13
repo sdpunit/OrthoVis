@@ -4,56 +4,26 @@ import json
 from abc import ABC, abstractmethod
 from pathlib import Path
 import os
-import SimpleITK as sitk
+import shutil
+
+def move_directory(source_folder : str, destination_folder: str):  
+    try:
+        # Move the folder
+        shutil.move(source_folder, destination_folder)
+        print(f"Folder '{source_folder}' moved successfully to '{destination_folder}'")
+    except FileNotFoundError:
+        print(f"Error: Source folder '{source_folder}' not found.")
+    except Exception as e:
+        print(f"An error occurred: {e}")
 
 
 class Patient:
-    def __init__(self, name: str, description: str, CT: str):
+    def __init__(self, name: str, description: str, CT: str, fluoro: str, caligrid: str):
         self.name = name
         self.description = description
-        st_path = os.path.abspath(CT)
-        if not os.path.exists(st_path):
-            raise FileNotFoundError(f"❌ path dose not exist: {st_path}")
-
-        # path to the CT and fluoroscopy data
-        se1_path = os.path.join(st_path, "SE000001")
-        se3_path = os.path.join(st_path, "SE000003")
-
-
-        # loading fluoroscopy (SE000001)
-        images = [sitk.ReadImage(f) for f in sorted([os.path.join(se1_path, f) for f in os.listdir(se1_path)])] 
-        self.fluoroscopy = images if len(images) > 1 else images[0]
-        print(f"✅ loading fluoroscopy data (SE000001)")
-
-        # loading CT (SE000003)
-        self.CT = self._load_series(se3_path,True)
-        print(f"✅ loading CT data (SE000003)")
-
-    def _load_series(self, ct_source, is_ct: bool = False):
-        
-        """
-        if is_ct:
-            # For CT, we can read a series of images
-            reader = sitk.ImageSeriesReader()
-            reader.SetFileNames(series_path)
-            return reader.Execute()
-        else:
-            # For fluoroscopy, we can read multiple images or a single image
-            images = [sitk.ReadImage(f) for f in series_path]
-            return images if len(images) > 1 else images[0]
-        """
-
-        if os.path.isdir(ct_source):
-            reader = sitk.ImageSeriesReader()
-            series_ids = reader.GetGDCMSeriesIDs(ct_source)
-            if not series_ids:
-                raise RuntimeError(f"No DICOM series found in {ct_source}")
-            # Pick the first series
-            file_names = reader.GetGDCMSeriesFileNames(ct_source, series_ids[0])
-            reader.SetFileNames(file_names)
-            return reader.Execute()
-        else:
-            return sitk.ReadImage(ct_source)
+        self.CT = CT
+        self.fluoro = fluoro
+        self.caligrid = caligrid
     
 
     @property
@@ -81,16 +51,24 @@ class Patient:
         self._CT = value
 
     @property
-    def fluoroscopy(self):
-        return self._fluoroscopy
+    def fluoro(self):
+        return self._fluoro
 
-    @fluoroscopy.setter
-    def fluoroscopy(self, value):
-        self._fluoroscopy = value
+    @fluoro.setter
+    def fluoro(self, value):
+        self._fluoro = value
+
+    @property
+    def caligrid(self):
+        return self._caligrid
+
+    @caligrid.setter
+    def caligrid(self, value):
+        self._caligrid = value
 
     def to_string(self):
         return "Name: " + self.name + "\n"+ "Description: " + self.description + "\n CT: " + str(self.CT) + "\n Flurocopy: " + str(
-            self.fluoroscopy)
+            self.fluoro)
 
 
 class SingletonPatient:
@@ -99,10 +77,10 @@ class SingletonPatient:
     _state = None
 
     @staticmethod
-    def get_instance(name: str = "", description: str = "", CT: str = "") -> SingletonPatient:
+    def get_instance() -> SingletonPatient:
         if SingletonPatient._instance is None:
             SingletonPatient._instance = SingletonPatient()
-            SingletonPatient._patient = Patient(name, description, CT)
+            SingletonPatient._patient = Patient("", "", "", "", "")
         return SingletonPatient._instance
 
     @property
@@ -214,51 +192,65 @@ class RawState(DataState):
 
     def handle_save(self, patient: SingletonPatient) -> None:
         print("RawState wants to save the context to local space.")
-        name = patient._patient._name
-        desc = patient._patient._description
+        patient_instance = patient._patient
+        # Retrieve the fields of the patient
+        name = patient_instance._name
+        desc = patient_instance._description
+        ct = patient_instance._CT
+        fluoro = patient_instance.fluoro
+        caligrid = patient_instance.caligrid
+
+        # Extract the last folder name from the CT and fluoro paths
+        ct_last = os.path.basename(os.path.normpath(ct))
+        fluoro_last = os.path.basename(os.path.normpath(fluoro))
+        caligrid_last = os.path.basename(os.path.normpath(caligrid))
+
+        # Turns State object into its string representation
         state = patient._state.handle_to_string()
 
+        # Create the Projects folder with the name
+        # Append the last folder names extracted from the step above 
         current_dir = Path(__file__).resolve().parent
         parent_dir = current_dir.parent
         folder = parent_dir / "Projects" / name
-        CT_folder = folder / "SE000003"
+        CT_folder = folder / ct_last
+        fluoro_folder = folder / fluoro_last
+        caligrid_folder = folder / caligrid_last
+
+        # Create the directories with those folder names
         folder.mkdir(parents=True, exist_ok=True)
+        CT_folder.mkdir(parents=True, exist_ok=True)
+        fluoro_folder.mkdir(parents=True, exist_ok=True)
+        caligrid_folder.mkdir(parents=True, exist_ok=True)
+
+        # Cast the paths to str
+        CT_folder = str(CT_folder)
+        fluoro_folder = str(fluoro_folder)
+        caligrid_folder = str(caligrid_folder)
+
+        # Move the CT, fluoro and caligrid paths to the Projects folder
+        move_directory(ct, CT_folder)
+        move_directory(fluoro, fluoro_folder)
+        move_directory(caligrid, caligrid_folder)
+
+        # Update the path fields of the Singleton object
+        patient_instance._CT = CT_folder
+        patient_instance._fluoro = fluoro_folder
+        patient_instance._caligrid = caligrid_folder
+        
+
         data = {
             "name": name,
             "description": desc,
             "state": state,
-            "CT": str(CT_folder)
+            "CT": CT_folder,
+            "fluoro": fluoro_folder,
+            "caligrid": caligrid_folder
         }
+        # Save the metadata as data.json
         with open(os.path.join(folder, "data.json"), "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
-        # Save CT
-        CT_num_slices = patient._patient.CT.GetDepth()
-        print(patient._patient.CT.GetDepth())
-        patient._CT = CT_folder
-        CT_folder.mkdir(parents=True, exist_ok=True)
-        for i in range(CT_num_slices):
-            slice_i = patient._patient.CT[:, :, i]
-            filename = f"IN{i + 1:06d}.dcm"
 
-            filepath = os.path.join(CT_folder, filename)
-            sitk.WriteImage(slice_i, filepath)
-
-
-        # Save fluoroscopy
-        fluoro = patient._patient.fluoroscopy
-
-        if isinstance(fluoro, list):
-            for i, slice_i in enumerate(fluoro):
-                filename = f"IN{i + 1:06d}.dcm"
-                filepath = os.path.join(parent_dir, "Projects", name, "SE000001", filename)
-                os.makedirs(os.path.dirname(filepath), exist_ok=True)
-                sitk.WriteImage(slice_i, filepath)
-        else:
-            filename = "IN000001.dcm"
-            filepath = os.path.join(parent_dir, "Projects", name, "SE000001", filename)
-            os.makedirs(os.path.dirname(filepath), exist_ok=True)
-            sitk.WriteImage(fluoro, filepath)
-        print(f"✅ all fluoroscopy slices be saved")
 
         #add masks file:
         masks_folder = folder / "seg-masks"

@@ -10,6 +10,8 @@ from PySide6.QtWidgets import QWidget, QLabel, QPushButton, QHBoxLayout, QListWi
 name = ""
 model = QStandardItemModel()
 path_list = []
+path_dict = {}
+
 class ProjectSetup(QWidget):
     def __init__(self):
         super().__init__()
@@ -50,12 +52,16 @@ class ProjectSetup(QWidget):
         if not path_list:
             self.show_error("Please import at least one CT sequence folder.")
             return
-        path = path_list[0]
+        
+        ct_path = path_dict["CT"]
+        fluoro_path = path_dict["fluoro"]
+        caligrid_path = path_dict["caligrid"]
+
         try:
-            se1_path = os.path.join(path, "SE000001")
-            se3_path = os.path.join(path, "SE000003")
-            if not os.path.exists(se1_path) or not os.path.exists(se3_path):
-                raise FileNotFoundError("Required SE000001 or SE000003 folders are missing.")
+            # se1_path = os.path.join(path, "SE000001")
+            # se3_path = os.path.join(path, "SE000003")
+            # if not os.path.exists(se1_path) or not os.path.exists(se3_path):
+            #     raise FileNotFoundError("Required SE000001 or SE000003 folders are missing.")
             msg = QMessageBox(self)
             msg.setWindowTitle("Import Data")
             msg.setText("Data is being loaded!   ")
@@ -63,7 +69,7 @@ class ProjectSetup(QWidget):
             msg.setModal(False)
             msg.show()
             QApplication.processEvents()
-            context = initialize_project(projectName, projectDesc, path)
+            context = initialize_project(projectName, projectDesc, ct_path, fluoro_path, caligrid_path)
             patient = context._singleton_data.get_instance()
             #Test for simple save function
             context.request_save(patient)
@@ -97,12 +103,12 @@ class ProjectSetup(QWidget):
         )
         
         if folder_path:
-            self.add_import_item(folder_path)
+            self.add_import_item(folder_path, "CT")
             path_list.append(folder_path)
             print(f"Selected folder: {folder_path}")
             self.ui.save.setEnabled(True)
 
-    def add_import_item(self, path):
+    def add_import_item(self, path: str, key: str):
 
         row_widget = QWidget()
         layout = QHBoxLayout(row_widget)
@@ -125,15 +131,21 @@ class ProjectSetup(QWidget):
         self.ui.importListView.addItem(list_item)
         self.ui.importListView.setItemWidget(list_item, row_widget)
 
+        path_dict[key] = list_item.text()
+
     def select_file(self, label):
         file_path, _ = QFileDialog.getOpenFileName(self, "Select a file", "", "All Files (*.*)")
         if file_path:
             label.setText(file_path)
 
-    def delete_item(self, list_item):
+    def delete_item(self, list_item: QListWidgetItem):
         row = self.ui.importListView.row(list_item)
         self.ui.importListView.takeItem(row)
         path_list.pop(row)
+
+        for key in path_dict:
+            if path_dict[key] == list_item.text():
+                del path_dict[key]
 
     def changeName(self, new_name):
         name = new_name
