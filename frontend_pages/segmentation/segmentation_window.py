@@ -61,7 +61,7 @@ class Segmentation(QWidget):
         self.vtk_widget = QVTKRenderWindowInteractor()
         
         # Insert the VTK widget at the same position as the old VTK_display
-        parent_layout.insertWidget(vtk_display_index, self.vtk_widget)
+        parent_layout.insertWidget(vtk_display_index, self.vtk_widget, stretch=3)
         
         # Store reference for easy access
         self.ui.VTK_display = self.vtk_widget
