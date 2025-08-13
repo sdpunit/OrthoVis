@@ -245,20 +245,20 @@ class RawState(DataState):
         current_dir = Path(__file__).resolve().parent
         parent_dir = current_dir.parent
         folder = parent_dir / "Projects" / name
+
         CT_folder = folder / ct_last
         fluoro_folder = folder / fluoro_last
         caligrid_folder = folder / caligrid_last
 
+
         # Create the directories with those folder names
         folder.mkdir(parents=True, exist_ok=True)
-        CT_folder.mkdir(parents=True, exist_ok=True)
-        fluoro_folder.mkdir(parents=True, exist_ok=True)
-        caligrid_folder.mkdir(parents=True, exist_ok=True)
 
         # Cast the paths to str
         CT_folder = str(CT_folder)
         fluoro_folder = str(fluoro_folder)
         caligrid_folder = str(caligrid_folder)
+
 
         # Copy the CT, fluoro and caligrid paths to the Projects folder (don't move to preserve originals)
         copy_directory(ct, CT_folder)
