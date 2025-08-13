@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'project_setup_windowuwvBFy.ui'
+## Form generated from reading UI file 'project_setup_window.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.9.0
+## Created by: Qt User Interface Compiler version 6.8.1
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -16,8 +16,8 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QApplication, QFrame, QHBoxLayout, QLabel,
-    QLineEdit, QListView, QPushButton, QSizePolicy,QListWidget,
-    QTextEdit, QVBoxLayout, QWidget)
+    QLineEdit, QListWidget, QListWidgetItem, QPushButton,
+    QSizePolicy, QTextEdit, QVBoxLayout, QWidget)
 
 from widgets.sidebar.sidebar import Sidebar
 from widgets.titlebar.titlebar import Titlebar
@@ -168,21 +168,21 @@ class Ui_Form(object):
         self.importsLayout = QHBoxLayout()
         self.importsLayout.setSpacing(20)
         self.importsLayout.setObjectName(u"importsLayout")
-        self.importFluoro = QPushButton(self.dataPanel)
-        self.importFluoro.setObjectName(u"importFluoro")
+        self.importCT = QPushButton(self.dataPanel)
+        self.importCT.setObjectName(u"importCT")
         sizePolicy4 = QSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         sizePolicy4.setHorizontalStretch(0)
         sizePolicy4.setVerticalStretch(0)
-        sizePolicy4.setHeightForWidth(self.importFluoro.sizePolicy().hasHeightForWidth())
-        self.importFluoro.setSizePolicy(sizePolicy4)
-        self.importFluoro.setMinimumSize(QSize(180, 40))
+        sizePolicy4.setHeightForWidth(self.importCT.sizePolicy().hasHeightForWidth())
+        self.importCT.setSizePolicy(sizePolicy4)
+        self.importCT.setMinimumSize(QSize(150, 40))
         font1 = QFont()
         font1.setFamilies([u"Segoe UI"])
         font1.setPointSize(12)
         font1.setWeight(QFont.DemiBold)
         font1.setItalic(False)
-        self.importFluoro.setFont(font1)
-        self.importFluoro.setStyleSheet(u"QPushButton {\n"
+        self.importCT.setFont(font1)
+        self.importCT.setStyleSheet(u"QPushButton {\n"
 "background-color: rgb(255, 215, 0);\n"
 "font: 600 12pt \"Segoe UI\";\n"
 "border-radius: 10px;}\n"
@@ -193,7 +193,43 @@ class Ui_Form(object):
 "}\n"
 "")
 
-        self.importsLayout.addWidget(self.importFluoro)
+        self.importsLayout.addWidget(self.importCT)
+
+        self.importFL = QPushButton(self.dataPanel)
+        self.importFL.setObjectName(u"importFL")
+        sizePolicy4.setHeightForWidth(self.importFL.sizePolicy().hasHeightForWidth())
+        self.importFL.setSizePolicy(sizePolicy4)
+        self.importFL.setMinimumSize(QSize(150, 40))
+        self.importFL.setStyleSheet(u"QPushButton {\n"
+"background-color: rgb(255, 215, 0);\n"
+"font: 600 12pt \"Segoe UI\";\n"
+"border-radius: 10px;}\n"
+"\n"
+"QPushButton:hover {\n"
+"background-color: rgb(255, 230, 50);\n"
+"font-size: 14pt;\n"
+"}\n"
+"")
+
+        self.importsLayout.addWidget(self.importFL)
+
+        self.importCG = QPushButton(self.dataPanel)
+        self.importCG.setObjectName(u"importCG")
+        sizePolicy4.setHeightForWidth(self.importCG.sizePolicy().hasHeightForWidth())
+        self.importCG.setSizePolicy(sizePolicy4)
+        self.importCG.setMinimumSize(QSize(150, 40))
+        self.importCG.setStyleSheet(u"QPushButton {\n"
+"background-color: rgb(255, 215, 0);\n"
+"font: 600 12pt \"Segoe UI\";\n"
+"border-radius: 10px;}\n"
+"\n"
+"QPushButton:hover {\n"
+"background-color: rgb(255, 230, 50);\n"
+"font-size: 14pt;\n"
+"}\n"
+"")
+
+        self.importsLayout.addWidget(self.importCG)
 
         self.save = QPushButton(self.dataPanel)
         self.save.setObjectName(u"save")
@@ -216,7 +252,6 @@ class Ui_Form(object):
 
         self.importsLayout.addWidget(self.save)
 
-        self.importsLayout.setStretch(0, 1)
 
         self.buttons.addLayout(self.importsLayout)
 
@@ -244,7 +279,9 @@ class Ui_Form(object):
         self.projectNameLabel.setText(QCoreApplication.translate("Form", u"Project Name", None))
         self.projectDesLabel.setText(QCoreApplication.translate("Form", u"Project Description", None))
         self.importListLabel.setText(QCoreApplication.translate("Form", u"Successful Imports", None))
-        self.importFluoro.setText(QCoreApplication.translate("Form", u"Import Data", None))
+        self.importCT.setText(QCoreApplication.translate("Form", u"Import CT", None))
+        self.importFL.setText(QCoreApplication.translate("Form", u"Import Fluoroscopy", None))
+        self.importCG.setText(QCoreApplication.translate("Form", u"Import Calibration Grid", None))
         self.save.setText(QCoreApplication.translate("Form", u"Save", None))
     # retranslateUi
 

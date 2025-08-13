@@ -20,7 +20,7 @@ class ProjectSetup(QWidget):
 
         self.ui.titlebar.ui.title.setText("Project Setup")
         self.ui.projectNameInput.setText(name)
-        self.ui.importFluoro.clicked.connect(self.handleImportFluoro)
+        self.ui.importCT.clicked.connect(self.handleImportCT)
         self.ui.save.clicked.connect(self.handleSave)
 
         # Enable Save button only when there are changes to save
@@ -90,7 +90,7 @@ class ProjectSetup(QWidget):
     #         print(f"Selected folder: {folder_path}")
 
 
-    def handleImportFluoro(self):
+    def handleImportCT(self):
         folder_path = QFileDialog.getExistingDirectory(
             self,
             "Select the CT sequence folder (e.g. SE000000)"
