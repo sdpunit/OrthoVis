@@ -41,7 +41,7 @@ def run_totalseg(ct_dir: str, seg_dir: str):
     
     # TotalSegmentator commands - these only READ from ct_dir, never modify it
     # Note: Cannot combine multiple --ta tasks in single command, must run sequentially
-    base_command = f"TotalSegmentator -i \"{ct_dir}\" -o \"{seg_dir}\""
+    base_command = f"python -m TotalSegmentator -i \"{ct_dir}\" -o \"{seg_dir}\""
     
     command_total = f"{base_command} --ta total"
     command_appendicular = f"{base_command} --ta appendicular_bones"
