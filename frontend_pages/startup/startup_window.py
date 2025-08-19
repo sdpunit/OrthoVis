@@ -58,7 +58,7 @@ class HomePage(QWidget):
 
                 # Now 'data' contains the parsed JSON as a Python object
                 projectsetup = self.parent().widget(1)
-                projectsetup.updateData(data)
+                #projectsetup.updateData(data)
                 self.parent().setCurrentIndex(1)
 
 
