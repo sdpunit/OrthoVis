@@ -4,8 +4,11 @@ from PySide6.QtGui import QStandardItemModel
 from PySide6.QtWidgets import (QApplication, QHBoxLayout, QLabel, QPushButton, QWidget, QListWidgetItem)
 from frontend_pages.project_setup.ui_project_setup_window import Ui_Form
 from PySide6.QtWidgets import QFileDialog
-from test import *
 from PySide6.QtWidgets import QWidget, QLabel, QPushButton, QHBoxLayout, QListWidgetItem, QMessageBox
+from PySide6.QtCore import Signal, QTimer
+
+# Import backend objects
+from classes.objects import SingletonPatient, Context, initialize_project, SegmentState
 
 name = ""
 model = QStandardItemModel()
@@ -13,12 +16,18 @@ path_list = []
 path_dict = {}
 
 class ProjectSetup(QWidget):
+    # Signal to notify when project is saved
+    project_saved = Signal()
+    
     def __init__(self):
         super().__init__()
         self.ui = Ui_Form()
         self.ui.setupUi(self)
-
-
+        
+        # Initialize attributes for dialog and transition handling
+        self.loading_msg = None
+        self.pending_stacked_widget = None
+        self.pending_main_window = None
 
         self.ui.titlebar.ui.title.setText("Project Setup")
         self.ui.projectNameInput.setText(name)
@@ -43,7 +52,6 @@ class ProjectSetup(QWidget):
         """
         )
 
-
     def handleSave(self):
         projectName = self.ui.projectNameInput.text()
         if not projectName:
@@ -55,104 +63,253 @@ class ProjectSetup(QWidget):
             self.show_error("Please import at least one CT sequence folder.")
             return
         
-        ct_path = path_dict["CT"]
-        fluoro_path = path_dict["fluoro"]
-        caligrid_path = path_dict["caligrid"]
+        ct_path = path_dict.get("CT", "")
+        fluoro_path = path_dict.get("fluoro", "")
+        caligrid_path = path_dict.get("caligrid", "")
+
+        if not ct_path:
+            self.show_error("CT path is required.")
+            return
 
         try:
-            # se1_path = os.path.join(path, "SE000001")
-            # se3_path = os.path.join(path, "SE000003")
-            # if not os.path.exists(se1_path) or not os.path.exists(se3_path):
-            #     raise FileNotFoundError("Required SE000001 or SE000003 folders are missing.")
-            msg = QMessageBox(self)
-            msg.setWindowTitle("Import Data")
-            msg.setText("Data is being loaded!   ")
-            msg.setStandardButtons(QMessageBox.NoButton)
-            msg.setModal(False)
-            msg.show()
-            QApplication.processEvents()
+            # Show loading dialog and STAY on project setup page
+            self.show_loading_dialog_with_message("Loading data...")
+            
+            # Get singleton and update patient data
+            singleton = SingletonPatient.get_instance()
+            patient = singleton.patient
+            
+            # Update patient with new data
+            patient.name = projectName
+            patient.description = projectDesc
+            patient.CT = ct_path
+            patient.fluoro = fluoro_path
+            patient.caligrid = caligrid_path
+            
+            print(f"Updated patient data:")
+            print(f"  Name: {patient.name}")
+            print(f"  CT: {patient.CT}")
+            print(f"  Fluoro: {patient.fluoro}")
+            print(f"  Caligrid: {patient.caligrid}")
+            
+            # Initialize context and save project
             context = initialize_project(projectName, projectDesc, ct_path, fluoro_path, caligrid_path)
-            patient = context._singleton_data.get_instance()
-            #Test for simple save function
-            context.request_save(patient)
+            
+            # Save the project through context
+            context.request_save(singleton)
+            
+            # Transition to segmentation state
+            context.transition_to(SegmentState())
+            
             self.ui.save.setEnabled(False)
-
-            segmentation = self.parent().widget(2)
-
-            self.parent().setCurrentIndex(2)
-            msg.done(0)
-            msg.close()
-
+            
+            # Get the main window components for delayed transition
+            stacked_widget = self.parent()  # QStackedWidget
+            main_window = stacked_widget.parent()  # MainWindow
+            
+            print(f"Stacked widget type: {type(stacked_widget)}")
+            print(f"Main window type: {type(main_window)}")
+            
+            # Store references for transition callback
+            self.pending_stacked_widget = stacked_widget
+            self.pending_main_window = main_window
+            
+            # Get segmentation page and set up delayed transition
+            segmentation_page = None
+            if hasattr(main_window, 'segmentation'):
+                segmentation_page = main_window.segmentation
+                print("Got segmentation page via main_window.segmentation")
+            elif hasattr(stacked_widget, 'widget'):
+                segmentation_page = stacked_widget.widget(2)
+                print("Got segmentation page via stacked_widget.widget(2)")
+            
+            if segmentation_page:
+                print(f"Segmentation page found: {type(segmentation_page)}")
+                
+                # Check if delayed transition method exists, otherwise use regular method
+                if hasattr(segmentation_page, 'set_context_with_delayed_transition'):
+                    print("Using delayed transition method")
+                    segmentation_page.set_context_with_delayed_transition(
+                        context, 
+                        self.on_vtk_loading_complete
+                    )
+                elif hasattr(segmentation_page, 'set_context'):
+                    print("Using regular set_context method with manual callback setup")
+                    # Manually set up the callback
+                    print(f"Setting completion_callback to: {self.on_vtk_loading_complete}")
+                    segmentation_page.completion_callback = self.on_vtk_loading_complete
+                    
+                    # Verify it was set
+                    if hasattr(segmentation_page, 'completion_callback'):
+                        print(f"Callback successfully set: {segmentation_page.completion_callback}")
+                    else:
+                        print("ERROR: Failed to set completion_callback")
+                    
+                    segmentation_page.set_context(context)
+                else:
+                    print("ERROR: No set_context method found")
+                    self.show_error("Internal error: Cannot set context on segmentation page")
+                    self.force_close_loading_dialog()
+                    return
+                
+                # Store context in main window
+                if hasattr(main_window, 'context'):
+                    main_window.context = context
+                
+                print("Project saved - VTK loading started, staying on project setup page...")
+                
+                # Emit signal that project was saved successfully
+                self.project_saved.emit()
+            else:
+                print("ERROR: Could not find segmentation page")
+                self.show_error("Internal error: Segmentation page not available")
+                self.force_close_loading_dialog()
 
         except FileNotFoundError as e:
             self.show_error(f"File not found, make sure you select file with CT file(SE000003) and Fluoroscopy file(SE000001) in the same folder.")
-    
-    # def handleImportCT(self):
-    #     folder_path = QFileDialog.getExistingDirectory(
-    #         self,
-    #         "Select the CT sequence folder (e.g. SE000000)"
-    #     )
+            self.force_close_loading_dialog()
+        except Exception as e:
+            self.show_error(f"Error saving project: {str(e)}")
+            self.force_close_loading_dialog()
+
+    def show_loading_dialog_with_message(self, message: str):
+        """Show loading dialog with custom message"""
+        # Close any existing dialog first
+        if hasattr(self, 'loading_msg') and self.loading_msg:
+            self.loading_msg.close()
+            self.loading_msg = None
         
-    #     if folder_path:
-    #         item = QStandardItem(folder_path)
-    #         model.appendRow(item)
+        self.loading_msg = QMessageBox(self)
+        self.loading_msg.setWindowTitle("Loading Project")
+        self.loading_msg.setText(message)
+        self.loading_msg.setStandardButtons(QMessageBox.NoButton)
+        self.loading_msg.setModal(False)  # Make non-modal to prevent blocking
+        self.loading_msg.show()
+        QApplication.processEvents()
+        print(f"Loading dialog shown: {message}")
 
-    #         print(f"Selected folder: {folder_path}")
+    def force_close_loading_dialog(self):
+        """Force close loading dialog with multiple methods"""
+        print("=== Force closing loading dialog ===")
+        
+        try:
+            if hasattr(self, 'loading_msg') and self.loading_msg:
+                print("Attempting to close loading dialog...")
+                
+                # Try multiple methods to close the dialog
+                self.loading_msg.setVisible(False)
+                self.loading_msg.close()
+                self.loading_msg.hide()
+                self.loading_msg.reject()
+                
+                # Process events multiple times
+                for i in range(5):
+                    QApplication.processEvents()
+                
+                # Delete the dialog
+                self.loading_msg.deleteLater()
+                self.loading_msg = None
+                
+                print("Loading dialog forcefully closed")
+                
+            else:
+                print("No loading dialog to close")
+                
+        except Exception as e:
+            print(f"Error force closing loading dialog: {e}")
+        
+        # Clean up attribute
+        if hasattr(self, 'loading_msg'):
+            try:
+                delattr(self, 'loading_msg')
+            except:
+                pass
+        
+        # Force additional UI updates
+        for i in range(3):
+            QTimer.singleShot(50 * (i + 1), lambda: QApplication.processEvents())
 
+    def on_vtk_loading_complete(self):
+        """Called when VTK loading is complete - transition to segmentation page"""
+        print("VTK loading complete - transitioning to segmentation page")
+        
+        # Force close the loading dialog
+        self.force_close_loading_dialog()
+        
+        if hasattr(self, 'pending_stacked_widget'):
+            self.pending_stacked_widget.setCurrentIndex(2)
+            print("Successfully transitioned to segmentation page")
+            
+            # Clean up pending references
+            delattr(self, 'pending_stacked_widget')
+            if hasattr(self, 'pending_main_window'):
+                delattr(self, 'pending_main_window')
+    
     def handleImportFL(self):
         folder_path = QFileDialog.getExistingDirectory(
             self,
-            "Select the CT sequence folder (e.g. SE000000)"
+            "Select the Fluoroscopy sequence folder (e.g. SE000001)"
         )
         
         if folder_path:
             self.add_import_item(folder_path, "fluoro")
-            path_list.append(folder_path)
-            print(f"Selected folder: {folder_path}")
+            if folder_path not in path_list:
+                path_list.append(folder_path)
+            print(f"Selected fluoroscopy folder: {folder_path}")
             self.ui.save.setEnabled(True)
 
     def handleImportCG(self):
         folder_path = QFileDialog.getExistingDirectory(
             self,
-            "Select the CT sequence folder (e.g. SE000000)"
+            "Select the Calibration Grid sequence folder"
         )
         
         if folder_path:
             self.add_import_item(folder_path, "caligrid")
-            path_list.append(folder_path)
-            print(f"Selected folder: {folder_path}")
+            if folder_path not in path_list:
+                path_list.append(folder_path)
+            print(f"Selected calibration grid folder: {folder_path}")
             self.ui.save.setEnabled(True)
 
     def handleImportCT(self):
         folder_path = QFileDialog.getExistingDirectory(
             self,
-            "Select the CT sequence folder (e.g. SE000000)"
+            "Select the CT sequence folder (e.g. SE000003)"
         )
         
         if folder_path:
             self.add_import_item(folder_path, "CT")
-            path_list.append(folder_path)
-            print(f"Selected folder: {folder_path}")
+            if folder_path not in path_list:
+                path_list.append(folder_path)
+            print(f"Selected CT folder: {folder_path}")
             self.ui.save.setEnabled(True)
 
     def add_import_item(self, path: str, key: str):
+        # Remove existing item with same key if it exists
+        for i in range(self.ui.importListView.count()):
+            item = self.ui.importListView.item(i)
+            widget = self.ui.importListView.itemWidget(item)
+            if widget:
+                label = widget.findChild(QLabel)
+                if label and path_dict.get(key) == label.text():
+                    self.ui.importListView.takeItem(i)
+                    if label.text() in path_list:
+                        path_list.remove(label.text())
+                    break
 
         row_widget = QWidget()
         layout = QHBoxLayout(row_widget)
         layout.setContentsMargins(5, 2, 5, 2)
 
-        labeled_path = key + ":  "+path
-
-        label = QLabel(labeled_path)
+        # Add key prefix to show what type of data this is
+        display_text = f"[{key.upper()}] {path}"
+        label = QLabel(display_text)
         layout.addWidget(label)
 
-
-
         btn_delete = QPushButton("X")
-        btn_delete.clicked.connect(lambda: self.delete_item(list_item, path))
-        btn_delete.setFixedWidth(15)
+        btn_delete.clicked.connect(lambda: self.delete_item(list_item, path, key))
+        btn_delete.setFixedWidth(25)
         layout.addWidget(btn_delete)
-
 
         list_item = QListWidgetItem(self.ui.importListView)
         list_item.setSizeHint(row_widget.sizeHint())
@@ -160,32 +317,33 @@ class ProjectSetup(QWidget):
         self.ui.importListView.setItemWidget(list_item, row_widget)
 
         path_dict[key] = path
-        print(path_dict)
+        print(f"Updated path_dict: {path_dict}")
 
     def select_file(self, label):
         file_path, _ = QFileDialog.getOpenFileName(self, "Select a file", "", "All Files (*.*)")
         if file_path:
             label.setText(file_path)
 
-    def delete_item(self, list_item: QListWidgetItem, label: str):
+    def delete_item(self, list_item: QListWidgetItem, path: str, key: str):
         row = self.ui.importListView.row(list_item)
         self.ui.importListView.takeItem(row)
-        path_list.pop(row)
-
-        key_to_remove = ""
-        for key in path_dict:
-            if path_dict[key] == label:
-                key_to_remove = key
-        del path_dict[key_to_remove]
-        print(path_dict)
+        
+        if path in path_list:
+            path_list.remove(path)
+        
+        if key in path_dict and path_dict[key] == path:
+            del path_dict[key]
+        
+        print(f"Updated path_dict after deletion: {path_dict}")
 
     def changeName(self, new_name):
+        global name
         name = new_name
         self.ui.projectNameInput.setText(name)
 
     def show_error(self, message):
         msg = QMessageBox(self)
-        msg.setIcon(QMessageBox.Critical)  # 错误图标
+        msg.setIcon(QMessageBox.Critical)
         msg.setWindowTitle("Error")
         msg.setText(message)
         msg.exec()
