@@ -25,7 +25,7 @@ class MainWindow(QMainWindow):
         self.projectsetup = ProjectSetup()
 
         # Visualise the Imported ct, start segmentation
-        self.segmentation = Segmentation(r"C:\Users\hanna\Downloads\DICOM\P0000001\ST000001\SE000003", r"C:\Users\hanna\Downloads\segmentation_masks")
+        self.segmentation = Segmentation()
 
         # Calibrate the fluroscopy
         self.calibration = Calibration()

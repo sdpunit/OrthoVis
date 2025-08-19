@@ -77,6 +77,8 @@ class ProjectSetup(QWidget):
             context.request_save(patient)
             self.ui.save.setEnabled(False)
 
+            segmentation = self.parent().widget(2)
+
             self.parent().setCurrentIndex(2)
             msg.done(0)
             msg.close()
@@ -139,14 +141,15 @@ class ProjectSetup(QWidget):
         layout = QHBoxLayout(row_widget)
         layout.setContentsMargins(5, 2, 5, 2)
 
+        labeled_path = key + ":  "+path
 
-        label = QLabel(path)
+        label = QLabel(labeled_path)
         layout.addWidget(label)
 
 
 
         btn_delete = QPushButton("X")
-        btn_delete.clicked.connect(lambda: self.delete_item(list_item, label.text()))
+        btn_delete.clicked.connect(lambda: self.delete_item(list_item, path))
         btn_delete.setFixedWidth(15)
         layout.addWidget(btn_delete)
 
@@ -156,7 +159,7 @@ class ProjectSetup(QWidget):
         self.ui.importListView.addItem(list_item)
         self.ui.importListView.setItemWidget(list_item, row_widget)
 
-        path_dict[key] = label.text()
+        path_dict[key] = path
         print(path_dict)
 
     def select_file(self, label):

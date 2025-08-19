@@ -4,17 +4,21 @@ from PySide6.QtWidgets import QWidget, QVBoxLayout
 from PySide6.QtCore import QTimer
 from vtkmodules.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 
+from classes.objects import SingletonPatient
+
 # Import the UI form (like project_setup does)
 from frontend_pages.segmentation.ui_segmentation_window import Ui_Form
 from seg.embedding import create_vtk_pipeline, add_masks_to_pipeline
 from seg.totalseg import load_ct
 
+
 class Segmentation(QWidget):
-    def __init__(self, ct_dir: str, mask_dir: str = None):
+    def __init__(self):
         super().__init__()
+        instance = SingletonPatient.get_instance()
+        self.ct_dir = instance.patient.CT
+        self.mask_dir = instance.patient.mask
         self._vtk_initialized = False
-        self.ct_dir = ct_dir
-        self.mask_dir = mask_dir
         self.interactor_style = None
         self.viewers = None
         self.ct_img = None  # Store CT image for later mask addition
@@ -130,15 +134,14 @@ class Segmentation(QWidget):
             success = add_masks_to_pipeline(
                 self.viewers, 
                 self.ct_img, 
-                mask_dir, 
+                self.mask_dir, 
                 render_window
             )
             
             if success:
-                self.mask_dir = mask_dir
-                print(f"Successfully added masks from: {mask_dir}")
+                print(f"Successfully added masks from: {self.mask_dir}")
             else:
-                print(f"Failed to add masks from: {mask_dir}")
+                print(f"Failed to add masks from: {self.mask_dir}")
             
             return success
             

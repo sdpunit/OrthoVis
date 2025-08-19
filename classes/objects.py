@@ -18,12 +18,13 @@ def move_directory(source_folder : str, destination_folder: str):
 
 
 class Patient:
-    def __init__(self, name: str, description: str, CT: str, fluoro: str, caligrid: str):
+    def __init__(self, name: str, description: str, CT: str, fluoro: str, caligrid: str, mask: str):
         self.name = name
         self.description = description
         self.CT = CT
         self.fluoro = fluoro
         self.caligrid = caligrid
+        self.mask = mask
     
 
     @property
@@ -66,6 +67,14 @@ class Patient:
     def caligrid(self, value):
         self._caligrid = value
 
+    @property
+    def mask(self):
+        return self._mask
+
+    @mask.setter
+    def mask(self, value):
+        self._mask = value
+
     def to_string(self):
         return "Name: " + self.name + "\n"+ "Description: " + self.description + "\n CT: " + str(self.CT) + "\n Flurocopy: " + str(
             self.fluoro)
@@ -80,7 +89,7 @@ class SingletonPatient:
     def get_instance() -> SingletonPatient:
         if SingletonPatient._instance is None:
             SingletonPatient._instance = SingletonPatient()
-            SingletonPatient._patient = Patient("", "", "", "", "")
+            SingletonPatient._patient = Patient("", "", "", "", "", "")
         return SingletonPatient._instance
 
     @property
@@ -102,7 +111,6 @@ class Context:
     _singleton_data = None
     # _name = None
     # _description = None
-    _masks_folder = None
     """
     A reference to the current state of the Context.
     """
@@ -133,7 +141,7 @@ class Context:
         self._singleton_data._state.handle_process()
 
     def request_save(self, patient: SingletonPatient):
-        self._masks_folder = self._singleton_data._state.handle_save(patient)
+        self._singleton_data._state.handle_save(patient)
     
     def request_string(self):
         self._singleton_data._state.handle_to_string()
@@ -222,10 +230,15 @@ class RawState(DataState):
         # Create the directories with those folder names
         folder.mkdir(parents=True, exist_ok=True)
 
+        #add masks file:
+        masks_folder = folder / "seg-masks"
+        masks_folder.mkdir(parents=True, exist_ok=True)
+
         # Cast the paths to str
         CT_folder = str(CT_folder)
         fluoro_folder = str(fluoro_folder)
         caligrid_folder = str(caligrid_folder)
+        masks_folder = str(masks_folder)
 
 
         # Move the CT, fluoro and caligrid paths to the Projects folder
@@ -237,6 +250,7 @@ class RawState(DataState):
         patient_instance._CT = CT_folder
         patient_instance._fluoro = fluoro_folder
         patient_instance._caligrid = caligrid_folder
+        patient_instance._mask = masks_folder
         
 
         data = {
@@ -245,17 +259,13 @@ class RawState(DataState):
             "state": state,
             "CT": CT_folder,
             "fluoro": fluoro_folder,
-            "caligrid": caligrid_folder
+            "caligrid": caligrid_folder,
+            "mask": masks_folder,
         }
         # Save the metadata as data.json
         with open(os.path.join(folder, "data.json"), "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
 
-
-        #add masks file:
-        masks_folder = folder / "seg-masks"
-        masks_folder.mkdir(parents=True, exist_ok=True)
-        return masks_folder
 
     def handle_to_string(self) -> str:
         return "RawState"
