@@ -3,6 +3,7 @@
 import numpy as np
 import os 
 import subprocess
+import shutil
 
 # pip install TotalSegmentator 
 
@@ -16,38 +17,62 @@ import subprocess
 # totalseg_download_weights -t total [femur_left, femur_right]
 # totalseg_download_weights -t appendicular_bones [patella, tibia, fibula]
 
-# Input and output directories
-ct_dir = r"C:/users/avery/Desktop/PI201/DICOM/P0000001/ST000001/SE000003"  # Input CT directory 
-seg_dir = r"C:/users/avery/Desktop/segmentation_masks"  # Output segmentation masks directory
-roi = ["femur_right", "fibula", "patella", "tibia"] # ROIs 
+# ROIs to segment - these are the only masks we'll keep
+roi = ["femur_right", "fibula", "patella", "tibia"] 
 
 def run_totalseg(ct_dir: str, seg_dir: str): 
-    # TotalSegmentator segmentation 
-    # Commands to run segmentations for trained classes 
-    command_total = f"TotalSegmentator -i {ct_dir} -o {seg_dir} --ta total" # "total"
-    command_appendicular = f"TotalSegmentator -i {ct_dir} -o {seg_dir} --ta appendicular_bones" # "appendicular_bones"
-
-    # Run first command (femurs)
-    print("Running segmentation with '--ta total'...")
-    result_total = subprocess.run(command_total, shell=True, capture_output=True, text=True)
-    if result_total.stderr:
-        print("Errors:")
-        print(result_total.stderr)
-    print("Finished '--ta total' segmentation.")
-
-    # Run second command (patella, tibia, fibula)
-    print("Running segmentation with '--ta appendicular_bones'...")
-    result_appendicular = subprocess.run(command_appendicular, shell=True, capture_output=True, text=True)
-    if result_appendicular.stderr:
-        print("Errors:")
-        print(result_appendicular.stderr)
-    print("Finished '--ta appendicular_bones' segmentation.")
+    """
+    Run TotalSegmentator on CT directory, outputting masks to separate seg_dir.
+    Original CT files are never modified.
     
+    Args:
+        ct_dir: Path to CT directory (DICOM files) - READ ONLY
+        seg_dir: Output directory for segmentation masks - WRITE ONLY
+    """
+    # Ensure output directory exists
+    os.makedirs(seg_dir, exist_ok=True)
+    
+    # Verify input directory exists and is readable
+    if not os.path.exists(ct_dir):
+        raise FileNotFoundError(f"CT directory not found: {ct_dir}")
+    
+    print(f"Reading CT from: {ct_dir} (READ ONLY)")
+    print(f"Writing masks to: {seg_dir} (WRITE ONLY)")
+    
+    # TotalSegmentator commands - these only READ from ct_dir, never modify it
+    # Note: Cannot combine multiple --ta tasks in single command, must run sequentially
+    base_command = f"python -m TotalSegmentator -i \"{ct_dir}\" -o \"{seg_dir}\""
+    
+    command_total = f"{base_command} --ta total"
+    command_appendicular = f"{base_command} --ta appendicular_bones"
+
+    # Run segmentation commands
+    print("Running TotalSegmentator (total)...")
+    print(f"Command: {command_total}")
+    subprocess.run(command_total, shell=True)
+    
+    print("Running TotalSegmentator (appendicular_bones)...")
+    print(f"Command: {command_appendicular}")
+    subprocess.run(command_appendicular, shell=True)
+    
+    # Clean up ONLY in seg_dir - never touch ct_dir
+    print("Cleaning up unwanted masks...")
     rois = {f'{bone}.nii.gz' for bone in roi}
+    
     for f in os.listdir(seg_dir):
         if f not in rois:
-            os.remove(os.path.join(seg_dir, f))  
-    print(f"TotalSegmentator masks successfully saved to: {seg_dir}")
+            file_path = os.path.join(seg_dir, f)
+            if os.path.isfile(file_path):
+                os.remove(file_path)
+            elif os.path.isdir(file_path):
+                shutil.rmtree(file_path)
+    
+    # Verify original CT directory is untouched
+    if not os.path.exists(ct_dir):
+        raise Exception(f"CRITICAL ERROR: Original CT directory was deleted! {ct_dir}")
+    
+    print(f"TotalSegmentator completed. Original CT preserved at: {ct_dir}")
+    print(f"Masks saved to: {seg_dir}")
 
 
 import SimpleITK as sitk 
@@ -164,13 +189,56 @@ def refine_mask_adaptive_otsu(mask_path: str, ct_path: str, output_path: str,
     print(f"Hybrid Otsu-adaptive refined mask saved to: {output_path}")
 
 
+def run_complete_segmentation(ct_dir: str, seg_dir: str):
+    """
+    Complete segmentation pipeline: TotalSegmentator + Otsu refinement
+    Original CT directory is never modified - only read from.
+    
+    Args:
+        ct_dir: Path to CT directory (READ ONLY)
+        seg_dir: Output directory for refined masks (WRITE ONLY)
+        
+    Returns:
+        bool: True if successful, False otherwise
+    """
+    try:
+        print(f"Segmentation pipeline: {ct_dir} (READ) -> {seg_dir} (WRITE)")
+        
+        # Verify original CT exists before starting
+        if not os.path.exists(ct_dir):
+            print(f"ERROR: CT directory not found: {ct_dir}")
+            return False
+        
+        # Step 1: Run TotalSegmentator (only reads from ct_dir)
+        run_totalseg(ct_dir, seg_dir)
+        
+        # Step 2: Apply Otsu refinement (only works in seg_dir)
+        print("Applying Otsu refinement...")
+        for mask_name in roi:
+            original_mask = os.path.join(seg_dir, f"{mask_name}.nii.gz")
+            refined_mask = os.path.join(seg_dir, f"{mask_name}_otsu.nii.gz")
+            
+            if os.path.exists(original_mask):
+                # Otsu refinement reads from ct_dir but only writes to seg_dir
+                refine_mask_adaptive_otsu(original_mask, ct_dir, refined_mask)
+                # Remove only the original mask in seg_dir
+                os.remove(original_mask)
+        
+        # Final verification that original CT is untouched
+        if not os.path.exists(ct_dir):
+            raise Exception(f"CRITICAL: Original CT directory was deleted: {ct_dir}")
+        
+        print("Segmentation completed! Original CT files preserved.")
+        return True
+        
+    except Exception as e:
+        print(f"Segmentation error: {e}")
+        return False
+
 
 if __name__ == "__main__":
-    run_totalseg(ct_dir, seg_dir)
-    for m in roi:
-        print(f"Post-processing {m} mask...")
-        refine_mask_adaptive_otsu(f"{seg_dir}/{m}.nii.gz", ct_dir, f"{seg_dir}/{m}_otsu.nii.gz")
-        print(f"Successfully saved refined {m} mask to: {seg_dir}/{m}_otsu.nii.gz")
-    for f in os.listdir(seg_dir):
-        if "_otsu" not in f:
-            os.remove(os.path.join(seg_dir, f)) 
+    # Example usage with hardcoded paths
+    ct_dir = r"C:/users/avery/Desktop/PI201/DICOM/P0000001/ST000001/SE000003"
+    seg_dir = r"C:/users/avery/Desktop/segmentation_masks"
+    
+    run_complete_segmentation(ct_dir, seg_dir)
