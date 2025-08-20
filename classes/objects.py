@@ -143,26 +143,29 @@ class Context:
         self._singleton_data._state = state
         self._singleton_data._state.context = self
 
-        current_dir = Path(__file__).resolve().parent
-        parent_dir = current_dir.parent
-        patient = self._singleton_data._patient
-        name = patient.name
-        folder = parent_dir / "Projects" / name
+        # Check if the sate is not raw
+        if not isinstance(state, RawState):
 
-        json_path = folder / "data.json"
+            current_dir = Path(__file__).resolve().parent
+            parent_dir = current_dir.parent
+            patient = self._singleton_data._patient
+            name = patient.name
+            folder = parent_dir / "Projects" / name
 
-        # Keep the other fields as they are
-        # Load the existing JSON from a file
-        with open(json_path, "r") as f:
-            data = json.load(f)
+            json_path = folder / "data.json"
 
-        # Update like a normal dictionary
-        data["state"] = self.request_string()
+            # Keep the other fields as they are
+            # Load the existing JSON from a file
+            with open(json_path, "r") as f:
+                data = json.load(f)
+
+            # Update like a normal dictionary
+            data["state"] = self.request_string()
 
 
-        # Update the state in metadata data.json
-        with open(os.path.join(folder, "data.json"), "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
+            # Update the state in metadata data.json
+            with open(os.path.join(folder, "data.json"), "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
 
 
 
