@@ -31,7 +31,7 @@ class Segmentation(QWidget):
         super().__init__()
         instance = SingletonPatient.get_instance()
         self.ct_dir = instance.patient.CT
-        self.mask_dir = instance.patient.mask
+        self.mask_dir = instance.patient.seg_masks_dir
         self._vtk_initialized = False
         
         # Initialize paths as None - will be set from backend
