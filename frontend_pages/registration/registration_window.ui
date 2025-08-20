@@ -185,7 +185,7 @@ font: 600 12pt &quot;Segoe UI&quot;;
                </widget>
               </item>
               <item row="1" column="1">
-               <widget class="QLineEdit" name="pos_yLineEdit">
+               <widget class="QLineEdit" name="pos_y">
                 <property name="text">
                  <string>[link to object]</string>
                 </property>
@@ -199,7 +199,7 @@ font: 600 12pt &quot;Segoe UI&quot;;
                </widget>
               </item>
               <item row="2" column="1">
-               <widget class="QLineEdit" name="pos_zLineEdit">
+               <widget class="QLineEdit" name="pos_z">
                 <property name="text">
                  <string>[link to object]</string>
                 </property>
@@ -213,7 +213,7 @@ font: 600 12pt &quot;Segoe UI&quot;;
                </widget>
               </item>
               <item row="3" column="1">
-               <widget class="QLineEdit" name="rotation_xLineEdit">
+               <widget class="QLineEdit" name="rotation_x">
                 <property name="text">
                  <string>[link to object]</string>
                 </property>
@@ -227,7 +227,7 @@ font: 600 12pt &quot;Segoe UI&quot;;
                </widget>
               </item>
               <item row="4" column="1">
-               <widget class="QLineEdit" name="rotation_yLineEdit">
+               <widget class="QLineEdit" name="rotation_y">
                 <property name="text">
                  <string>[link to object]</string>
                 </property>
@@ -241,7 +241,7 @@ font: 600 12pt &quot;Segoe UI&quot;;
                </widget>
               </item>
               <item row="5" column="1">
-               <widget class="QLineEdit" name="rotation_zLineEdit">
+               <widget class="QLineEdit" name="rotation_z">
                 <property name="text">
                  <string>[link to object]</string>
                 </property>
