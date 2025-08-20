@@ -150,8 +150,8 @@ class Context:
     def request_import(self, path: str):
         self._singleton_data._state.handle_import(path)
 
-    def request_process(self):
-        self._singleton_data._state.handle_process()
+    def request_process(self) -> bool:
+        return self._singleton_data._state.handle_process()
 
     def request_save(self, patient: SingletonPatient) -> str:
         return self._singleton_data._state.handle_save(patient)
@@ -159,9 +159,6 @@ class Context:
     def request_string(self):
         self._singleton_data._state.handle_to_string()
 
-    def request_segmentation(self):
-        """Request segmentation processing"""
-        return self._singleton_data._state.handle_segmentation()
 
 
 
@@ -186,7 +183,7 @@ class DataState(ABC):
         pass
 
     @abstractmethod
-    def handle_process(self) -> None:
+    def handle_process(self) -> bool:
         pass
 
     @abstractmethod
@@ -197,10 +194,6 @@ class DataState(ABC):
     def handle_to_string(self) -> None:
         pass
 
-    @abstractmethod
-    def handle_segmentation(self) -> bool:
-        """Handle segmentation request"""
-        pass
 
 
 
@@ -216,9 +209,39 @@ class RawState(DataState):
         print("RawState wants to change the state of the context.")
         self.context.transition_to(SegmentState())
 
-    def handle_process(self) -> None:
-        print("RawState wants to change the state of the context.")
-        self.context.transition_to(SegmentState())
+    def handle_process(self) -> bool:
+        """Handle segmentation in SegmentState"""
+        try:
+            from seg.totalseg import run_complete_segmentation
+            
+            patient_instance = self.context._singleton_data._patient
+            ct_dir = patient_instance.CT
+            seg_dir = patient_instance.seg_masks_dir
+            
+            if not ct_dir or not seg_dir:
+                print("SegmentState: Missing CT or segmentation directory")
+                return False
+            
+            print(f"SegmentState: Running segmentation on {ct_dir}")
+            print(f"SegmentState: Output directory {seg_dir}")
+            
+            success = run_complete_segmentation(ct_dir, seg_dir)
+            
+            if success:
+                print("SegmentState: Segmentation completed successfully")
+                # Transition to next state after successful segmentation
+                self.context.transition_to(SegmentState())
+            else:
+                print("SegmentState: Segmentation failed")
+            
+            return success
+            
+        except Exception as e:
+            print(f"SegmentState: Error during segmentation: {e}")
+            import traceback
+            traceback.print_exc()
+            return False
+
 
     def handle_save(self, patient: SingletonPatient) -> str:
         print("RawState wants to save the context to local space.")
@@ -257,7 +280,6 @@ class RawState(DataState):
         CT_folder = str(CT_folder)
         fluoro_folder = str(fluoro_folder)
         caligrid_folder = str(caligrid_folder)
-        masks_folder = str(masks_folder)
 
 
         # Copy the CT, fluoro and caligrid paths to the Projects folder (don't move to preserve originals)
@@ -278,7 +300,6 @@ class RawState(DataState):
         patient_instance._CT = CT_folder
         patient_instance._fluoro = fluoro_folder
         patient_instance._caligrid = caligrid_folder
-        patient_instance._seg_masks_dir = masks_folder
         
 
         # Create masks folder and store in patient
@@ -304,10 +325,6 @@ class RawState(DataState):
     def handle_to_string(self) -> str:
         return "RawState"
 
-    def handle_segmentation(self) -> bool:
-        """RawState can't handle segmentation yet"""
-        print("RawState: Cannot perform segmentation in raw state")
-        return False
 
 
 class SegmentState(DataState):
@@ -316,9 +333,9 @@ class SegmentState(DataState):
         print("SegmentState wants to change the state of the context.")
         self.context.transition_to(SegmentState())
 
-    def handle_process(self) -> None:
+    def handle_process(self) -> bool:
         print("SegmentState wants to change the state of the context.")
-        self.context.transition_to(SegmentState())
+        return False
  
     def handle_save(self, patient: SingletonPatient) -> str:
         print("SegmentState wants to change the state of the context.")
@@ -327,39 +344,6 @@ class SegmentState(DataState):
     def handle_to_string(self) -> str:
         return "SegmentState"
 
-    def handle_segmentation(self) -> bool:
-        """Handle segmentation in SegmentState"""
-        try:
-            from seg.totalseg import run_complete_segmentation
-            
-            patient_instance = self.context._singleton_data._patient
-            ct_dir = patient_instance.CT
-            seg_dir = patient_instance.seg_masks_dir
-            
-            if not ct_dir or not seg_dir:
-                print("SegmentState: Missing CT or segmentation directory")
-                return False
-            
-            print(f"SegmentState: Running segmentation on {ct_dir}")
-            print(f"SegmentState: Output directory {seg_dir}")
-            
-            success = run_complete_segmentation(ct_dir, seg_dir)
-            
-            if success:
-                print("SegmentState: Segmentation completed successfully")
-                # Transition to next state after successful segmentation
-                self.context.transition_to(CalibrationState())
-            else:
-                print("SegmentState: Segmentation failed")
-            
-            return success
-            
-        except Exception as e:
-            print(f"SegmentState: Error during segmentation: {e}")
-            import traceback
-            traceback.print_exc()
-            return False
-
 
 class CalibrationState(DataState):
 
@@ -367,7 +351,7 @@ class CalibrationState(DataState):
         print("CalibrationState wants to change the state of the context.")
         self.context.transition_to(SegmentState())
 
-    def handle_process(self) -> None:
+    def handle_process(self) -> bool:
         print("CalibrationState wants to change the state of the context.")
         self.context.transition_to(SegmentState())
 
@@ -378,11 +362,6 @@ class CalibrationState(DataState):
     def handle_to_string(self) -> str:
         return "CalibrationState"
 
-    def handle_segmentation(self) -> bool:
-        """CalibrationState: segmentation already completed"""
-        print("CalibrationState: Segmentation already completed")
-        return True
-
 
 class RegistrationState(DataState):
 
@@ -390,7 +369,7 @@ class RegistrationState(DataState):
         print("RegistrationState wants to change the state of the context.")
         self.context.transition_to(SegmentState())
 
-    def handle_process(self) -> None:
+    def handle_process(self) -> bool:
         print("RegistrationState wants to change the state of the context.")
         self.context.transition_to(SegmentState())
 
@@ -401,11 +380,6 @@ class RegistrationState(DataState):
     def handle_to_string(self) -> str:
         return "RegistrationState"
 
-    def handle_segmentation(self) -> bool:
-        """RegistrationState: segmentation already completed"""
-        print("RegistrationState: Segmentation already completed")
-        return True
-
 
 class ReferenceSysState(DataState):
 
@@ -413,7 +387,7 @@ class ReferenceSysState(DataState):
         print("ReferenceSysState wants to change the state of the context.")
         self.context.transition_to(SegmentState())
 
-    def handle_process(self) -> None:
+    def handle_process(self) -> bool:
         print("ReferenceSysState wants to change the state of the context.")
         self.context.transition_to(SegmentState())
 
@@ -424,11 +398,6 @@ class ReferenceSysState(DataState):
     def handle_to_string(self) -> str:
         return "ReferenceSysState"
 
-    def handle_segmentation(self) -> bool:
-        """ReferenceSysState: segmentation already completed"""
-        print("ReferenceSysState: Segmentation already completed")
-        return True
-
 
 class MotionState(DataState):
 
@@ -436,7 +405,7 @@ class MotionState(DataState):
         print("MotionState wants to change the state of the context.")
         self.context.transition_to(SegmentState())
 
-    def handle_process(self) -> None:
+    def handle_process(self) -> bool:
         print("MotionState wants to change the state of the context.")
         self.context.transition_to(SegmentState())
 
@@ -447,10 +416,6 @@ class MotionState(DataState):
     def handle_to_string(self) -> str:
         return "MotionState"
 
-    def handle_segmentation(self) -> bool:
-        """MotionState: segmentation already completed"""
-        print("MotionState: Segmentation already completed")
-        return True
 
 
 class VisualState(DataState):
@@ -459,7 +424,7 @@ class VisualState(DataState):
         print("VisualState wants to change the state of the context.")
         self.context.transition_to(SegmentState())
 
-    def handle_process(self) -> None:
+    def handle_process(self) -> bool:
         print("VisualState wants to change the state of the context.")
         self.context.transition_to(SegmentState())
 
@@ -470,10 +435,6 @@ class VisualState(DataState):
     def handle_to_string(self) -> str:
         return "VisualState"
 
-    def handle_segmentation(self) -> bool:
-        """VisualState: segmentation already completed"""
-        print("VisualState: Segmentation already completed")
-        return True
 
 def initialize_project(name: str, description: str, ct_path: str, fluoro_path: str, caligrid_path: str):
     """

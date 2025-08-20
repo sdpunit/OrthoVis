@@ -22,7 +22,7 @@ class SegmentationWorker(QThread):
         self.context = context
     
     def run(self):
-        success = self.context.request_segmentation()
+        success = self.context.request_process()
         self.finished.emit(success)
 
 
