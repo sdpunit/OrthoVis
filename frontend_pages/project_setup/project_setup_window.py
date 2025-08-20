@@ -99,7 +99,7 @@ class ProjectSetup(QWidget):
             context.request_save(singleton)
             
             # Transition to segmentation state
-            context.transition_to(SegmentState())
+            #context.transition_to(SegmentState())
             
             self.ui.save.setEnabled(False)
             
