@@ -123,50 +123,50 @@ class Ui_Form(object):
 
         self.formLayout.setWidget(1, QFormLayout.ItemRole.LabelRole, self.pos_yLabel)
 
-        self.pos_yLineEdit = QLineEdit(self.details)
-        self.pos_yLineEdit.setObjectName(u"pos_yLineEdit")
+        self.pos_y = QLineEdit(self.details)
+        self.pos_y.setObjectName(u"pos_y")
 
-        self.formLayout.setWidget(1, QFormLayout.ItemRole.FieldRole, self.pos_yLineEdit)
+        self.formLayout.setWidget(1, QFormLayout.ItemRole.FieldRole, self.pos_y)
 
         self.pos_zLabel = QLabel(self.details)
         self.pos_zLabel.setObjectName(u"pos_zLabel")
 
         self.formLayout.setWidget(2, QFormLayout.ItemRole.LabelRole, self.pos_zLabel)
 
-        self.pos_zLineEdit = QLineEdit(self.details)
-        self.pos_zLineEdit.setObjectName(u"pos_zLineEdit")
+        self.pos_z = QLineEdit(self.details)
+        self.pos_z.setObjectName(u"pos_z")
 
-        self.formLayout.setWidget(2, QFormLayout.ItemRole.FieldRole, self.pos_zLineEdit)
+        self.formLayout.setWidget(2, QFormLayout.ItemRole.FieldRole, self.pos_z)
 
         self.rotation_xLabel = QLabel(self.details)
         self.rotation_xLabel.setObjectName(u"rotation_xLabel")
 
         self.formLayout.setWidget(3, QFormLayout.ItemRole.LabelRole, self.rotation_xLabel)
 
-        self.rotation_xLineEdit = QLineEdit(self.details)
-        self.rotation_xLineEdit.setObjectName(u"rotation_xLineEdit")
+        self.rotation_x = QLineEdit(self.details)
+        self.rotation_x.setObjectName(u"rotation_x")
 
-        self.formLayout.setWidget(3, QFormLayout.ItemRole.FieldRole, self.rotation_xLineEdit)
+        self.formLayout.setWidget(3, QFormLayout.ItemRole.FieldRole, self.rotation_x)
 
         self.rotation_yLabel = QLabel(self.details)
         self.rotation_yLabel.setObjectName(u"rotation_yLabel")
 
         self.formLayout.setWidget(4, QFormLayout.ItemRole.LabelRole, self.rotation_yLabel)
 
-        self.rotation_yLineEdit = QLineEdit(self.details)
-        self.rotation_yLineEdit.setObjectName(u"rotation_yLineEdit")
+        self.rotation_y = QLineEdit(self.details)
+        self.rotation_y.setObjectName(u"rotation_y")
 
-        self.formLayout.setWidget(4, QFormLayout.ItemRole.FieldRole, self.rotation_yLineEdit)
+        self.formLayout.setWidget(4, QFormLayout.ItemRole.FieldRole, self.rotation_y)
 
         self.rotation_zLabel = QLabel(self.details)
         self.rotation_zLabel.setObjectName(u"rotation_zLabel")
 
         self.formLayout.setWidget(5, QFormLayout.ItemRole.LabelRole, self.rotation_zLabel)
 
-        self.rotation_zLineEdit = QLineEdit(self.details)
-        self.rotation_zLineEdit.setObjectName(u"rotation_zLineEdit")
+        self.rotation_z = QLineEdit(self.details)
+        self.rotation_z.setObjectName(u"rotation_z")
 
-        self.formLayout.setWidget(5, QFormLayout.ItemRole.FieldRole, self.rotation_zLineEdit)
+        self.formLayout.setWidget(5, QFormLayout.ItemRole.FieldRole, self.rotation_z)
 
 
         self.verticalLayout_2.addLayout(self.formLayout)
@@ -202,15 +202,15 @@ class Ui_Form(object):
         self.pos_xLabel.setText(QCoreApplication.translate("Form", u"pos_x", None))
         self.pos_x.setText(QCoreApplication.translate("Form", u"[link to object]", None))
         self.pos_yLabel.setText(QCoreApplication.translate("Form", u"pos_y", None))
-        self.pos_yLineEdit.setText(QCoreApplication.translate("Form", u"[link to object]", None))
+        self.pos_y.setText(QCoreApplication.translate("Form", u"[link to object]", None))
         self.pos_zLabel.setText(QCoreApplication.translate("Form", u"pos_z", None))
-        self.pos_zLineEdit.setText(QCoreApplication.translate("Form", u"[link to object]", None))
+        self.pos_z.setText(QCoreApplication.translate("Form", u"[link to object]", None))
         self.rotation_xLabel.setText(QCoreApplication.translate("Form", u"rotation_x", None))
-        self.rotation_xLineEdit.setText(QCoreApplication.translate("Form", u"[link to object]", None))
+        self.rotation_x.setText(QCoreApplication.translate("Form", u"[link to object]", None))
         self.rotation_yLabel.setText(QCoreApplication.translate("Form", u"rotation_y", None))
-        self.rotation_yLineEdit.setText(QCoreApplication.translate("Form", u"[link to object]", None))
+        self.rotation_y.setText(QCoreApplication.translate("Form", u"[link to object]", None))
         self.rotation_zLabel.setText(QCoreApplication.translate("Form", u"rotation_z", None))
-        self.rotation_zLineEdit.setText(QCoreApplication.translate("Form", u"[link to object]", None))
+        self.rotation_z.setText(QCoreApplication.translate("Form", u"[link to object]", None))
         self.textEdit.setHtml(QCoreApplication.translate("Form", u"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><meta charset=\"utf-8\" /><style type=\"text/css\">\n"
 "p, li { white-space: pre-wrap; }\n"
