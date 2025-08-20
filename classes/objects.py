@@ -143,6 +143,29 @@ class Context:
         self._singleton_data._state = state
         self._singleton_data._state.context = self
 
+        current_dir = Path(__file__).resolve().parent
+        parent_dir = current_dir.parent
+        patient = self._singleton_data._patient
+        name = patient.name
+        folder = parent_dir / "Projects" / name
+
+        json_path = folder / "data.json"
+
+        # Keep the other fields as they are
+        # Load the existing JSON from a file
+        with open(json_path, "r") as f:
+            data = json.load(f)
+
+        # Update like a normal dictionary
+        data["state"] = self.request_string()
+
+
+        # Update the state in metadata data.json
+        with open(os.path.join(folder, "data.json"), "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+
+
+
     """
     The Context delegates part of its behavior to the current State object.
     """
@@ -156,8 +179,8 @@ class Context:
     def request_save(self, patient: SingletonPatient) -> str:
         return self._singleton_data._state.handle_save(patient)
     
-    def request_string(self):
-        self._singleton_data._state.handle_to_string()
+    def request_string(self) -> str:
+        return self._singleton_data._state.handle_to_string()
 
 
 
@@ -191,7 +214,7 @@ class DataState(ABC):
         pass
 
     @abstractmethod
-    def handle_to_string(self) -> None:
+    def handle_to_string(self) -> str:
         pass
 
 
