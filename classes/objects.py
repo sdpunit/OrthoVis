@@ -4,7 +4,6 @@ import json
 from abc import ABC, abstractmethod
 from pathlib import Path
 import os
-import shutil
 
 def copy_directory(source_folder: str, destination_folder: str):  
     """Copy directory safely, preserving original files"""
@@ -32,7 +31,7 @@ def copy_directory(source_folder: str, destination_folder: str):
 
 
 class Patient:
-    def __init__(self, name: str, description: str, CT: str, fluoro: str, caligrid: str, mask: str):
+    def __init__(self, name: str, description: str, CT: str, fluoro: str, caligrid: str):
         self.name = name
         self.description = description
         self.CT = CT
@@ -103,7 +102,7 @@ class SingletonPatient:
     def get_instance() -> SingletonPatient:
         if SingletonPatient._instance is None:
             SingletonPatient._instance = SingletonPatient()
-            SingletonPatient._patient = Patient("", "", "", "", "", "")
+            SingletonPatient._patient = Patient("", "", "", "", "")
         return SingletonPatient._instance
 
     @property
@@ -154,8 +153,8 @@ class Context:
     def request_process(self):
         self._singleton_data._state.handle_process()
 
-    def request_save(self, patient: SingletonPatient):
-        self._singleton_data._state.handle_save(patient)
+    def request_save(self, patient: SingletonPatient) -> str:
+        return self._singleton_data._state.handle_save(patient)
     
     def request_string(self):
         self._singleton_data._state.handle_to_string()
@@ -191,7 +190,7 @@ class DataState(ABC):
         pass
 
     @abstractmethod
-    def handle_save(self, patient: SingletonPatient) -> None:
+    def handle_save(self, patient: SingletonPatient) -> str:
         pass
 
     @abstractmethod
@@ -221,7 +220,7 @@ class RawState(DataState):
         print("RawState wants to change the state of the context.")
         self.context.transition_to(SegmentState())
 
-    def handle_save(self, patient: SingletonPatient) -> None:
+    def handle_save(self, patient: SingletonPatient) -> str:
         print("RawState wants to save the context to local space.")
         patient_instance = patient._patient
         # Retrieve the fields of the patient
@@ -253,9 +252,6 @@ class RawState(DataState):
         # Create the directories with those folder names
         folder.mkdir(parents=True, exist_ok=True)
 
-        #add masks file:
-        masks_folder = folder / "seg-masks"
-        masks_folder.mkdir(parents=True, exist_ok=True)
 
         # Cast the paths to str
         CT_folder = str(CT_folder)
@@ -282,7 +278,7 @@ class RawState(DataState):
         patient_instance._CT = CT_folder
         patient_instance._fluoro = fluoro_folder
         patient_instance._caligrid = caligrid_folder
-        patient_instance._mask = masks_folder
+        patient_instance._seg_masks_dir = masks_folder
         
 
         # Create masks folder and store in patient
@@ -323,8 +319,8 @@ class SegmentState(DataState):
     def handle_process(self) -> None:
         print("SegmentState wants to change the state of the context.")
         self.context.transition_to(SegmentState())
-
-    def handle_save(self, patient: SingletonPatient) -> None:
+ 
+    def handle_save(self, patient: SingletonPatient) -> str:
         print("SegmentState wants to change the state of the context.")
         self.context.transition_to(SegmentState())
 
@@ -375,7 +371,7 @@ class CalibrationState(DataState):
         print("CalibrationState wants to change the state of the context.")
         self.context.transition_to(SegmentState())
 
-    def handle_save(self, patient: SingletonPatient) -> None:
+    def handle_save(self, patient: SingletonPatient) -> str:
         print("CalibrationState wants to change the state of the context.")
         self.context.transition_to(SegmentState())
 
@@ -398,7 +394,7 @@ class RegistrationState(DataState):
         print("RegistrationState wants to change the state of the context.")
         self.context.transition_to(SegmentState())
 
-    def handle_save(self, patient: SingletonPatient) -> None:
+    def handle_save(self, patient: SingletonPatient) -> str:
         print("RegistrationState wants to change the state of the context.")
         self.context.transition_to(SegmentState())
     
@@ -421,7 +417,7 @@ class ReferenceSysState(DataState):
         print("ReferenceSysState wants to change the state of the context.")
         self.context.transition_to(SegmentState())
 
-    def handle_save(self, patient: SingletonPatient) -> None:
+    def handle_save(self, patient: SingletonPatient) -> str:
         print("ReferenceSysState wants to change the state of the context.")
         self.context.transition_to(SegmentState())
 
@@ -444,7 +440,7 @@ class MotionState(DataState):
         print("MotionState wants to change the state of the context.")
         self.context.transition_to(SegmentState())
 
-    def handle_save(self, patient: SingletonPatient) -> None:
+    def handle_save(self, patient: SingletonPatient) -> str:
         print("MotionState wants to change the state of the context.")
         self.context.transition_to(SegmentState())
 
@@ -467,7 +463,7 @@ class VisualState(DataState):
         print("VisualState wants to change the state of the context.")
         self.context.transition_to(SegmentState())
 
-    def handle_save(self, patient: SingletonPatient) -> None:
+    def handle_save(self, patient: SingletonPatient) -> str:
         print("VisualState wants to change the state of the context.")
         self.context.transition_to(SegmentState())
 
