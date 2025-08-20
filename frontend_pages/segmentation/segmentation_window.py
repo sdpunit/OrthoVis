@@ -43,8 +43,7 @@ class Segmentation(QWidget):
         self.ct_img = None
         self.context = None
         self.completion_callback = None  # Initialize callback
-        self.segmentation_progress_msg = None  # Initialize segmentation dialog
-        self.mask_addition_msg = None  # Initialize mask dialog
+        self.progress_dialog = None  # Single dialog for all progress messages
 
         # Set up UI
         self.ui = Ui_Form()
@@ -74,6 +73,23 @@ class Segmentation(QWidget):
         self.setupVTKWidget()
         
         print("Segmentation window created - waiting for backend paths")
+
+    def show_progress_dialog(self, title: str, message: str):
+        """Universal function to show progress dialog"""
+        self.close_progress_dialog()  # Close any existing dialog first
+        
+        self.progress_dialog = QMessageBox(self)
+        self.progress_dialog.setWindowTitle(title)
+        self.progress_dialog.setText(message)
+        self.progress_dialog.setStandardButtons(QMessageBox.NoButton)
+        self.progress_dialog.setModal(True)
+        self.progress_dialog.show()
+
+    def close_progress_dialog(self):
+        """Universal function to close progress dialog"""
+        if hasattr(self, 'progress_dialog') and self.progress_dialog:
+            self.progress_dialog.accept()
+            self.progress_dialog = None
 
     def setupVTKWidget(self):
         """Replace the placeholder QGraphicsView with VTK widget"""
@@ -111,10 +127,10 @@ class Segmentation(QWidget):
             
             if has_masks:
                 print("Found existing masks - loading CT with masks...")
-                self.show_loading_dialog_with_message("Loading CT data and segmentation masks...")
+                self.show_progress_dialog("Loading Project", "Loading CT data and segmentation masks...")
             else:
                 print("No existing masks - loading CT only...")
-                self.show_loading_dialog_with_message("Loading CT data...")
+                self.show_progress_dialog("Loading Project", "Loading CT data...")
             
             # Initialize VTK with delay to allow UI to update
             QTimer.singleShot(100, self.initialize_vtk_with_backend_paths)
@@ -149,33 +165,6 @@ class Segmentation(QWidget):
         except Exception as e:
             print(f"Error checking for existing masks: {e}")
             return False
-
-    def show_loading_dialog_with_message(self, message: str):
-        """Show loading dialog with custom message"""
-        # Close any existing dialog first
-        if hasattr(self, 'loading_msg'):
-            self.loading_msg.close()
-            delattr(self, 'loading_msg')
-        
-        self.loading_msg = QMessageBox(self)
-        self.loading_msg.setWindowTitle("Loading Project")
-        self.loading_msg.setText(message)
-        self.loading_msg.setStandardButtons(QMessageBox.NoButton)
-        self.loading_msg.setModal(False)  # Make non-modal to prevent blocking
-        self.loading_msg.show()
-        QApplication.processEvents()
-        print(f"Loading dialog shown: {message}")
-
-    def show_loading_dialog(self):
-        """Show default loading CT dialog"""
-        self.show_loading_dialog_with_message("Loading CT data, please wait...")
-
-    def hide_loading_dialog(self):
-        """Hide loading CT dialog"""
-        if hasattr(self, 'loading_msg'):
-            self.loading_msg.close()
-            delattr(self, 'loading_msg')
-            print("Loading dialog hidden")
 
     def initialize_vtk_with_backend_paths(self):
         """Initialize VTK pipeline with backend paths and auto-load masks if available"""
@@ -289,8 +278,8 @@ class Segmentation(QWidget):
         """Complete the loading process - close dialog and trigger page transition"""
         print("=== Completing loading process ===")
         
-        # Force close the loading dialog
-        self.force_close_loading_dialog()
+        # Close the loading dialog
+        self.close_progress_dialog()
         
         # Call completion callback if available
         if hasattr(self, 'completion_callback') and self.completion_callback:
@@ -298,134 +287,11 @@ class Segmentation(QWidget):
             callback = self.completion_callback
             self.completion_callback = None  # Clear it to prevent multiple calls
             # Call with a delay to ensure dialog is fully closed
-            QTimer.singleShot(300, callback)
+            QTimer.singleShot(100, callback)
         else:
             print("No completion callback found")
         
         print("Loading process completed")
-
-    def force_close_loading_dialog(self):
-        """Force close loading dialog with multiple methods"""
-        print("=== Force closing loading dialog ===")
-        
-        try:
-            if hasattr(self, 'loading_msg') and self.loading_msg:
-                print("Attempting to close loading dialog...")
-                
-                # Try multiple methods to close the dialog
-                self.loading_msg.setVisible(False)
-                self.loading_msg.close()
-                self.loading_msg.hide()
-                self.loading_msg.reject()
-                
-                # Process events multiple times
-                for i in range(5):
-                    QApplication.processEvents()
-                
-                # Delete the dialog
-                self.loading_msg.deleteLater()
-                self.loading_msg = None
-                
-                print("Loading dialog forcefully closed")
-                
-            else:
-                print("No loading dialog to close")
-                
-        except Exception as e:
-            print(f"Error force closing loading dialog: {e}")
-        
-        # Clean up attribute
-        if hasattr(self, 'loading_msg'):
-            try:
-                delattr(self, 'loading_msg')
-            except:
-                pass
-        
-        # Force additional UI updates
-        for i in range(3):
-            QTimer.singleShot(50 * (i + 1), lambda: QApplication.processEvents())
-
-    def force_close_segmentation_dialog(self):
-        """Force close segmentation progress dialog"""
-        print("=== Force closing segmentation dialog ===")
-        
-        try:
-            if hasattr(self, 'segmentation_progress_msg') and self.segmentation_progress_msg:
-                print("Attempting to close segmentation progress dialog...")
-                
-                # Try multiple methods to close the dialog
-                self.segmentation_progress_msg.setVisible(False)
-                self.segmentation_progress_msg.close()
-                self.segmentation_progress_msg.hide()
-                self.segmentation_progress_msg.reject()
-                
-                # Process events multiple times
-                for i in range(5):
-                    QApplication.processEvents()
-                
-                # Delete the dialog
-                self.segmentation_progress_msg.deleteLater()
-                self.segmentation_progress_msg = None
-                
-                print("Segmentation progress dialog forcefully closed")
-                
-            else:
-                print("No segmentation progress dialog to close")
-                
-        except Exception as e:
-            print(f"Error force closing segmentation dialog: {e}")
-        
-        # Clean up attribute
-        if hasattr(self, 'segmentation_progress_msg'):
-            try:
-                delattr(self, 'segmentation_progress_msg')
-            except:
-                pass
-        
-        # Force additional UI updates
-        for i in range(3):
-            QTimer.singleShot(50 * (i + 1), lambda: QApplication.processEvents())
-
-    def force_close_mask_dialog(self):
-        """Force close mask addition dialog"""
-        print("=== Force closing mask addition dialog ===")
-        
-        try:
-            if hasattr(self, 'mask_addition_msg') and self.mask_addition_msg:
-                print("Attempting to close mask addition dialog...")
-                
-                # Try multiple methods to close the dialog
-                self.mask_addition_msg.setVisible(False)
-                self.mask_addition_msg.close()
-                self.mask_addition_msg.hide()
-                self.mask_addition_msg.reject()
-                
-                # Process events multiple times
-                for i in range(5):
-                    QApplication.processEvents()
-                
-                # Delete the dialog
-                self.mask_addition_msg.deleteLater()
-                self.mask_addition_msg = None
-                
-                print("Mask addition dialog forcefully closed")
-                
-            else:
-                print("No mask addition dialog to close")
-                
-        except Exception as e:
-            print(f"Error force closing mask addition dialog: {e}")
-        
-        # Clean up attribute
-        if hasattr(self, 'mask_addition_msg'):
-            try:
-                delattr(self, 'mask_addition_msg')
-            except:
-                pass
-        
-        # Force additional UI updates
-        for i in range(3):
-            QTimer.singleShot(50 * (i + 1), lambda: QApplication.processEvents())
 
     def find_dicom_directory(self, base_dir):
         """Find directory containing DICOM files"""
@@ -462,13 +328,7 @@ class Segmentation(QWidget):
             return
         
         # Show progress dialog
-        self.segmentation_progress_msg = QMessageBox(self)
-        self.segmentation_progress_msg.setWindowTitle("Segmentation Progress")
-        self.segmentation_progress_msg.setText("Running segmentation...")
-        self.segmentation_progress_msg.setStandardButtons(QMessageBox.NoButton)
-        self.segmentation_progress_msg.setModal(True)
-        self.segmentation_progress_msg.show()
-        QApplication.processEvents()
+        self.show_progress_dialog("Segmentation Progress", "Running segmentation...")
         
         # Disable segmentation button and VTK widget interaction
         if hasattr(self.ui, 'segment_btn'):
@@ -486,8 +346,8 @@ class Segmentation(QWidget):
         """Handle segmentation completion"""
         print(f"=== Segmentation finished: {success} ===")
         
-        # Force close progress dialog
-        self.force_close_segmentation_dialog()
+        # Close progress dialog
+        self.close_progress_dialog()
         
         # Re-enable segmentation button and VTK widget
         if hasattr(self.ui, 'segment_btn'):
@@ -504,13 +364,7 @@ class Segmentation(QWidget):
                 print("Adding masks to visualization...")
                 
                 # Show brief loading message for mask overlay
-                self.mask_addition_msg = QMessageBox(self)
-                self.mask_addition_msg.setWindowTitle("Adding Masks")
-                self.mask_addition_msg.setText("Adding segmentation masks to visualization...")
-                self.mask_addition_msg.setStandardButtons(QMessageBox.NoButton)
-                self.mask_addition_msg.setModal(False)
-                self.mask_addition_msg.show()
-                QApplication.processEvents()
+                self.show_progress_dialog("Adding Masks", "Adding segmentation masks to visualization...")
                 
                 # Add masks with delay to allow UI update
                 QTimer.singleShot(100, self._add_masks_and_close_dialog)
@@ -522,23 +376,20 @@ class Segmentation(QWidget):
     def _add_masks_and_close_dialog(self):
         """Add masks and close the dialog"""
         try:
-            if hasattr(self, 'mask_addition_msg'):
-                success = self.add_masks(self.mask_dir)
-                
-                # Force close the mask addition dialog
-                self.force_close_mask_dialog()
-                
-                if success:
-                    print("Masks added successfully!")
-                else:
-                    print("Failed to add masks")
+            success = self.add_masks(self.mask_dir)
+            
+            # Close the progress dialog
+            self.close_progress_dialog()
+            
+            if success:
+                print("Masks added successfully!")
             else:
-                print("No mask addition dialog to close")
+                print("Failed to add masks")
                 
         except Exception as e:
             print(f"Error adding masks: {e}")
-            # Force close dialog even if there was an error
-            self.force_close_mask_dialog()
+            # Close dialog even if there was an error
+            self.close_progress_dialog()
 
     def add_masks(self, mask_dir: str):
         """Add masks to the existing CT visualization"""
