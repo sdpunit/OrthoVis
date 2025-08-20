@@ -13,10 +13,7 @@ import sys
 
 # Set license
 # totalseg_set_license -l <your-license-number>
-
-# Download weights of the pre-trained model 
-# totalseg_download_weights -t total [femur_left, femur_right]
-# totalseg_download_weights -t appendicular_bones [patella, tibia, fibula]
+# totalseg_set_license -l aca_DBGCR896PIOE7A 
 
 # ROIs to segment - these are the only masks we'll keep
 roi = ["femur_right", "fibula", "patella", "tibia"] 
