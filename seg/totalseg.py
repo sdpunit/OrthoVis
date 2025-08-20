@@ -4,6 +4,7 @@ import numpy as np
 import os 
 import subprocess
 import shutil
+import sys
 
 # pip install TotalSegmentator 
 
@@ -19,6 +20,35 @@ import shutil
 
 # ROIs to segment - these are the only masks we'll keep
 roi = ["femur_right", "fibula", "patella", "tibia"] 
+
+def setup_totalsegmentator():
+    """Ensure TotalSegmentator can be run by setting up PATH and finding executable"""
+    # Add Scripts to PATH
+    scripts_path = os.path.join(sys.prefix, 'Scripts')
+    current_path = os.environ.get('PATH', '')
+    
+    if scripts_path not in current_path:
+        os.environ['PATH'] = scripts_path + os.pathsep + current_path
+    
+    # Try different ways to run TotalSegmentator
+    methods = [
+        ['TotalSegmentator'],  # Direct command
+        [os.path.join(scripts_path, 'TotalSegmentator')],  # Full path
+        [os.path.join(scripts_path, 'TotalSegmentator.exe')],  # Windows with .exe
+        [sys.executable, '-m', 'TotalSegmentator'],  # As module
+    ]
+    
+    for method in methods:
+        try:
+            # Test if this method works
+            result = subprocess.run(method + ['--help'], 
+                                  capture_output=True, text=True, timeout=10)
+            if result.returncode == 0:
+                return method
+        except:
+            continue
+    
+    raise RuntimeError("TotalSegmentator not found. Install with: pip install TotalSegmentator")
 
 def run_totalseg(ct_dir: str, seg_dir: str): 
     """
@@ -39,21 +69,21 @@ def run_totalseg(ct_dir: str, seg_dir: str):
     print(f"Reading CT from: {ct_dir} (READ ONLY)")
     print(f"Writing masks to: {seg_dir} (WRITE ONLY)")
     
-    # TotalSegmentator commands - these only READ from ct_dir, never modify it
-    # Note: Cannot combine multiple --ta tasks in single command, must run sequentially
-    base_command = f"python -m TotalSegmentator -i \"{ct_dir}\" -o \"{seg_dir}\""
+    # Setup TotalSegmentator command
+    ts_command = setup_totalsegmentator()
     
-    command_total = f"{base_command} --ta total"
-    command_appendicular = f"{base_command} --ta appendicular_bones"
+    # Build commands
+    command_total = ts_command + ['-i', ct_dir, '-o', seg_dir, '--ta', 'total']
+    command_appendicular = ts_command + ['-i', ct_dir, '-o', seg_dir, '--ta', 'appendicular_bones']
 
     # Run segmentation commands
     print("Running TotalSegmentator (total)...")
-    print(f"Command: {command_total}")
-    subprocess.run(command_total, shell=True)
+    print(f"Command: {' '.join(command_total)}")
+    subprocess.run(command_total)
     
     print("Running TotalSegmentator (appendicular_bones)...")
-    print(f"Command: {command_appendicular}")
-    subprocess.run(command_appendicular, shell=True)
+    print(f"Command: {' '.join(command_appendicular)}")
+    subprocess.run(command_appendicular)
     
     # Clean up ONLY in seg_dir - never touch ct_dir
     print("Cleaning up unwanted masks...")
