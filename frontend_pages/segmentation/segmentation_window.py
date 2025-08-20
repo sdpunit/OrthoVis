@@ -7,7 +7,7 @@ import vtk
 
 # Import the UI form
 from frontend_pages.segmentation.ui_segmentation_window import Ui_Form
-from seg.embedding import create_vtk_pipeline, add_masks_to_pipeline
+from seg.embedding import create_vtk_pipeline, add_masks_to_pipeline, update_interactor_style_for_editing
 from seg.totalseg import load_ct
 from classes.objects import SingletonPatient, Context
 import os
@@ -44,6 +44,13 @@ class Segmentation(QWidget):
         self.context = None
         self.completion_callback = None  # Initialize callback
         self.progress_dialog = None  # Single dialog for all progress messages
+        
+        # NEW: Editing-related attributes
+        self.editing_enabled = False
+        self.editable_masks = None
+        self.label_actors = None
+        self.mode_button = None
+        self.brush_label = None
 
         # Set up UI
         self.ui = Ui_Form()
@@ -126,10 +133,12 @@ class Segmentation(QWidget):
             has_masks = self.check_for_existing_masks()
             
             if has_masks:
-                print("Found existing masks - loading CT with masks...")
-                self.show_progress_dialog("Loading Project", "Loading CT data and segmentation masks...")
+                print("Found existing masks - loading CT with masks in EDITING mode...")
+                self.editing_enabled = True  # Enable editing when masks exist
+                self.show_progress_dialog("Loading Project", "Loading CT data and segmentation masks with editing features...")
             else:
-                print("No existing masks - loading CT only...")
+                print("No existing masks - loading CT only in BROWSE mode...")
+                self.editing_enabled = False  # Browse-only when no masks
                 self.show_progress_dialog("Loading Project", "Loading CT data...")
             
             # Initialize VTK with delay to allow UI to update
@@ -169,6 +178,7 @@ class Segmentation(QWidget):
     def initialize_vtk_with_backend_paths(self):
         """Initialize VTK pipeline with backend paths and auto-load masks if available"""
         print("=== Initializing VTK with backend paths ===")
+        print(f"Editing enabled: {self.editing_enabled}")
         
         if not self.ct_dir or not os.path.exists(self.ct_dir):
             print(f"ERROR: Invalid CT directory: {self.ct_dir}")
@@ -207,18 +217,27 @@ class Segmentation(QWidget):
                     mask_dir_for_display = self.mask_dir
                     print(f"Will display {len(mask_files)} existing mask files")
             
-            # Create VTK pipeline with off-screen rendering
-            print("Creating VTK pipeline (off-screen)...")
+            # Create VTK pipeline with off-screen rendering and editing capability
+            print(f"Creating VTK pipeline (off-screen) with editing={self.editing_enabled}...")
             self.interactor_style = create_vtk_pipeline(
                 ct_path_to_use, 
                 mask_dir_for_display,
-                render_window=render_window
+                render_window=render_window,
+                enable_editing=self.editing_enabled  # NEW: Enable editing when appropriate
             )
             
             if self.interactor_style:
                 # Store references
                 self.viewers = self.interactor_style.viewers
                 self.ct_img = load_ct(ct_path_to_use)
+                
+                # NEW: Store editing-related references if editing is enabled
+                if self.editing_enabled and hasattr(self.interactor_style, 'editable_masks'):
+                    self.editable_masks = self.interactor_style.editable_masks
+                    self.label_actors = getattr(self.interactor_style, 'label_actors', None)
+                    self.mode_button = getattr(self.interactor_style, 'mode_button', None)
+                    self.brush_label = getattr(self.interactor_style, 'brush_label', None)
+                    print(f"Editing features initialized: {len(self.editable_masks) if self.editable_masks else 0} editable masks")
                 
                 # Set interactor style
                 interactor = render_window.GetInteractor()
@@ -233,6 +252,8 @@ class Segmentation(QWidget):
                 print("VTK pipeline created successfully!")
                 if mask_dir_for_display:
                     print(f"Existing masks loaded from: {mask_dir_for_display}")
+                    if self.editing_enabled:
+                        print("EDITING MODE: You can now edit masks using mouse and keyboard shortcuts")
             else:
                 print("ERROR: Failed to create VTK pipeline")
                 self.complete_loading_process()
@@ -249,6 +270,25 @@ class Segmentation(QWidget):
             print("Final VTK initialization...")
             self.vtk_widget.Initialize()
             self._vtk_initialized = True
+            
+            # Print editing mode status
+            if self.editing_enabled:
+                print("=== EDITING MODE ACTIVE ===")
+                print("Controls:")
+                print("  - Left drag: Paint pixels")
+                print("  - Ctrl + Left drag: Erase pixels") 
+                print("  - Ctrl + Shift + Left drag: Pan view")
+                print("  - +/- keys: Adjust brush size")
+                print("  - S key: Save all modified masks")
+                print("  - R key: Reset current mask")
+                print("  - Click mode button to toggle Browse/Edit")
+                print("  - Click mask labels to select which mask to edit")
+            else:
+                print("=== BROWSE MODE ACTIVE ===")
+                print("Controls:")
+                print("  - Left drag: Pan view")
+                print("  - Mouse wheel: Change slices")
+                print("  - Ctrl + Mouse wheel: Zoom")
             
             # Render and then complete loading after successful render
             QTimer.singleShot(100, self._render_and_complete)
@@ -359,12 +399,12 @@ class Segmentation(QWidget):
         if success:
             self.show_info("Segmentation completed successfully!")
             
-            # Add masks to visualization
+            # Add masks to visualization WITH EDITING ENABLED
             if self.mask_dir and os.path.exists(self.mask_dir):
-                print("Adding masks to visualization...")
+                print("Adding masks to visualization with EDITING enabled...")
                 
                 # Show brief loading message for mask overlay
-                self.show_progress_dialog("Adding Masks", "Adding segmentation masks to visualization...")
+                self.show_progress_dialog("Adding Masks", "Adding segmentation masks with editing features...")
                 
                 # Add masks with delay to allow UI update
                 QTimer.singleShot(100, self._add_masks_and_close_dialog)
@@ -374,15 +414,18 @@ class Segmentation(QWidget):
             self.show_error("Segmentation failed. Check console for details.")
 
     def _add_masks_and_close_dialog(self):
-        """Add masks and close the dialog"""
+        """Add masks with editing enabled and close the dialog"""
         try:
-            success = self.add_masks(self.mask_dir)
+            # Enable editing mode since we now have masks
+            self.editing_enabled = True
+            success = self.add_masks(self.mask_dir, enable_editing=True)
             
             # Close the progress dialog
             self.close_progress_dialog()
             
             if success:
-                print("Masks added successfully!")
+                print("Masks added successfully with EDITING FEATURES!")
+                print("=== EDITING MODE NOW ACTIVE ===")
             else:
                 print("Failed to add masks")
                 
@@ -391,7 +434,7 @@ class Segmentation(QWidget):
             # Close dialog even if there was an error
             self.close_progress_dialog()
 
-    def add_masks(self, mask_dir: str):
+    def add_masks(self, mask_dir: str, enable_editing: bool = False):
         """Add masks to the existing CT visualization"""
         if not self.viewers or not self.ct_img:
             print("Cannot add masks - VTK pipeline not initialized")
@@ -399,15 +442,95 @@ class Segmentation(QWidget):
         
         try:
             render_window = self.vtk_widget.GetRenderWindow()
-            success = add_masks_to_pipeline(self.viewers, self.ct_img, mask_dir, render_window)
+            
+            # NEW: Use enhanced add_masks_to_pipeline with editing support
+            success, editable_masks = add_masks_to_pipeline(
+                self.viewers, 
+                self.ct_img, 
+                mask_dir, 
+                render_window,
+                enable_editing=enable_editing  # NEW: Enable editing features
+            )
             
             if success:
                 print(f"Masks added successfully from: {mask_dir}")
+                
+                # NEW: If editing was enabled, update interactor style and store references
+                if enable_editing and editable_masks:
+                    print("Updating interactor style for editing...")
+                    
+                    # Store editing references
+                    self.editable_masks = editable_masks
+                    self.editing_enabled = True
+                    
+                    # Find the UI elements that were created
+                    render_window = self.vtk_widget.GetRenderWindow()
+                    renderers = render_window.GetRenderers()
+                    
+                    # Look for the legend overlay renderer (layer 1)
+                    legend_renderer = None
+                    renderers.InitTraversal()
+                    for i in range(renderers.GetNumberOfItems()):
+                        renderer = renderers.GetNextItem()
+                        if hasattr(renderer, 'GetLayer') and renderer.GetLayer() == 1:
+                            legend_renderer = renderer
+                            break
+                    
+                    if legend_renderer:
+                        # Extract UI elements from the renderer
+                        self.label_actors = []
+                        self.mode_button = None
+                        self.brush_label = None
+                        
+                        actors = legend_renderer.GetActors2D()
+                        actors.InitTraversal()
+                        for i in range(actors.GetNumberOfItems()):
+                            actor = actors.GetNextItem()
+                            if hasattr(actor, 'GetInput'):
+                                input_text = actor.GetInput()
+                                if "Mode:" in input_text:
+                                    self.mode_button = actor
+                                elif "Brush Size:" in input_text:
+                                    self.brush_label = actor
+                                elif input_text not in ["Edit Mode:\nLeft drag: Paint\nCtrl+Left drag: Erase\nCtrl+Shift+Left: Pan\n+/-: Brush size\nS: Save\nR: Reset"]:
+                                    # This is likely a mask label
+                                    self.label_actors.append(actor)
+                        
+                        # Update the interactor style with editing features
+                        if self.interactor_style and hasattr(self.interactor_style, 'enable_editing'):
+                            print("Enabling editing features on existing interactor style...")
+                            self.interactor_style.enable_editing = True
+                            self.interactor_style.label_actors = self.label_actors
+                            self.interactor_style.editable_masks = self.editable_masks
+                            self.interactor_style.mode_button = self.mode_button
+                            self.interactor_style.brush_label = self.brush_label
+                            self.interactor_style.selected_idx = 0
+                            self.interactor_style.edit_mode = False
+                            self.interactor_style.brush_size = 1
+                            self.interactor_style.editing = False
+                            self.interactor_style.last_edit_pos = None
+                            
+                            # Add editing event observers if not already present
+                            if not hasattr(self.interactor_style, '_editing_observers_added'):
+                                self.interactor_style.AddObserver('KeyPressEvent', self.interactor_style.on_key_press)
+                                self.interactor_style._editing_observers_added = True
+                            
+                            # Update visual state
+                            if hasattr(self.interactor_style, 'update_selection_visuals'):
+                                self.interactor_style.update_selection_visuals()
+                            
+                            print(f"Editing enabled with {len(self.editable_masks)} editable masks")
+                        else:
+                            print("Warning: Could not enable editing on interactor style")
+                    else:
+                        print("Warning: Could not find legend renderer for UI elements")
             
             return success
             
         except Exception as e:
             print(f"Error adding masks: {e}")
+            import traceback
+            traceback.print_exc()
             return False
 
     def refresh_visualization(self):
@@ -430,6 +553,33 @@ class Segmentation(QWidget):
             QTimer.singleShot(50, self._render_vtk)
         else:
             print("No valid CT data available for visualization")
+
+    def save_edited_masks(self):
+        """Save all edited masks - can be called externally"""
+        if not self.editing_enabled or not self.editable_masks:
+            print("No editable masks available")
+            return False
+        
+        try:
+            saved_count = 0
+            for mask in self.editable_masks:
+                if hasattr(mask, 'modified') and mask.modified:
+                    mask.save_mask()
+                    saved_count += 1
+            
+            if saved_count > 0:
+                print(f"Saved {saved_count} modified masks")
+                self.show_info(f"Saved {saved_count} modified masks")
+                return True
+            else:
+                print("No masks were modified")
+                self.show_info("No masks were modified")
+                return False
+                
+        except Exception as e:
+            print(f"Error saving masks: {e}")
+            self.show_error(f"Error saving masks: {e}")
+            return False
 
     def show_error(self, message):
         """Show error message dialog"""

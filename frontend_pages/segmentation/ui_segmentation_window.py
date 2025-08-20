@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'segmentation_windowgoHazJ.ui'
+## Form generated from reading UI file 'segmentation_windowVAwnAR.ui'
 ##
 ## Created by: Qt User Interface Compiler version 6.9.0
 ##
@@ -16,12 +16,11 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QApplication, QFormLayout, QFrame, QGraphicsView,
-    QHBoxLayout, QLabel, QProgressBar, QPushButton,
-    QSizePolicy, QVBoxLayout, QWidget)
+    QHBoxLayout, QLabel, QPushButton, QSizePolicy,
+    QTextBrowser, QVBoxLayout, QWidget)
 
 from widgets.sidebar.sidebar import Sidebar
 from widgets.titlebar.titlebar import Titlebar
-
 
 class Ui_Form(object):
     def setupUi(self, Form):
@@ -119,11 +118,13 @@ class Ui_Form(object):
         self.progress_wdg.setObjectName(u"progress_wdg")
         self.verticalLayout_3 = QVBoxLayout(self.progress_wdg)
         self.verticalLayout_3.setObjectName(u"verticalLayout_3")
-        self.progress_bar = QProgressBar(self.progress_wdg)
-        self.progress_bar.setObjectName(u"progress_bar")
-        self.progress_bar.setValue(0)
+        self.textBrowser = QTextBrowser(self.progress_wdg)
+        self.textBrowser.setObjectName(u"textBrowser")
+        font = QFont()
+        font.setPointSize(10)
+        self.textBrowser.setFont(font)
 
-        self.verticalLayout_3.addWidget(self.progress_bar)
+        self.verticalLayout_3.addWidget(self.textBrowser)
 
 
         self.verticalLayout_2.addWidget(self.progress_wdg)
@@ -135,25 +136,19 @@ class Ui_Form(object):
         self.segment_btn = QPushButton(self.button_wdg)
         self.segment_btn.setObjectName(u"segment_btn")
         self.segment_btn.setMinimumSize(QSize(0, 40))
-        self.segment_btn.setStyleSheet(u"QPushButton {\n"
-        "background-color: rgb(255, 215, 0);\n"
-        "border-radius: 10px;\n"
-        "border: none;\n"
-        "font: 600 12pt \"Segoe UI\";\n"
-        "}\n"
-        "QPushButton:hover {\n"
-        "background-color: rgb(255, 230, 50);\n"
-        "font-size: 18px;\n"
-        "}")
+        self.segment_btn.setStyleSheet(u"background-color: rgb(255, 215, 0);\n"
+"border-radius: 10px;\n"
+"border: none;\n"
+"font: 600 12pt \"Segoe UI\";\n"
+"")
 
         self.horizontalLayout_3.addWidget(self.segment_btn)
 
 
         self.verticalLayout_2.addWidget(self.button_wdg)
 
-        self.verticalLayout_2.setStretch(0, 3)
-        self.verticalLayout_2.setStretch(1, 2)
-        self.verticalLayout_2.setStretch(2, 1)
+        self.verticalLayout_2.setStretch(0, 1)
+        self.verticalLayout_2.setStretch(1, 5)
 
         self.horizontalLayout_2.addWidget(self.details)
 
@@ -179,6 +174,28 @@ class Ui_Form(object):
         self.patient_lbl.setText(QCoreApplication.translate("Form", u"Patient:", None))
         self.label.setText("")
         self.label_2.setText("")
+        self.textBrowser.setHtml(QCoreApplication.translate("Form", u"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
+"<html><head><meta name=\"qrichtext\" content=\"1\" /><meta charset=\"utf-8\" /><style type=\"text/css\">\n"
+"p, li { white-space: pre-wrap; }\n"
+"hr { height: 1px; border-width: 0; }\n"
+"li.unchecked::marker { content: \"\\2610\"; }\n"
+"li.checked::marker { content: \"\\2612\"; }\n"
+"</style></head><body style=\" font-family:'Segoe UI'; font-size:10pt; font-weight:400; font-style:normal;\">\n"
+"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><a name=\"chat-messages-1347034336519786528-1407610463646257205\"></a><span style=\" font-family:'inherit'; font-weight:700; color:#000000;\">B</span><span style=\" font-family:'inherit'; font-weight:700; color:#000000;\">rowse modes</span><span style=\" font-family:'inherit'; color:#000000;\"> </span></p>\n"
+"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block"
+                        "-indent:0; text-indent:0px;\"><span style=\" font-family:'inherit'; color:#000000;\">Scroll: View slices</span></p>\n"
+"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:'inherit'; color:#000000;\">Ctrl + Scroll: Zoom in/out</span></p>\n"
+"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:'inherit'; color:#000000;\">Ctrl + Shift + Left Drag: Pan</span></p>\n"
+"<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'inherit'; color:#000000;\"><br /></p>\n"
+"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:'inherit'; font-weight:700; color:#000000;\">Edit Modes</span></p>\n"
+"<p style=\" margin-top:0px; margin-bottom:0px; m"
+                        "argin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:'inherit'; color:#000000;\">Left drag: Paint</span></p>\n"
+"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:'inherit'; color:#000000;\">Ctrl+Left drag: Erase</span></p>\n"
+"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:'inherit'; color:#000000;\">Ctrl+Shift+Left: Pan</span></p>\n"
+"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:'inherit'; color:#000000;\">+/-: Brush size</span></p>\n"
+"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:'inherit'; color:#000000;\">S: Save</span></p>\n"
+"<p style=\" margin-top:0px; margin"
+                        "-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:'inherit'; color:#000000;\">R: Reset</span></p></body></html>", None))
         self.segment_btn.setText(QCoreApplication.translate("Form", u"Segment CT", None))
     # retranslateUi
 
