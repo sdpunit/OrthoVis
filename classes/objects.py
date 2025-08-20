@@ -173,9 +173,6 @@ class Context:
     The Context delegates part of its behavior to the current State object.
     """
 
-    def request_import(self, path: str):
-        self._singleton_data._state.handle_import(path)
-
     def request_process(self) -> bool:
         return self._singleton_data._state.handle_process()
 
@@ -205,10 +202,6 @@ class DataState(ABC):
         self._context = context
 
     @abstractmethod
-    def handle_import(self) -> None:
-        pass
-
-    @abstractmethod
     def handle_process(self) -> bool:
         pass
 
@@ -230,10 +223,6 @@ Context.
 
 
 class RawState(DataState):
-
-    def handle_import(self) -> None:
-        print("RawState wants to change the state of the context.")
-        self.context.transition_to(SegmentState())
 
     def handle_process(self) -> bool:
         """Handle segmentation in SegmentState"""
@@ -355,10 +344,6 @@ class RawState(DataState):
 
 class SegmentState(DataState):
 
-    def handle_import(self) -> None:
-        print("SegmentState wants to change the state of the context.")
-        self.context.transition_to(SegmentState())
-
     def handle_process(self) -> bool:
         print("SegmentState wants to change the state of the context.")
         return False
@@ -372,10 +357,6 @@ class SegmentState(DataState):
 
 
 class CalibrationState(DataState):
-
-    def handle_import(self) -> None:
-        print("CalibrationState wants to change the state of the context.")
-        self.context.transition_to(SegmentState())
 
     def handle_process(self) -> bool:
         print("CalibrationState wants to change the state of the context.")
@@ -391,10 +372,6 @@ class CalibrationState(DataState):
 
 class RegistrationState(DataState):
 
-    def handle_import(self) -> None:
-        print("RegistrationState wants to change the state of the context.")
-        self.context.transition_to(SegmentState())
-
     def handle_process(self) -> bool:
         print("RegistrationState wants to change the state of the context.")
         self.context.transition_to(SegmentState())
@@ -408,10 +385,6 @@ class RegistrationState(DataState):
 
 
 class ReferenceSysState(DataState):
-
-    def handle_import(self) -> None:
-        print("ReferenceSysState wants to change the state of the context.")
-        self.context.transition_to(SegmentState())
 
     def handle_process(self) -> bool:
         print("ReferenceSysState wants to change the state of the context.")
@@ -427,10 +400,6 @@ class ReferenceSysState(DataState):
 
 class MotionState(DataState):
 
-    def handle_import(self) -> None:
-        print("MotionState wants to change the state of the context.")
-        self.context.transition_to(SegmentState())
-
     def handle_process(self) -> bool:
         print("MotionState wants to change the state of the context.")
         self.context.transition_to(SegmentState())
@@ -445,10 +414,6 @@ class MotionState(DataState):
 
 
 class VisualState(DataState):
-
-    def handle_import(self) -> None:
-        print("VisualState wants to change the state of the context.")
-        self.context.transition_to(SegmentState())
 
     def handle_process(self) -> bool:
         print("VisualState wants to change the state of the context.")
@@ -496,6 +461,32 @@ def initialize_project(name: str, description: str, ct_path: str, fluoro_path: s
     print(f"Caligrid: {caligrid_path}")
     
     return context
+
+
+
+class StateFactory:
+    @staticmethod
+    def get_state(state: str) -> DataState:
+        if state == "RawState":
+            return RawState()
+        
+        elif state == "SegmentState":
+            return SegmentState()
+        
+        elif state == "CalibrationState":
+            return CalibrationState()
+        
+        elif state == "RegistrationState":
+            return RegistrationState()
+        
+        elif state == "ReferenceSysState":
+            return ReferenceSysState()
+        
+        elif state == "MotionState":
+            return MotionState()
+            
+        else:
+            return VisualState()
 
 
 # if __name__ == "__main__":
