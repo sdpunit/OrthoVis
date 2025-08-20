@@ -47,7 +47,11 @@ class VTKView(QWidget):
 
         self.renderer.SetBackground(*bg)
         self.actor = None
+
+        # axes marker
         self._axes_widget = None
+        self._axes_actor = None
+        self._axes_follow = "actor"
 
         # Emit pose while user interacts
         self.iren.AddObserver(vtk.vtkCommand.InteractionEvent, self._on_interaction)
@@ -56,7 +60,7 @@ class VTKView(QWidget):
         self.iren.Initialize()
 
     # ---- Public helpers -------------------------------------------------
-    def add_cube(self, size=1.0, color=(0.27, 0.51, 0.71)):
+    def add_cube(self, size, color=(0.27, 0.51, 0.71)):
         cube = vtk.vtkCubeSource()
         cube.SetXLength(size); cube.SetYLength(size); cube.SetZLength(size)
         mapper = vtk.vtkPolyDataMapper(); mapper.SetInputConnection(cube.GetOutputPort())
@@ -65,8 +69,8 @@ class VTKView(QWidget):
         self.renderer.AddActor(actor)
         self.renderer.ResetCamera()
         self.actor = actor
-        self.render_window.Render()
-        self._emit_pose()  # publish initial pose
+        self._emit_pose()              # sync axes first
+        self.render_window.Render()    # then render
         return actor
 
     def set_background(self, r, g, b):
@@ -77,14 +81,21 @@ class VTKView(QWidget):
 
     def set_actor_translation(self, x=0.0, y=0.0, z=0.0):
         if not self.actor: return
-        self.actor.SetPosition(x, y, z); self.render_window.Render(); self._emit_pose()
+        self.actor.SetPosition(x, y, z)
+        self._emit_pose()              # sync axes first
+        self.render_window.Render()    # then render
 
     def set_actor_rotation_euler(self, rx_deg=0.0, ry_deg=0.0, rz_deg=0.0):
         if not self.actor: return
-        self.actor.SetOrientation(rx_deg, ry_deg, rz_deg); self.render_window.Render(); self._emit_pose()
+        self.actor.SetOrientation(rx_deg, ry_deg, rz_deg)
+        self._emit_pose()              # sync axes first
+        self.render_window.Render()    # then render
 
-    def add_axes_widget(self, size=0.15):
-        if self._axes_widget: return self._axes_widget
+    def add_axes_widget(self, size=0.15, follow="actor"):
+        if self._axes_widget:
+            self._axes_follow = follow
+            return self._axes_widget
+
         axes = vtk.vtkAxesActor()
         widget = vtk.vtkOrientationMarkerWidget()
         widget.SetOrientationMarker(axes)
@@ -92,7 +103,10 @@ class VTKView(QWidget):
         widget.SetViewport(0.0, 0.0, size, size)
         widget.SetEnabled(1)
         widget.InteractiveOff()
+
         self._axes_widget = widget
+        self._axes_actor = axes
+        self._axes_follow = follow
         self.render_window.Render()
         return widget
 
@@ -102,15 +116,40 @@ class VTKView(QWidget):
         self.render_window.Render()
         self._emit_pose()
 
-    # internal: publish pose on interaction
+    # ---------- internal ----------
     def _on_interaction(self, *_):
+        # while dragging: keep marker in lockstep and render
+        self._sync_axes_to_actor_matrix()
+        self.render_window.Render()
         self._emit_pose()
 
     def _emit_pose(self):
-        if not self.actor: return
+        if not self.actor:
+            return
+        # keep marker aligned (also used for programmatic changes)
+        self._sync_axes_to_actor_matrix()
+
         x, y, z = self.actor.GetPosition()
         rx, ry, rz = self.actor.GetOrientation()
         self.poseChanged.emit(x, y, z, rx, ry, rz)
+
+    def _sync_axes_to_actor_matrix(self):
+        """Copy the actor's rotation into the corner axes (translation removed)."""
+        if not (self._axes_widget and self._axes_actor and self._axes_follow == "actor" and self.actor):
+            return
+        m = vtk.vtkMatrix4x4()
+        self.actor.GetMatrix(m)
+
+        # zero translation so the corner marker doesn't drift
+        m.SetElement(0, 3, 0.0)
+        m.SetElement(1, 3, 0.0)
+        m.SetElement(2, 3, 0.0)
+        m.SetElement(3, 0, 0.0); m.SetElement(3, 1, 0.0); m.SetElement(3, 2, 0.0); m.SetElement(3, 3, 1.0)
+
+        t = vtk.vtkTransform()
+        t.SetMatrix(m)
+        self._axes_actor.SetUserTransform(t)
+        self._axes_actor.Modified()
 
 
 # --------------------------
@@ -142,7 +181,7 @@ class Registration(QWidget):
 
         # Scene
         self.view.add_cube(size=0.5, color=(0.27, 0.51, 0.71))
-        self.view.add_axes_widget(size=0.18)
+        self.view.add_axes_widget(size=0.18, follow="actor")
         self.view.reset_camera()
 
         # input fields trigger actor live updates
@@ -153,7 +192,7 @@ class Registration(QWidget):
         self.ui.rotation_y.textChanged.connect(self._on_rot_changed)
         self.ui.rotation_z.textChanged.connect(self._on_rot_changed)
 
-        # ---- actor/camera interaction -> fields live updates
+        # actor/camera interaction -> fields live updates
         self.view.poseChanged.connect(self._update_fields_from_pose)
 
         # Seed UI with initial pose
@@ -172,10 +211,10 @@ class Registration(QWidget):
             (self.ui.rotation_z, f"{rz:.2f}"),
         ]
         for w, val in pairs:
-            with QSignalBlocker(w):  # avoid feedback loops
+            with QSignalBlocker(w):
                 w.setText(val)
 
-    # ---- move actor when fields change
+    # move actor when fields change
     def _on_pos_changed(self):
         try:
             x = float(self.ui.pos_x.text())
