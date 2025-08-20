@@ -1,8 +1,9 @@
 # startup_window.py - Startup window on opening of the application
 from PySide6.QtWidgets import QWidget, QMessageBox
+from PySide6.QtCore import QObject
 from frontend_pages.startup.ui_startup_window import Ui_HomePage
 from PySide6.QtWidgets import QFileDialog
-from classes.objects import SingletonPatient, Context, SegmentState
+from classes.objects import *
 import json
 import os
 
@@ -67,48 +68,45 @@ class HomePage(QWidget):
                     
                     # Create context and set to SegmentState
                     singleton = SingletonPatient.get_instance()
-                    context = Context(SegmentState(), singleton)
+                    state = StateFactory.get_state(project_data["state"])
+                    context = Context(state, singleton)
+
+                    state = project_data["state"]
                     
                     # Get segmentation page
-                    segmentation_page = None
-                    if hasattr(main_window, 'segmentation'):
-                        segmentation_page = main_window.segmentation
-                        print("Got segmentation page via main_window.segmentation")
-                    elif hasattr(stacked_widget, 'widget'):
-                        segmentation_page = stacked_widget.widget(2)
-                        print("Got segmentation page via stacked_widget.widget(2)")
+                    page = self.get_page(main_window, stacked_widget, state)
                     
-                    if segmentation_page:
-                        print(f"Segmentation page found: {type(segmentation_page)}")
-                        print(f"Available methods: {[method for method in dir(segmentation_page) if not method.startswith('_') and 'context' in method.lower()]}")
+                    if page:
+                        print(f"Segmentation page found: {type(page)}")
+                        print(f"Available methods: {[method for method in dir(page) if not method.startswith('_') and 'context' in method.lower()]}")
                         
                         # Store references for transition callback
                         self.pending_stacked_widget = stacked_widget
                         self.pending_main_window = main_window
                         
                         # Check if delayed transition method exists, otherwise use regular method
-                        if hasattr(segmentation_page, 'set_context_with_delayed_transition'):
+                        if hasattr(page, 'set_context_with_delayed_transition'):
                             print("Using delayed transition method")
-                            segmentation_page.set_context_with_delayed_transition(
+                            page.set_context_with_delayed_transition(
                                 context, 
                                 self.on_vtk_loading_complete
                             )
-                        elif hasattr(segmentation_page, 'set_context'):
+                        elif hasattr(page, 'set_context'):
                             print("Using regular set_context method with manual callback setup")
                             # Manually set up the callback
                             print(f"Setting completion_callback to: {self.on_vtk_loading_complete}")
-                            segmentation_page.completion_callback = self.on_vtk_loading_complete
+                            page.completion_callback = self.on_vtk_loading_complete
                             
                             # Verify it was set
-                            if hasattr(segmentation_page, 'completion_callback'):
-                                print(f"Callback successfully set: {segmentation_page.completion_callback}")
+                            if hasattr(page, 'completion_callback'):
+                                print(f"Callback successfully set: {page.completion_callback}")
                             else:
                                 print("ERROR: Failed to set completion_callback")
                             
-                            segmentation_page.set_context(context)
+                            page.set_context(context)
                         else:
                             print("ERROR: No set_context method found")
-                            print(f"All methods: {[method for method in dir(segmentation_page) if not method.startswith('_')]}")
+                            print(f"All methods: {[method for method in dir(page) if not method.startswith('_')]}")
                             self.show_error("Internal error: Cannot set context on segmentation page")
                             return
                         
@@ -135,6 +133,31 @@ class HomePage(QWidget):
                 )
             except Exception as e:
                 self.show_error(f"Error loading project: {str(e)}")
+    
+    def get_page(self, main_window : QObject, stacked_widget: QObject, state: str) -> QObject:
+        page = None
+        index = 0
+        page_name = ''
+
+        if state == "RawState" or "SegmentState":
+            page = main_window.segmentation
+            page_name = "segmentation"
+            index = 2
+        
+
+        
+        # elif state == "CalibrationState":
+        #     page = main_window.segmentation
+        #     page_name = "segmentation"
+        #     index = 2
+        
+
+        if hasattr(main_window, page_name) and isinstance(state, SegmentState):
+            print("Got segmentation page via main_window.segmentation")
+        elif hasattr(stacked_widget, 'widget'):
+            page = stacked_widget.widget(index)
+            print("Got segmentation page via stacked_widget.widget(2)")
+        return page
 
     def on_vtk_loading_complete(self):
         """Called when VTK loading is complete - transition to segmentation page"""
