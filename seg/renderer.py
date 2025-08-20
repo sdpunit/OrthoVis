@@ -687,15 +687,6 @@ def main(ct_path: str, mask_dir: str):
     mode_btn.SetPosition(0.5, 0.85)
     legend_overlay.AddActor(mode_btn)
 
-    # Add instructions
-    instructions = vtkTextActor()
-    instructions.SetInput("Edit Mode:\nLeft drag: Paint\nCtrl+Left drag: Erase\nCtrl+Shift+Left: Pan\n+/-: Brush size\nS: Save\nR: Reset")
-    instructions.GetTextProperty().SetFontSize(12)
-    instructions.GetTextProperty().SetColor(0.8, 0.8, 0.8)
-    instructions.GetPositionCoordinate().SetCoordinateSystemToNormalizedViewport()
-    instructions.SetPosition(0.51, 0.67)
-    legend_overlay.AddActor(instructions)
-
     # Add brush size indicator
     brush_label = vtkTextActor()
     brush_label.SetInput("Brush Size: 1")
