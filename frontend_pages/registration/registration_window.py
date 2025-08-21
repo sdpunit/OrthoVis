@@ -1,7 +1,7 @@
 # frontend_pages/registration/registration_window.py
 
 from PySide6.QtCore import Qt, Signal, QSignalBlocker
-from PySide6.QtGui import QSurfaceFormat
+from PySide6.QtGui import QSurfaceFormat, QVector3D, QQuaternion
 from PySide6.QtWidgets import QWidget, QSizePolicy, QVBoxLayout
 
 from frontend_pages.registration.ui_registration_window import Ui_Form
@@ -193,3 +193,59 @@ class Registration(QWidget):
         except ValueError:
             return
         self.view.set_actor_rotation_euler(rx, ry, rz)
+
+    def mousePressEvent(self, event):
+        self.last_mouse_pos = event.pos()
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        if self.last_mouse_pos is None:
+            return
+
+        dx = event.x() - self.last_mouse_pos.x()
+        dy = event.y() - self.last_mouse_pos.y()
+        self.last_mouse_pos = event.pos()
+
+        # Rotate with Ctrl
+        if event.modifiers() & Qt.ControlModifier:
+            current_rot = self.transform.rotation()
+            rot_x = QQuaternion.fromAxisAndAngle(QVector3D(1, 0, 0), dy)
+            rot_y = QQuaternion.fromAxisAndAngle(QVector3D(0, 1, 0), dx)
+            self.transform.setRotation(rot_x * rot_y * current_rot)
+
+        # Translate with Shift
+        else:
+            current_translation = self.transform.translation()
+            # Adjust sensitivity as needed
+            sensitivity = 0.01
+            new_translation = QVector3D(
+                current_translation.x() + dx * sensitivity,
+                current_translation.y() - dy * sensitivity,  # invert Y
+                current_translation.z()
+            )
+            self.transform.setTranslation(new_translation)
+
+        super().mouseMoveEvent(event)
+
+    def wheelEvent(self, event):
+        # Get current translation
+        current_translation = self.transform.translation()
+        
+        # Adjust sensitivity
+        sensitivity = 0.5
+        
+        # Delta from the wheel event (positive = scroll up, negative = scroll down)
+        delta = event.angleDelta().y() / 120  # 1 step = 120 units
+        
+        # Update Z position
+        new_translation = QVector3D(
+            current_translation.x(),
+            current_translation.y(),
+            current_translation.z() - delta * sensitivity  # subtract to zoom in
+        )
+        
+        self.transform.setTranslation(new_translation)
+
+    def mouseReleaseEvent(self, a0):
+        self.last_mouse_pos = None
+        super().mouseReleaseEvent(a0)
