@@ -17,7 +17,7 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QApplication, QFormLayout, QFrame, QGraphicsView,
     QHBoxLayout, QLabel, QLineEdit, QPushButton,
-    QSizePolicy, QTextEdit, QVBoxLayout, QWidget)
+    QSizePolicy, QTextBrowser, QVBoxLayout, QWidget)
 
 from widgets.sidebar.sidebar import Sidebar
 from widgets.titlebar.titlebar import Titlebar
@@ -171,10 +171,10 @@ class Ui_Form(object):
 
         self.verticalLayout_2.addLayout(self.formLayout)
 
-        self.textEdit = QTextEdit(self.details)
-        self.textEdit.setObjectName(u"textEdit")
+        self.textBrowser = QTextBrowser(self.details)
+        self.textBrowser.setObjectName(u"textBrowser")
 
-        self.verticalLayout_2.addWidget(self.textEdit)
+        self.verticalLayout_2.addWidget(self.textBrowser)
 
 
         self.horizontalLayout_2.addWidget(self.details)
@@ -211,7 +211,7 @@ class Ui_Form(object):
         self.rotation_y.setText(QCoreApplication.translate("Form", u"[link to object]", None))
         self.rotation_zLabel.setText(QCoreApplication.translate("Form", u"rotation_z", None))
         self.rotation_z.setText(QCoreApplication.translate("Form", u"[link to object]", None))
-        self.textEdit.setHtml(QCoreApplication.translate("Form", u"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
+        self.textBrowser.setHtml(QCoreApplication.translate("Form", u"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><meta charset=\"utf-8\" /><style type=\"text/css\">\n"
 "p, li { white-space: pre-wrap; }\n"
 "hr { height: 1px; border-width: 0; }\n"
