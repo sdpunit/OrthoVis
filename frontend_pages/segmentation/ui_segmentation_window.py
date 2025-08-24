@@ -245,7 +245,7 @@ class Ui_Form(object):
             </tr>
             <tr>
                 <td class="shortcut-action">Pan</td>
-                <td class="shortcut-control">Ctrl + Shift + Left Drag</td>
+                <td class="shortcut-control">Ctrl + Shift + Drag</td>
             </tr>
         </table>
 
@@ -253,15 +253,15 @@ class Ui_Form(object):
         <table class="shortcut-table">
             <tr>
                 <td class="shortcut-action">Paint</td>
-                <td class="shortcut-control">Left Drag</td>
+                <td class="shortcut-control">Drag</td>
             </tr>
             <tr>
                 <td class="shortcut-action">Erase</td>
-                <td class="shortcut-control">Ctrl + Left Drag</td>
+                <td class="shortcut-control">Ctrl + Drag</td>
             </tr>
             <tr>
                 <td class="shortcut-action">Pan</td>
-                <td class="shortcut-control">Ctrl + Shift + Left Drag</td>
+                <td class="shortcut-control">Ctrl + Shift + Drag</td>
             </tr>
             <tr>
                 <td class="shortcut-action">Brush Size</td>
