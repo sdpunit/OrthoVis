@@ -122,6 +122,11 @@ class Segmentation(QWidget):
         self.ct_dir = patient.CT
         self.mask_dir = patient.seg_masks_dir
         
+        # Update the project name in the UI with proper spacing
+        if patient.name:
+            self.ui.label_2.setText(f"   {patient.name}")  # Add spaces for horizontal spacing
+            print(f"Updated project name display: {patient.name}")
+        
         print(f"Backend CT path: {self.ct_dir}")
         print(f"Backend mask path: {self.mask_dir}")
         print(f"CT path exists: {os.path.exists(self.ct_dir) if self.ct_dir else False}")
@@ -151,6 +156,14 @@ class Segmentation(QWidget):
         print("=== set_context_with_delayed_transition called ===")
         self.completion_callback = callback
         print(f"Stored completion callback: {callback}")
+        
+        # Get patient name and update UI
+        singleton = SingletonPatient.get_instance()
+        patient = singleton.patient
+        if patient.name:
+            self.ui.label_2.setText(f"    {patient.name}")  # Add spaces for horizontal spacing
+            print(f"Updated project name display: {patient.name}")
+    
         self.set_context(context)
 
     def check_for_existing_masks(self) -> bool:
@@ -270,25 +283,6 @@ class Segmentation(QWidget):
             print("Final VTK initialization...")
             self.vtk_widget.Initialize()
             self._vtk_initialized = True
-            
-            # Print editing mode status
-            if self.editing_enabled:
-                print("=== EDITING MODE ACTIVE ===")
-                print("Controls:")
-                print("  - Left drag: Paint pixels")
-                print("  - Ctrl + Left drag: Erase pixels") 
-                print("  - Ctrl + Shift + Left drag: Pan view")
-                print("  - +/- keys: Adjust brush size")
-                print("  - S key: Save all modified masks")
-                print("  - R key: Reset current mask")
-                print("  - Click mode button to toggle Browse/Edit")
-                print("  - Click mask labels to select which mask to edit")
-            else:
-                print("=== BROWSE MODE ACTIVE ===")
-                print("Controls:")
-                print("  - Left drag: Pan view")
-                print("  - Mouse wheel: Change slices")
-                print("  - Ctrl + Mouse wheel: Zoom")
             
             # Render and then complete loading after successful render
             QTimer.singleShot(100, self._render_and_complete)

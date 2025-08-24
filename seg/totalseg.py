@@ -15,8 +15,16 @@ import sys
 # totalseg_set_license -l <your-license-number>
 # totalseg_set_license -l aca_DBGCR896PIOE7A 
 
-# ROIs to segment - these are the only masks we'll keep
-roi = ["femur_right", "fibula", "patella", "tibia"] 
+total = ["sacrum", "humerus_left", "humerus_right", "scapula_left", "scapula_right",
+         "clavicula_left", "clavicula_right", "femur_left", "femur_right",
+         "hip_left", "hip_right", "spinal_cord", "sternum"
+         ]
+
+appendicular = ["patella", "tibia", "fibula", "tarsal", "metatarsal","phalanges_feet", 
+                "ulna", "radius", "carpal", "metacarpal", "phalanges_hand"
+                ]
+
+roi = ["tibia", "patella", "fibula", "femur_right"]
 
 def setup_totalsegmentator():
     """Ensure TotalSegmentator can be run by setting up PATH and finding executable"""
@@ -31,7 +39,7 @@ def setup_totalsegmentator():
     methods = [
         ['TotalSegmentator'],  # Direct command
         [os.path.join(scripts_path, 'TotalSegmentator')],  # Full path
-        [os.path.join(scripts_path, 'TotalSegmentator.exe')],  # Windows with .exe
+        [os.path.join(scripts_path, 'TotalSegmentator.exe')],  
         [sys.executable, '-m', 'TotalSegmentator'],  # As module
     ]
     
@@ -263,9 +271,6 @@ def run_complete_segmentation(ct_dir: str, seg_dir: str):
         return False
 
 
-if __name__ == "__main__":
-    # Example usage with hardcoded paths
-    ct_dir = r"C:/users/avery/Desktop/PI201/DICOM/P0000001/ST000001/SE000003"
-    seg_dir = r"C:/users/avery/Desktop/segmentation_masks"
-    
-    run_complete_segmentation(ct_dir, seg_dir)
+#if __name__ == "__main__":
+    # Example usage with predefined ct_dir, seg_dir
+    # run_complete_segmentation(ct_dir, seg_dir)
