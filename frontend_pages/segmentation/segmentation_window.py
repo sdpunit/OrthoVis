@@ -1,6 +1,6 @@
 # segmentation_window.py
 
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QMessageBox, QApplication, QPushButton
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QMessageBox, QApplication, QPushButton, QCheckBox
 from PySide6.QtCore import QTimer, QThread, Signal
 from vtkmodules.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 import vtk
@@ -8,7 +8,7 @@ import vtk
 # Import the UI form
 from frontend_pages.segmentation.ui_segmentation_window import Ui_Form
 from seg.embedding import create_vtk_pipeline, add_masks_to_pipeline, update_interactor_style_for_editing
-from seg.totalseg import load_ct
+from seg.totalseg import load_ct, get_all_available_bones
 from classes.objects import SingletonPatient, Context
 import os
 
@@ -17,12 +17,14 @@ class SegmentationWorker(QThread):
     """Worker thread for running segmentation"""
     finished = Signal(bool)
     
-    def __init__(self, context):
+    def __init__(self, context, custom_roi):
         super().__init__()
         self.context = context
+        self.custom_roi = custom_roi
     
     def run(self):
-        success = self.context.request_process()
+        # Pass custom ROI to the context for processing
+        success = self.context.request_process_with_roi(self.custom_roi)
         self.finished.emit(success)
 
 
@@ -45,12 +47,16 @@ class Segmentation(QWidget):
         self.completion_callback = None  # Initialize callback
         self.progress_dialog = None  # Single dialog for all progress messages
         
-        # NEW: Editing-related attributes
+        # Editing-related attributes
         self.editing_enabled = False
         self.editable_masks = None
         self.label_actors = None
         self.mode_button = None
         self.brush_label = None
+
+        # ROI selection attributes
+        self.roi_checkboxes = {}
+        self.selected_roi = []
 
         # Set up UI
         self.ui = Ui_Form()
@@ -75,11 +81,72 @@ class Segmentation(QWidget):
         if hasattr(self.ui, 'segment_btn'):
             self.ui.segment_btn.clicked.connect(self.run_segmentation)
             print("Connected segmentation button: segment_btn")
+
+        # Connect editing mode buttons
+        if hasattr(self.ui, 'save_edits_btn'):
+            self.ui.save_edits_btn.clicked.connect(self.save_edited_masks)
+            print("Connected save edits button")
+
+        if hasattr(self.ui, 'proceed_calibration_btn'):
+            self.ui.proceed_calibration_btn.clicked.connect(self.proceed_to_calibration)
+            print("Connected proceed to calibration button")
         
         # Set up VTK widget
         self.setupVTKWidget()
         
+        # Initialize ROI selection
+        self.setup_roi_selection()
+        
+        # Set initial shortcuts display (browse mode only)
+        self.update_shortcuts_display(False)
+        
         print("Segmentation window created - waiting for backend paths")
+
+    def setup_roi_selection(self):
+        """Set up the ROI selection checkboxes"""
+        try:
+            # Get all available bones and sort alphabetically
+            all_bones = sorted(get_all_available_bones())  # Sort alphabetically
+            
+            # Clear existing checkboxes
+            for checkbox in self.roi_checkboxes.values():
+                checkbox.setParent(None)
+            self.roi_checkboxes.clear()
+            
+            # Create checkboxes for each bone
+            for bone in all_bones:
+                checkbox = QCheckBox(bone.replace('_', ' ').title())
+                checkbox.setObjectName(f"roi_checkbox_{bone}")
+                checkbox.setStyleSheet("""
+                    QCheckBox {
+                        font: 10pt "Segoe UI";
+                        padding: 2px;
+                    }
+                    QCheckBox::indicator {
+                        width: 16px;
+                        height: 16px;
+                    }
+                """)
+                checkbox.stateChanged.connect(lambda state, b=bone: self.on_roi_checkbox_changed(b, state))
+                
+                self.roi_checkboxes[bone] = checkbox
+                self.ui.roi_content_layout.addWidget(checkbox)
+            
+            print(f"Created {len(all_bones)} ROI checkboxes (alphabetically sorted)")
+            
+        except Exception as e:
+            print(f"Error setting up ROI selection: {e}")
+
+    def on_roi_checkbox_changed(self, bone_name, state):
+        """Handle ROI checkbox state changes"""
+        if state == 2:  # Checked
+            if bone_name not in self.selected_roi:
+                self.selected_roi.append(bone_name)
+        else:  # Unchecked
+            if bone_name in self.selected_roi:
+                self.selected_roi.remove(bone_name)
+        
+        print(f"Selected ROI updated: {self.selected_roi}")
 
     def show_progress_dialog(self, title: str, message: str):
         """Universal function to show progress dialog"""
@@ -110,6 +177,186 @@ class Segmentation(QWidget):
         parent_layout.insertWidget(vtk_display_index, self.vtk_widget, stretch=3)
         self.ui.VTK_display = self.vtk_widget
 
+    def set_editing_mode(self, editing_enabled: bool):
+        """Toggle between browse and editing modes"""
+        self.editing_enabled = editing_enabled
+        
+        if editing_enabled:
+            # Hide ROI selection and segment button, show editing buttons
+            self.ui.roi_selection_widget.hide()
+            self.ui.segment_btn.hide()  # Hide segment button in editing mode
+            self.ui.editing_buttons_widget.show()
+            # Update shortcuts to show editing mode
+            self.update_shortcuts_display(True)
+        else:
+            # Show ROI selection and segment button, hide editing buttons
+            self.ui.roi_selection_widget.show()
+            self.ui.segment_btn.show()  # Show segment button in browse mode
+            self.ui.editing_buttons_widget.hide()
+            # Update shortcuts to show browse mode only
+            self.update_shortcuts_display(False)
+        
+        print(f"Editing mode set to: {editing_enabled}")
+
+    def update_shortcuts_display(self, show_editing: bool):
+        """Update the shortcuts display based on current mode"""
+        if show_editing:
+            # Show both browse and editing shortcuts
+            shortcuts_html = """<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0//EN" "http://www.w3.org/TR/REC-html40/strict.dtd">
+            <html><head><meta name="qrichtext" content="1" /><meta charset="utf-8" /><style type="text/css">
+            p, li { white-space: pre-wrap; }
+            hr { height: 1px; border-width: 0; }
+            li.unchecked::marker { content: "\\2610"; }
+            li.checked::marker { content: "\\2612"; }
+            .shortcut-title { 
+                font-weight: bold; 
+                font-size: 12pt; 
+                color: #000000; 
+                margin-bottom: 15px; 
+                text-align: center;
+            }
+            .shortcut-section { 
+                font-weight: bold; 
+                font-size: 11pt; 
+                color: #000000; 
+                margin-top: 15px; 
+                margin-bottom: 8px; 
+                text-decoration: underline;
+            }
+            .shortcut-table {
+                width: 100%;
+                border-collapse: collapse;
+                table-layout: fixed;
+            }
+            .shortcut-table td {
+                padding: 2px 0px;
+                vertical-align: top;
+            }
+            .shortcut-action { 
+                font-weight: bold; 
+                color: #000000; 
+                width: 60%;
+                text-align: left;
+            }
+            .shortcut-control { 
+                color: #666666; 
+                width: 40%;
+                text-align: left;
+                padding-left: 5px;
+            }
+            </style></head><body style="font-family:'Segoe UI'; font-size:10pt; font-weight:400; font-style:normal;">
+
+            <p class="shortcut-title">SHORTCUTS</p>
+
+            <p class="shortcut-section">Browse Mode</p>
+            <table class="shortcut-table">
+                <tr>
+                    <td class="shortcut-action">View Slices</td>
+                    <td class="shortcut-control">Scroll</td>
+                </tr>
+                <tr>
+                    <td class="shortcut-action">Zoom</td>
+                    <td class="shortcut-control">Ctrl + Scroll</td>
+                </tr>
+                <tr>
+                    <td class="shortcut-action">Pan</td>
+                    <td class="shortcut-control">Ctrl + Shift + Drag</td>
+                </tr>
+            </table>
+
+            <p class="shortcut-section">Edit Mode</p>
+            <table class="shortcut-table">
+                <tr>
+                    <td class="shortcut-action">Paint</td>
+                    <td class="shortcut-control">Drag</td>
+                </tr>
+                <tr>
+                    <td class="shortcut-action">Erase</td>
+                    <td class="shortcut-control">Ctrl + Drag</td>
+                </tr>
+                <tr>
+                    <td class="shortcut-action">Pan</td>
+                    <td class="shortcut-control">Ctrl + Shift + Drag</td>
+                </tr>
+                <tr>
+                    <td class="shortcut-action">Brush Size</td>
+                    <td class="shortcut-control">+/-</td>
+                </tr>
+                <tr>
+                    <td class="shortcut-action">Save Edits</td>
+                    <td class="shortcut-control">S</td>
+                </tr>
+            </table>
+
+            </body></html>"""
+        else:
+            # Show only browse mode shortcuts
+            shortcuts_html = """<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0//EN" "http://www.w3.org/TR/REC-html40/strict.dtd">
+            <html><head><meta name="qrichtext" content="1" /><meta charset="utf-8" /><style type="text/css">
+            p, li { white-space: pre-wrap; }
+            hr { height: 1px; border-width: 0; }
+            li.unchecked::marker { content: "\\2610"; }
+            li.checked::marker { content: "\\2612"; }
+            .shortcut-title { 
+                font-weight: bold; 
+                font-size: 12pt; 
+                color: #000000; 
+                margin-bottom: 15px; 
+                text-align: center;
+            }
+            .shortcut-section { 
+                font-weight: bold; 
+                font-size: 11pt; 
+                color: #000000; 
+                margin-top: 15px; 
+                margin-bottom: 8px; 
+                text-decoration: underline;
+            }
+            .shortcut-table {
+                width: 100%;
+                border-collapse: collapse;
+                table-layout: fixed;
+            }
+            .shortcut-table td {
+                padding: 2px 0px;
+                vertical-align: top;
+            }
+            .shortcut-action { 
+                font-weight: bold; 
+                color: #000000; 
+                width: 60%;
+                text-align: left;
+            }
+            .shortcut-control { 
+                color: #666666; 
+                width: 40%;
+                text-align: left;
+                padding-left: 5px;
+            }
+            </style></head><body style="font-family:'Segoe UI'; font-size:10pt; font-weight:400; font-style:normal;">
+
+            <p class="shortcut-title">SHORTCUTS</p>
+
+            <p class="shortcut-section">Browse Mode</p>
+            <table class="shortcut-table">
+                <tr>
+                    <td class="shortcut-action">View Slices</td>
+                    <td class="shortcut-control">Scroll</td>
+                </tr>
+                <tr>
+                    <td class="shortcut-action">Zoom</td>
+                    <td class="shortcut-control">Ctrl + Scroll</td>
+                </tr>
+                <tr>
+                    <td class="shortcut-action">Pan</td>
+                    <td class="shortcut-control">Ctrl + Shift + Drag</td>
+                </tr>
+            </table>
+
+            </body></html>"""
+        
+        self.ui.textBrowser.setHtml(shortcuts_html)
+
     def set_context(self, context: Context):
         """Set the context and handle automatic visualization for loaded projects"""
         print("=== set_context called ===")
@@ -138,13 +385,13 @@ class Segmentation(QWidget):
             has_masks = self.check_for_existing_masks()
             
             if has_masks:
-                print("Found existing masks - loading CT with masks in EDITING mode...")
-                self.editing_enabled = True  # Enable editing when masks exist
-                self.show_progress_dialog("Loading Project", "Loading CT data and segmentation masks with editing features...")
+                print("Found existing masks - loading CT with masks in EDIT mode...")
+                self.set_editing_mode(True)  # Enable editing when masks exist
+                self.show_progress_dialog("Loading Project", "Loading CT data and segmentation masks in EDIT mode...")
             else:
                 print("No existing masks - loading CT only in BROWSE mode...")
-                self.editing_enabled = False  # Browse-only when no masks
-                self.show_progress_dialog("Loading Project", "Loading CT data...")
+                self.set_editing_mode(False)  # Browse-only when no masks
+                self.show_progress_dialog("Loading Project", "Loading CT data in BROWSE mode...")
             
             # Initialize VTK with delay to allow UI to update
             QTimer.singleShot(100, self.initialize_vtk_with_backend_paths)
@@ -236,7 +483,8 @@ class Segmentation(QWidget):
                 ct_path_to_use, 
                 mask_dir_for_display,
                 render_window=render_window,
-                enable_editing=self.editing_enabled  # NEW: Enable editing when appropriate
+                enable_editing=self.editing_enabled,  # Enable editing when appropriate
+                save_callback=self.on_save_shortcut  # Pass save callback for 'S' key
             )
             
             if self.interactor_style:
@@ -244,7 +492,7 @@ class Segmentation(QWidget):
                 self.viewers = self.interactor_style.viewers
                 self.ct_img = load_ct(ct_path_to_use)
                 
-                # NEW: Store editing-related references if editing is enabled
+                # Store editing-related references if editing is enabled
                 if self.editing_enabled and hasattr(self.interactor_style, 'editable_masks'):
                     self.editable_masks = self.interactor_style.editable_masks
                     self.label_actors = getattr(self.interactor_style, 'label_actors', None)
@@ -352,7 +600,7 @@ class Segmentation(QWidget):
             return False
 
     def run_segmentation(self):
-        """Run segmentation process"""
+        """Run segmentation process with custom ROI"""
         if not self.context:
             self.show_error("No context available")
             return
@@ -361,8 +609,15 @@ class Segmentation(QWidget):
             self.show_error(f"Invalid CT directory: {self.ct_dir}")
             return
         
+        # Check if ROI is selected
+        if not self.selected_roi or len(self.selected_roi) == 0:
+            self.show_error("Please select at least one bone from the ROI list before running segmentation.")
+            return
+        
+        print(f"Running segmentation with custom ROI: {self.selected_roi}")
+        
         # Show progress dialog
-        self.show_progress_dialog("Segmentation Progress", "Running segmentation...")
+        self.show_progress_dialog("Segmentation Progress", f"Running segmentation for {len(self.selected_roi)} selected bones...")
         
         # Disable segmentation button and VTK widget interaction
         if hasattr(self.ui, 'segment_btn'):
@@ -371,8 +626,8 @@ class Segmentation(QWidget):
         if hasattr(self, 'vtk_widget'):
             self.vtk_widget.setEnabled(False)
         
-        # Start segmentation worker
-        self.segmentation_worker = SegmentationWorker(self.context)
+        # Start segmentation worker with custom ROI
+        self.segmentation_worker = SegmentationWorker(self.context, self.selected_roi)
         self.segmentation_worker.finished.connect(self.on_segmentation_finished)
         self.segmentation_worker.start()
 
@@ -393,12 +648,14 @@ class Segmentation(QWidget):
         if success:
             self.show_info("Segmentation completed successfully!")
             
-            # Add masks to visualization WITH EDITING ENABLED
+            # Switch to editing mode and add masks to visualization WITH EDITING ENABLED
+            self.set_editing_mode(True)
+            
             if self.mask_dir and os.path.exists(self.mask_dir):
                 print("Adding masks to visualization with EDITING enabled...")
                 
                 # Show brief loading message for mask overlay
-                self.show_progress_dialog("Adding Masks", "Adding segmentation masks with editing features...")
+                self.show_progress_dialog("Adding Masks", "Overlaying segmentation masks in EDIT mode...")
                 
                 # Add masks with delay to allow UI update
                 QTimer.singleShot(100, self._add_masks_and_close_dialog)
@@ -411,14 +668,13 @@ class Segmentation(QWidget):
         """Add masks with editing enabled and close the dialog"""
         try:
             # Enable editing mode since we now have masks
-            self.editing_enabled = True
             success = self.add_masks(self.mask_dir, enable_editing=True)
             
             # Close the progress dialog
             self.close_progress_dialog()
             
             if success:
-                print("Masks added successfully with EDITING FEATURES!")
+                print("Masks added successfully in EDIT mode!")
                 print("=== EDITING MODE NOW ACTIVE ===")
             else:
                 print("Failed to add masks")
@@ -437,19 +693,20 @@ class Segmentation(QWidget):
         try:
             render_window = self.vtk_widget.GetRenderWindow()
             
-            # NEW: Use enhanced add_masks_to_pipeline with editing support
+            # Use enhanced add_masks_to_pipeline with editing support
             success, editable_masks = add_masks_to_pipeline(
                 self.viewers, 
                 self.ct_img, 
                 mask_dir, 
                 render_window,
-                enable_editing=enable_editing  # NEW: Enable editing features
+                enable_editing=enable_editing,  # Enable editing features
+                save_callback=self.on_save_shortcut  # Pass save callback for 'S' key
             )
             
             if success:
                 print(f"Masks added successfully from: {mask_dir}")
                 
-                # NEW: If editing was enabled, update interactor style and store references
+                # If editing was enabled, update interactor style and store references
                 if enable_editing and editable_masks:
                     print("Updating interactor style for editing...")
                     
@@ -509,6 +766,9 @@ class Segmentation(QWidget):
                                 self.interactor_style.AddObserver('KeyPressEvent', self.interactor_style.on_key_press)
                                 self.interactor_style._editing_observers_added = True
                             
+                            # Set save callback for 'S' key
+                            self.interactor_style.save_callback = self.on_save_shortcut
+                            
                             # Update visual state
                             if hasattr(self.interactor_style, 'update_selection_visuals'):
                                 self.interactor_style.update_selection_visuals()
@@ -526,6 +786,47 @@ class Segmentation(QWidget):
             import traceback
             traceback.print_exc()
             return False
+
+    def on_save_shortcut(self):
+        """Callback for 'S' key shortcut - shows GUI message"""
+        message = "Saved edits to masks"
+        print(message)
+        self.show_info(message)
+
+    def save_edited_masks(self):
+        """Save all edited masks - triggered by button"""
+        if not self.editing_enabled or not self.editable_masks:
+            print("No editable masks available")
+            self.show_info("No editable masks available")
+            return False
+        
+        try:
+            saved_count = 0
+            for mask in self.editable_masks:
+                if hasattr(mask, 'modified') and mask.modified:
+                    mask.save_mask()
+                    saved_count += 1
+            
+            # Always show the message, even if no masks were modified
+            message = "Saved edits to masks"
+            print(message)
+            self.show_info(message)
+            
+            return True
+                
+        except Exception as e:
+            print(f"Error saving masks: {e}")
+            self.show_error(f"Error saving masks: {e}")
+            return False
+
+    def proceed_to_calibration(self):
+        """Proceed to calibration step"""
+        # First save any edited masks
+        self.save_edited_masks()
+        
+        # TODO: Implement transition to calibration page
+        print("Proceeding to calibration...")
+        self.show_info("Proceeding to calibration step...")
 
     def refresh_visualization(self):
         """Refresh the VTK visualization - called when switching to this page"""
@@ -547,33 +848,6 @@ class Segmentation(QWidget):
             QTimer.singleShot(50, self._render_vtk)
         else:
             print("No valid CT data available for visualization")
-
-    def save_edited_masks(self):
-        """Save all edited masks - can be called externally"""
-        if not self.editing_enabled or not self.editable_masks:
-            print("No editable masks available")
-            return False
-        
-        try:
-            saved_count = 0
-            for mask in self.editable_masks:
-                if hasattr(mask, 'modified') and mask.modified:
-                    mask.save_mask()
-                    saved_count += 1
-            
-            if saved_count > 0:
-                print(f"Saved {saved_count} modified masks")
-                self.show_info(f"Saved {saved_count} modified masks")
-                return True
-            else:
-                print("No masks were modified")
-                self.show_info("No masks were modified")
-                return False
-                
-        except Exception as e:
-            print(f"Error saving masks: {e}")
-            self.show_error(f"Error saving masks: {e}")
-            return False
 
     def show_error(self, message):
         """Show error message dialog"""

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-VTK Pipeline for Qt Integration with Editing Features
+VTK Pipeline for Qt Integration with editing features
 Updated: remove coloured legend squares; when edit mode toggles on, the
 currently selected mask's label enlarges and adopts that mask's colour.
 """
@@ -278,13 +278,16 @@ class SliceViewer:
 
 class QuadStyle(vtkInteractorStyleImage):
     def __init__(self, viewers, arr, origin, spacing, enable_editing=False,
-                 label_actors=None, editable_masks=None):
+                 label_actors=None, editable_masks=None, save_callback=None):
         super().__init__()
         self.viewers = viewers
         self.arr = arr
         self.origin = origin
         self.spacing = spacing
         self.enable_editing = enable_editing
+        
+        # Callback for save operation
+        self.save_callback = save_callback
 
         # Editing-specific attributes
         if enable_editing:
@@ -452,6 +455,7 @@ class QuadStyle(vtkInteractorStyleImage):
             self.brush_size = max(self.brush_size - 1, 1)
             self.update_brush_label()
         elif key == 's':
+            # Handle 'S' key for saving and show message
             self.save_masks()
 
     def update_brush_label(self):
@@ -460,14 +464,25 @@ class QuadStyle(vtkInteractorStyleImage):
             self.GetInteractor().GetRenderWindow().Render()
 
     def save_masks(self):
+        """Save masks and show message"""
         if not self.enable_editing:
             return
+        
         saved_count = 0
         for mask in self.editable_masks:
             if mask.modified:
                 mask.save_mask()
                 saved_count += 1
-        print(f"Saved {saved_count} modified masks" if saved_count else "No masks were modified")
+        
+        # Always show the "Saved edits to masks" message
+        print("Saved edits to masks")
+        
+        # Call external save callback if available (for GUI message)
+        if self.save_callback:
+            try:
+                self.save_callback()
+            except Exception as e:
+                print(f"Error calling save callback: {e}")
 
     def wheel_forward(self, obj, event):
         sv = self.pick_viewer()
@@ -496,10 +511,13 @@ class QuadStyle(vtkInteractorStyleImage):
         self.GetInteractor().GetRenderWindow().Render()
 
 
-def create_vtk_pipeline(ct_path: str, mask_dir: str = None, render_window=None, enable_editing=False):
+def create_vtk_pipeline(ct_path: str, mask_dir: str = None, render_window=None, enable_editing=False, save_callback=None):
     """
     Create the VTK pipeline for the quad viewer.
     Returns the interactor style that should be attached to the render window's interactor.
+    
+    Args:
+        save_callback: Optional callback function to call when masks are saved via 'S' key
     """
     vtk.vtkObject.GlobalWarningDisplayOff()
     if render_window is None:
@@ -630,7 +648,8 @@ def create_vtk_pipeline(ct_path: str, mask_dir: str = None, render_window=None, 
     interactor_style = QuadStyle(viewers, arr, img.GetOrigin(), img.GetSpacing(),
                                  enable_editing=enable_editing,
                                  label_actors=label_actors if legend_labels else None,
-                                 editable_masks=editable_masks if enable_editing else None)
+                                 editable_masks=editable_masks if enable_editing else None,
+                                 save_callback=save_callback)  # Pass save callback
 
     if legend_labels:
         interactor_style.mode_button = mode_btn
@@ -639,7 +658,7 @@ def create_vtk_pipeline(ct_path: str, mask_dir: str = None, render_window=None, 
     return interactor_style
 
 
-def add_masks_to_pipeline(viewers, img, mask_dir, render_window, enable_editing=False):
+def add_masks_to_pipeline(viewers, img, mask_dir, render_window, enable_editing=False, save_callback=None):
     """Add masks to an existing VTK pipeline (legend without coloured squares)."""
     try:
         mask_paths = sorted(glob.glob(os.path.join(mask_dir, '*.nii.gz')))
@@ -750,7 +769,7 @@ def add_masks_to_pipeline(viewers, img, mask_dir, render_window, enable_editing=
 
 
 def update_interactor_style_for_editing(interactor_style, label_actors, editable_masks,
-                                       mode_button, brush_label):
+                                       mode_button, brush_label, save_callback=None):
     """Enable editing on an existing interactor style (labels only, no squares)."""
     if not hasattr(interactor_style, 'enable_editing'):
         return
@@ -759,6 +778,7 @@ def update_interactor_style_for_editing(interactor_style, label_actors, editable
     interactor_style.editable_masks = editable_masks
     interactor_style.mode_button = mode_button
     interactor_style.brush_label = brush_label
+    interactor_style.save_callback = save_callback  # Set save callback
     interactor_style.selected_idx = 0
     interactor_style.edit_mode = False
     interactor_style.brush_size = 1
