@@ -170,32 +170,112 @@ class Ui_Form(object):
 
     def retranslateUi(self, Form):
         Form.setWindowTitle(QCoreApplication.translate("Form", u"Form", None))
-        self.group_lbl.setText(QCoreApplication.translate("Form", u"Group:", None))
-        self.patient_lbl.setText(QCoreApplication.translate("Form", u"Patient:", None))
+        self.patient_lbl.setText(QCoreApplication.translate("Form", u"Project:", None))
         self.label.setText("")
         self.label_2.setText("")
-        self.textBrowser.setHtml(QCoreApplication.translate("Form", u"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
-"<html><head><meta name=\"qrichtext\" content=\"1\" /><meta charset=\"utf-8\" /><style type=\"text/css\">\n"
-"p, li { white-space: pre-wrap; }\n"
-"hr { height: 1px; border-width: 0; }\n"
-"li.unchecked::marker { content: \"\\2610\"; }\n"
-"li.checked::marker { content: \"\\2612\"; }\n"
-"</style></head><body style=\" font-family:'Segoe UI'; font-size:10pt; font-weight:400; font-style:normal;\">\n"
-"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><a name=\"chat-messages-1347034336519786528-1407610463646257205\"></a><span style=\" font-family:'inherit'; font-weight:700; color:#000000;\">B</span><span style=\" font-family:'inherit'; font-weight:700; color:#000000;\">rowse modes</span><span style=\" font-family:'inherit'; color:#000000;\"> </span></p>\n"
-"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block"
-                        "-indent:0; text-indent:0px;\"><span style=\" font-family:'inherit'; color:#000000;\">Scroll: View slices</span></p>\n"
-"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:'inherit'; color:#000000;\">Ctrl + Scroll: Zoom in/out</span></p>\n"
-"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:'inherit'; color:#000000;\">Ctrl + Shift + Left Drag: Pan</span></p>\n"
-"<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'inherit'; color:#000000;\"><br /></p>\n"
-"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:'inherit'; font-weight:700; color:#000000;\">Edit Modes</span></p>\n"
-"<p style=\" margin-top:0px; margin-bottom:0px; m"
-                        "argin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:'inherit'; color:#000000;\">Left drag: Paint</span></p>\n"
-"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:'inherit'; color:#000000;\">Ctrl+Left drag: Erase</span></p>\n"
-"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:'inherit'; color:#000000;\">Ctrl+Shift+Left: Pan</span></p>\n"
-"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:'inherit'; color:#000000;\">+/-: Brush size</span></p>\n"
-"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:'inherit'; color:#000000;\">S: Save</span></p>\n"
-"<p style=\" margin-top:0px; margin"
-                        "-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:'inherit'; color:#000000;\">R: Reset</span></p></body></html>", None))
-        self.segment_btn.setText(QCoreApplication.translate("Form", u"Segment CT", None))
-    # retranslateUi
 
+        # Apply improved styling with subtle shadow-like border
+        self.textBrowser.setStyleSheet("""
+            QTextBrowser { 
+                border: none; 
+                background-color: transparent; 
+
+                border-radius: 6px;
+                padding: 8px;
+            }
+        """)
+
+        # Complete replacement for the textBrowser.setHtml() call with improved table-like layout:
+        self.textBrowser.setHtml(QCoreApplication.translate("Form", 
+        u"""<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0//EN" "http://www.w3.org/TR/REC-html40/strict.dtd">
+        <html><head><meta name="qrichtext" content="1" /><meta charset="utf-8" /><style type="text/css">
+        p, li { white-space: pre-wrap; }
+        hr { height: 1px; border-width: 0; }
+        li.unchecked::marker { content: "\\2610"; }
+        li.checked::marker { content: "\\2612"; }
+        .shortcut-title { 
+            font-weight: bold; 
+            font-size: 12pt; 
+            color: #000000; 
+            margin-bottom: 15px; 
+            text-align: center;
+        }
+        .shortcut-section { 
+            font-weight: bold; 
+            font-size: 11pt; 
+            color: #000000; 
+            margin-top: 15px; 
+            margin-bottom: 8px; 
+            text-decoration: underline;
+        }
+        .shortcut-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+        .shortcut-table td {
+            padding: 2px 0px;
+            vertical-align: top;
+        }
+        .shortcut-action { 
+            font-weight: bold; 
+            color: #000000; 
+            width: 60%;
+            text-align: left;
+        }
+        .shortcut-control { 
+            color: #666666; 
+            width: 40%;
+            text-align: left;
+            padding-left: 5px;
+        }
+        </style></head><body style="font-family:'Segoe UI'; font-size:10pt; font-weight:400; font-style:normal;">
+
+        <p class="shortcut-title">SHORTCUTS</p>
+
+        <p class="shortcut-section">Browse Mode</p>
+        <table class="shortcut-table">
+            <tr>
+                <td class="shortcut-action">View Slices</td>
+                <td class="shortcut-control">Scroll</td>
+            </tr>
+            <tr>
+                <td class="shortcut-action">Zoom</td>
+                <td class="shortcut-control">Ctrl + Scroll</td>
+            </tr>
+            <tr>
+                <td class="shortcut-action">Pan</td>
+                <td class="shortcut-control">Ctrl + Shift + Left Drag</td>
+            </tr>
+        </table>
+
+        <p class="shortcut-section">Edit Mode</p>
+        <table class="shortcut-table">
+            <tr>
+                <td class="shortcut-action">Paint</td>
+                <td class="shortcut-control">Left Drag</td>
+            </tr>
+            <tr>
+                <td class="shortcut-action">Erase</td>
+                <td class="shortcut-control">Ctrl + Left Drag</td>
+            </tr>
+            <tr>
+                <td class="shortcut-action">Pan</td>
+                <td class="shortcut-control">Ctrl + Shift + Left Drag</td>
+            </tr>
+            <tr>
+                <td class="shortcut-action">Brush Size</td>
+                <td class="shortcut-control">+/-</td>
+            </tr>
+            <tr>
+                <td class="shortcut-action">Save Edits</td>
+                <td class="shortcut-control">S</td>
+            </tr>
+            <tr>
+                <td class="shortcut-action">Reset Mask</td>
+                <td class="shortcut-control">R</td>
+            </tr>
+        </table>
+
+        </body></html>""", None))
+        self.segment_btn.setText(QCoreApplication.translate("Form", u"Segment CT", None))
