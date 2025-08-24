@@ -490,10 +490,6 @@ class QuadStyle(vtkInteractorStyleImage):
         elif key == 's':
             # Save all modified masks
             self.save_masks()
-        elif key == 'r':
-            # Reset current mask to original
-            if self.edit_mode and self.selected_idx < len(self.editable_masks):
-                self.reset_mask(self.selected_idx)
 
     def update_brush_label(self):
         if self.brush_label:
@@ -512,16 +508,6 @@ class QuadStyle(vtkInteractorStyleImage):
             print(f"Saved {saved_count} modified masks")
         else:
             print("No masks were modified")
-
-    def reset_mask(self, idx):
-        """Reset mask to original state"""
-        if idx < len(self.editable_masks):
-            mask = self.editable_masks[idx]
-            mask.data = sitk.GetArrayFromImage(mask.original_sitk).copy()
-            mask.update_vtk_data()
-            mask.modified = False
-            self.update_all_viewers()
-            print(f"Reset mask {idx} to original state")
 
     def wheel_forward(self, obj, event):
         sv = self.pick_viewer()

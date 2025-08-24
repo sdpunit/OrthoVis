@@ -271,10 +271,6 @@ class Ui_Form(object):
                 <td class="shortcut-action">Save Edits</td>
                 <td class="shortcut-control">S</td>
             </tr>
-            <tr>
-                <td class="shortcut-action">Reset Mask</td>
-                <td class="shortcut-control">R</td>
-            </tr>
         </table>
 
         </body></html>""", None))

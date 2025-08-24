@@ -486,7 +486,7 @@ class Segmentation(QWidget):
                                     self.mode_button = actor
                                 elif "Brush Size:" in input_text:
                                     self.brush_label = actor
-                                elif input_text not in ["Edit Mode:\nLeft drag: Paint\nCtrl+Left drag: Erase\nCtrl+Shift+Left: Pan\n+/-: Brush size\nS: Save\nR: Reset"]:
+                                elif input_text not in ["Edit Mode:\nLeft drag: Paint\nCtrl+Left drag: Erase\nCtrl+Shift+Left: Pan\n+/-: Brush size\nS: Save"]:
                                     # This is likely a mask label
                                     self.label_actors.append(actor)
                         
