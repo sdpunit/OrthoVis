@@ -17,7 +17,8 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QApplication, QFormLayout, QFrame, QGraphicsView,
     QHBoxLayout, QLabel, QPushButton, QSizePolicy,
-    QTextBrowser, QVBoxLayout, QWidget)
+    QTextBrowser, QVBoxLayout, QWidget, QListWidget, QListWidgetItem,
+    QCheckBox, QScrollArea)
 
 from widgets.sidebar.sidebar import Sidebar
 from widgets.titlebar.titlebar import Titlebar
@@ -114,41 +115,130 @@ class Ui_Form(object):
 
         self.verticalLayout_2.addLayout(self.info)
 
-        self.progress_wdg = QWidget(self.details)
-        self.progress_wdg.setObjectName(u"progress_wdg")
-        self.verticalLayout_3 = QVBoxLayout(self.progress_wdg)
-        self.verticalLayout_3.setObjectName(u"verticalLayout_3")
-        self.textBrowser = QTextBrowser(self.progress_wdg)
+        # Shortcuts and ROI Selection Widget
+        self.content_wdg = QWidget(self.details)
+        self.content_wdg.setObjectName(u"content_wdg")
+        self.content_layout = QVBoxLayout(self.content_wdg)
+        self.content_layout.setObjectName(u"content_layout")
+        
+        # Shortcuts TextBrowser
+        self.textBrowser = QTextBrowser(self.content_wdg)
         self.textBrowser.setObjectName(u"textBrowser")
         font = QFont()
         font.setPointSize(10)
         self.textBrowser.setFont(font)
+        self.content_layout.addWidget(self.textBrowser)
 
-        self.verticalLayout_3.addWidget(self.textBrowser)
+        # ROI Selection Widget (hidden in editing mode)
+        self.roi_selection_widget = QWidget(self.content_wdg)
+        self.roi_selection_widget.setObjectName(u"roi_selection_widget")
+        self.roi_layout = QVBoxLayout(self.roi_selection_widget)
+        self.roi_layout.setObjectName(u"roi_layout")
+        self.roi_layout.setContentsMargins(9, 9, 6, 6)
 
+        # ROI Section Title
+        self.roi_title = QLabel(self.roi_selection_widget)
+        self.roi_title.setObjectName(u"roi_title")
+        self.roi_title.setStyleSheet(u"font: 600 12pt \"Segoe UI\"; margin-bottom: 8px;")
+        self.roi_title.setText("Select ROI")
+        self.roi_layout.addWidget(self.roi_title)
 
-        self.verticalLayout_2.addWidget(self.progress_wdg)
+        # ROI List with checkboxes
+        self.roi_scroll_area = QScrollArea(self.roi_selection_widget)
+        self.roi_scroll_area.setObjectName(u"roi_scroll_area")
+        self.roi_scroll_area.setMaximumHeight(150)
+        self.roi_scroll_area.setWidgetResizable(True)
+        self.roi_scroll_area.setStyleSheet(u"""
+            QScrollArea {
+                border: 1px solid #cccccc;
+                border-radius: 4px;
+                background-color: white;
+            }
+        """)
+        
+        self.roi_content_widget = QWidget()
+        self.roi_content_layout = QVBoxLayout(self.roi_content_widget)
+        self.roi_content_layout.setContentsMargins(5, 5, 5, 5)
+        self.roi_content_layout.setSpacing(2)
+        
+        self.roi_scroll_area.setWidget(self.roi_content_widget)
+        self.roi_layout.addWidget(self.roi_scroll_area)
+
+        self.content_layout.addWidget(self.roi_selection_widget)
+        self.verticalLayout_2.addWidget(self.content_wdg)
 
         self.button_wdg = QWidget(self.details)
         self.button_wdg.setObjectName(u"button_wdg")
-        self.horizontalLayout_3 = QHBoxLayout(self.button_wdg)
-        self.horizontalLayout_3.setObjectName(u"horizontalLayout_3")
+        self.button_layout = QVBoxLayout(self.button_wdg)
+        self.button_layout.setObjectName(u"button_layout")
+        self.button_layout.setSpacing(10)
+
+        # Main segmentation button
         self.segment_btn = QPushButton(self.button_wdg)
         self.segment_btn.setObjectName(u"segment_btn")
         self.segment_btn.setMinimumSize(QSize(0, 40))
-        self.segment_btn.setStyleSheet(u"background-color: rgb(255, 215, 0);\n"
-"border-radius: 10px;\n"
-"border: none;\n"
+        self.segment_btn.setStyleSheet(u"QPushButton {\n"
+"background-color: rgb(255, 215, 0);\n"
 "font: 600 12pt \"Segoe UI\";\n"
+"border-radius: 10px;}\n"
+"\n"
+"QPushButton:hover {\n"
+"background-color: rgb(255, 230, 50);\n"
+"font-size: 14pt;\n"
+"}\n"
 "")
 
-        self.horizontalLayout_3.addWidget(self.segment_btn)
+        self.button_layout.addWidget(self.segment_btn)
 
+        # Editing mode buttons (hidden in browse mode)
+        self.editing_buttons_widget = QWidget(self.button_wdg)
+        self.editing_buttons_widget.setObjectName(u"editing_buttons_widget")
+        self.editing_buttons_layout = QVBoxLayout(self.editing_buttons_widget)
+        self.editing_buttons_layout.setSpacing(10)
+        self.editing_buttons_layout.setContentsMargins(0, 0, 0, 0)
+
+        # Save Edits Button
+        self.save_edits_btn = QPushButton(self.editing_buttons_widget)
+        self.save_edits_btn.setObjectName(u"save_edits_btn")
+        self.save_edits_btn.setMinimumSize(QSize(0, 40))
+        self.save_edits_btn.setStyleSheet(u"QPushButton {\n"
+"background-color: rgb(255, 215, 0);\n"
+"font: 600 12pt \"Segoe UI\";\n"
+"border-radius: 10px;}\n"
+"\n"
+"QPushButton:hover {\n"
+"background-color: rgb(255, 230, 50);\n"
+"font-size: 14pt;\n"
+"}\n"
+"")
+        self.editing_buttons_layout.addWidget(self.save_edits_btn)
+
+        # Proceed to Calibration Button
+        self.proceed_calibration_btn = QPushButton(self.editing_buttons_widget)
+        self.proceed_calibration_btn.setObjectName(u"proceed_calibration_btn")
+        self.proceed_calibration_btn.setMinimumSize(QSize(0, 40))
+        self.proceed_calibration_btn.setStyleSheet(u"QPushButton {\n"
+"background-color: rgb(255, 215, 0);\n"
+"font: 600 12pt \"Segoe UI\";\n"
+"border-radius: 10px;}\n"
+"\n"
+"QPushButton:hover {\n"
+"background-color: rgb(255, 230, 50);\n"
+"font-size: 14pt;\n"
+"}\n"
+"")
+        self.editing_buttons_layout.addWidget(self.proceed_calibration_btn)
+
+        self.button_layout.addWidget(self.editing_buttons_widget)
+
+        # Initially hide editing buttons
+        self.editing_buttons_widget.hide()
 
         self.verticalLayout_2.addWidget(self.button_wdg)
 
         self.verticalLayout_2.setStretch(0, 1)
-        self.verticalLayout_2.setStretch(1, 5)
+        self.verticalLayout_2.setStretch(1, 4)
+        self.verticalLayout_2.setStretch(2, 1)
 
         self.horizontalLayout_2.addWidget(self.details)
 
@@ -249,29 +339,7 @@ class Ui_Form(object):
             </tr>
         </table>
 
-        <p class="shortcut-section">Edit Mode</p>
-        <table class="shortcut-table">
-            <tr>
-                <td class="shortcut-action">Paint</td>
-                <td class="shortcut-control">Drag</td>
-            </tr>
-            <tr>
-                <td class="shortcut-action">Erase</td>
-                <td class="shortcut-control">Ctrl + Drag</td>
-            </tr>
-            <tr>
-                <td class="shortcut-action">Pan</td>
-                <td class="shortcut-control">Ctrl + Shift + Drag</td>
-            </tr>
-            <tr>
-                <td class="shortcut-action">Brush Size</td>
-                <td class="shortcut-control">+/-</td>
-            </tr>
-            <tr>
-                <td class="shortcut-action">Save Edits</td>
-                <td class="shortcut-control">S</td>
-            </tr>
-        </table>
-
         </body></html>""", None))
         self.segment_btn.setText(QCoreApplication.translate("Form", u"Segment CT", None))
+        self.save_edits_btn.setText(QCoreApplication.translate("Form", u"Save Edits", None))
+        self.proceed_calibration_btn.setText(QCoreApplication.translate("Form", u"Proceed to Calibration", None))
