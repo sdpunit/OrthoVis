@@ -24,9 +24,6 @@ appendicular = ["patella", "tibia", "fibula", "tarsal", "metatarsal","phalanges_
                 "ulna", "radius", "carpal", "metacarpal", "phalanges_hand"
                 ]
 
-# Default ROI removed - user must select bones via GUI
-# roi = ["tibia", "patella", "fibula", "femur_right"]  # REMOVED
-
 def get_all_available_bones():
     """Get all available bones from both total and appendicular lists"""
     return total + appendicular
@@ -43,9 +40,7 @@ def setup_totalsegmentator():
     # Try different ways to run TotalSegmentator
     methods = [
         ['TotalSegmentator'],  # Direct command
-        [os.path.join(scripts_path, 'TotalSegmentator')],  # Full path
-        [os.path.join(scripts_path, 'TotalSegmentator.exe')],  
-        [sys.executable, '-m', 'TotalSegmentator'],  # As module
+        [os.path.join(scripts_path, 'TotalSegmentator.exe')]
     ]
     
     for method in methods:
@@ -303,9 +298,9 @@ def run_complete_segmentation(ct_dir: str, seg_dir: str, custom_roi: list = None
         
         # Final verification that original CT is untouched
         if not os.path.exists(ct_dir):
-            raise Exception(f"CRITICAL: Original CT directory was deleted: {ct_dir}")
+            raise Exception(f"Critical: Original CT directory was deleted: {ct_dir}")
         
-        print("Segmentation completed! Original CT files preserved.")
+        print("Segmentation completed!")
         return True
         
     except Exception as e:
