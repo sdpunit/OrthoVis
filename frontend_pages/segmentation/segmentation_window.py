@@ -1,13 +1,12 @@
 # segmentation_window.py
 
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QMessageBox, QApplication, QPushButton, QCheckBox
+from PySide6.QtWidgets import QWidget, QMessageBox, QCheckBox
 from PySide6.QtCore import QTimer, QThread, Signal
 from vtkmodules.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
-import vtk
 
 # Import the UI form
 from frontend_pages.segmentation.ui_segmentation_window import Ui_Form
-from seg.embedding import create_vtk_pipeline, add_masks_to_pipeline, update_interactor_style_for_editing
+from seg.embedding import create_vtk_pipeline, add_masks_to_pipeline
 from seg.totalseg import load_ct, get_all_available_bones
 from classes.objects import SingletonPatient, Context
 import os
@@ -369,10 +368,9 @@ class Segmentation(QWidget):
         self.ct_dir = patient.CT
         self.mask_dir = patient.seg_masks_dir
         
-        # Update the project name in the UI with proper spacing
+        # Update the project name in the UI
         if patient.name:
             self.ui.label_2.setText(f"   {patient.name}")  # Add spaces for horizontal spacing
-            print(f"Updated project name display: {patient.name}")
         
         print(f"Backend CT path: {self.ct_dir}")
         print(f"Backend mask path: {self.mask_dir}")
@@ -409,7 +407,6 @@ class Segmentation(QWidget):
         patient = singleton.patient
         if patient.name:
             self.ui.label_2.setText(f"    {patient.name}")  # Add spaces for horizontal spacing
-            print(f"Updated project name display: {patient.name}")
     
         self.set_context(context)
 
@@ -651,9 +648,7 @@ class Segmentation(QWidget):
             # Switch to editing mode and add masks to visualization WITH EDITING ENABLED
             self.set_editing_mode(True)
             
-            if self.mask_dir and os.path.exists(self.mask_dir):
-                print("Adding masks to visualization with EDITING enabled...")
-                
+            if self.mask_dir and os.path.exists(self.mask_dir):                
                 # Show brief loading message for mask overlay
                 self.show_progress_dialog("Adding Masks", "Overlaying segmentation masks in EDIT mode...")
                 
@@ -826,7 +821,7 @@ class Segmentation(QWidget):
         
         # TODO: Implement transition to calibration page
         print("Proceeding to calibration...")
-        self.show_info("Proceeding to calibration step...")
+        self.show_info("Proceeding to calibration...")
 
     def refresh_visualization(self):
         """Refresh the VTK visualization - called when switching to this page"""
@@ -880,7 +875,7 @@ class Segmentation(QWidget):
     def showEvent(self, event):
         """Called when the widget is shown"""
         super().showEvent(event)
-        # Don't auto-initialize here anymore - handled by set_context
+        # Initialization handled by set_context
 
     def resizeEvent(self, event):
         """Handle resize events"""

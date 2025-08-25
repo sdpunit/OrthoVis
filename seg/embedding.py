@@ -7,7 +7,6 @@ currently selected mask's label enlarges and adopts that mask's colour.
 import os, glob
 import vtk
 import SimpleITK as sitk
-import numpy as np
 from vtkmodules.vtkInteractionStyle import vtkInteractorStyleImage
 from vtkmodules.vtkInteractionImage import vtkImageViewer2
 from vtkmodules.vtkRenderingCore import (
