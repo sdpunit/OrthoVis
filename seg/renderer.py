@@ -7,9 +7,9 @@ Features:
  2. Mouse wheel scrolls slices in the quadrant under the cursor; Ctrl + wheel zooms.
  3. Slice count labels in each quadrant showing "<View> \n Slice: X/N".
  4. Legend for segmentation masks in the top-right quadrant; default mask opacity 0.9.
- 5. NEW: Pixel editing - Left drag to paint, Ctrl+Left drag to erase
- 6. NEW: Adjustable brush size with +/- keys
- 7. NEW: Save edited masks functionality
+ 5. Pixel editing - Drag to paint, Ctrl+Drag to erase
+ 6. Adjustable brush size with +/- keys
+ 7. Save edited masks functionality
 """
 import os, glob, argparse, vtk 
 import SimpleITK as sitk
@@ -417,7 +417,7 @@ class QuadStyle(vtkInteractorStyleImage):
         shift_key = self.GetInteractor().GetShiftKey()
 
         if ctrl_key and shift_key:
-            # Ctrl+Shift+Left drag = Pan
+            # Ctrl+Shift+Drag = Pan
             self.active_viewer = sv
             self.panning = True
             cam = sv.viewer.GetRenderer().GetActiveCamera()
@@ -429,10 +429,10 @@ class QuadStyle(vtkInteractorStyleImage):
             world_pos = self.get_world_position(sv)
             if world_pos:
                 if ctrl_key:
-                    # Ctrl+Left drag = erase (set to 0)
+                    # Ctrl+Drag = erase (set to 0)
                     operation = 'erase'
                 else:
-                    # Left drag = paint (set to 1)
+                    # Drag = paint (set to 1)
                     operation = 'paint'
                 
                 sv.edit_pixel(world_pos, self.selected_idx, operation, self.brush_size)
@@ -490,10 +490,6 @@ class QuadStyle(vtkInteractorStyleImage):
         elif key == 's':
             # Save all modified masks
             self.save_masks()
-        elif key == 'r':
-            # Reset current mask to original
-            if self.edit_mode and self.selected_idx < len(self.editable_masks):
-                self.reset_mask(self.selected_idx)
 
     def update_brush_label(self):
         if self.brush_label:
@@ -512,16 +508,6 @@ class QuadStyle(vtkInteractorStyleImage):
             print(f"Saved {saved_count} modified masks")
         else:
             print("No masks were modified")
-
-    def reset_mask(self, idx):
-        """Reset mask to original state"""
-        if idx < len(self.editable_masks):
-            mask = self.editable_masks[idx]
-            mask.data = sitk.GetArrayFromImage(mask.original_sitk).copy()
-            mask.update_vtk_data()
-            mask.modified = False
-            self.update_all_viewers()
-            print(f"Reset mask {idx} to original state")
 
     def wheel_forward(self, obj, event):
         sv = self.pick_viewer()

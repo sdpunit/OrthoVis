@@ -1,6 +1,4 @@
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QPushButton
-from PySide6.QtGui import QIcon
-from PySide6.QtCore import QSize
+from PySide6.QtWidgets import QWidget
 from widgets.titlebar.ui_titlebar import Ui_TitleBar
 
 class Titlebar(QWidget):

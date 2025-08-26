@@ -176,6 +176,10 @@ class Context:
     def request_process(self) -> bool:
         return self._singleton_data._state.handle_process()
 
+    def request_process_with_roi(self, custom_roi: list) -> bool:
+        """Request processing with custom ROI"""
+        return self._singleton_data._state.handle_process_with_roi(custom_roi)
+
     def request_save(self, patient: SingletonPatient) -> str:
         return self._singleton_data._state.handle_save(patient)
     
@@ -205,6 +209,10 @@ class DataState(ABC):
     def handle_process(self) -> bool:
         pass
 
+    def handle_process_with_roi(self, custom_roi: list) -> bool:
+        """Handle processing with custom ROI - default implementation calls handle_process"""
+        return self.handle_process()
+
     @abstractmethod
     def handle_save(self, patient: SingletonPatient) -> str:
         pass
@@ -225,34 +233,45 @@ Context.
 class RawState(DataState):
 
     def handle_process(self) -> bool:
-        """Handle segmentation in SegmentState"""
+        """Handle segmentation in RawState - this should not be called directly anymore"""
+        print("RawState: handle_process called without ROI - use handle_process_with_roi instead")
+        return False
+
+    def handle_process_with_roi(self, custom_roi: list) -> bool:
+        """Handle segmentation in RawState with custom ROI"""
         try:
             from seg.totalseg import run_complete_segmentation
+            
+            # Validate custom ROI
+            if not custom_roi or len(custom_roi) == 0:
+                print("RawState: Custom ROI is empty - segmentation cannot proceed")
+                return False
             
             patient_instance = self.context._singleton_data._patient
             ct_dir = patient_instance.CT
             seg_dir = patient_instance.seg_masks_dir
             
             if not ct_dir or not seg_dir:
-                print("SegmentState: Missing CT or segmentation directory")
+                print("RawState: Missing CT or segmentation directory")
                 return False
             
-            print(f"SegmentState: Running segmentation on {ct_dir}")
-            print(f"SegmentState: Output directory {seg_dir}")
+            print(f"RawState: Running segmentation on {ct_dir}")
+            print(f"RawState: Output directory {seg_dir}")
+            print(f"RawState: Custom ROI: {custom_roi}")
             
-            success = run_complete_segmentation(ct_dir, seg_dir)
+            success = run_complete_segmentation(ct_dir, seg_dir, custom_roi)
             
             if success:
-                print("SegmentState: Segmentation completed successfully")
+                print("RawState: Segmentation completed successfully")
                 # Transition to next state after successful segmentation
                 self.context.transition_to(SegmentState())
             else:
-                print("SegmentState: Segmentation failed")
+                print("RawState: Segmentation failed")
             
             return success
             
         except Exception as e:
-            print(f"SegmentState: Error during segmentation: {e}")
+            print(f"RawState: Error during segmentation: {e}")
             import traceback
             traceback.print_exc()
             return False
@@ -347,6 +366,10 @@ class SegmentState(DataState):
     def handle_process(self) -> bool:
         print("SegmentState wants to change the state of the context.")
         return False
+
+    def handle_process_with_roi(self, custom_roi: list) -> bool:
+        print("SegmentState: Already segmented - no additional processing needed")
+        return True
  
     def handle_save(self, patient: SingletonPatient) -> str:
         print("SegmentState wants to change the state of the context.")
@@ -362,6 +385,9 @@ class CalibrationState(DataState):
         print("CalibrationState wants to change the state of the context.")
         self.context.transition_to(SegmentState())
 
+    def handle_process_with_roi(self, custom_roi: list) -> bool:
+        return self.handle_process()
+
     def handle_save(self, patient: SingletonPatient) -> str:
         print("CalibrationState wants to change the state of the context.")
         self.context.transition_to(SegmentState())
@@ -375,6 +401,9 @@ class RegistrationState(DataState):
     def handle_process(self) -> bool:
         print("RegistrationState wants to change the state of the context.")
         self.context.transition_to(SegmentState())
+
+    def handle_process_with_roi(self, custom_roi: list) -> bool:
+        return self.handle_process()
 
     def handle_save(self, patient: SingletonPatient) -> str:
         print("RegistrationState wants to change the state of the context.")
@@ -390,6 +419,9 @@ class ReferenceSysState(DataState):
         print("ReferenceSysState wants to change the state of the context.")
         self.context.transition_to(SegmentState())
 
+    def handle_process_with_roi(self, custom_roi: list) -> bool:
+        return self.handle_process()
+
     def handle_save(self, patient: SingletonPatient) -> str:
         print("ReferenceSysState wants to change the state of the context.")
         self.context.transition_to(SegmentState())
@@ -403,6 +435,9 @@ class MotionState(DataState):
     def handle_process(self) -> bool:
         print("MotionState wants to change the state of the context.")
         self.context.transition_to(SegmentState())
+
+    def handle_process_with_roi(self, custom_roi: list) -> bool:
+        return self.handle_process()
 
     def handle_save(self, patient: SingletonPatient) -> str:
         print("MotionState wants to change the state of the context.")
@@ -418,6 +453,9 @@ class VisualState(DataState):
     def handle_process(self) -> bool:
         print("VisualState wants to change the state of the context.")
         self.context.transition_to(SegmentState())
+
+    def handle_process_with_roi(self, custom_roi: list) -> bool:
+        return self.handle_process()
 
     def handle_save(self, patient: SingletonPatient) -> str:
         print("VisualState wants to change the state of the context.")
