@@ -288,7 +288,7 @@ class HomePage(QWidget):
             return False
 
     def check_segmentation_masks(self, seg_masks_path: str):
-        """Check segmentation masks directory and report findings"""
+        """Check segmentation masks directory"""
         if not seg_masks_path or not os.path.exists(seg_masks_path):
             print("No segmentation masks directory - will show CT only")
             return
