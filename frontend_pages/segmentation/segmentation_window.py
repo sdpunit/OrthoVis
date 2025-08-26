@@ -2,13 +2,13 @@
 
 from PySide6.QtWidgets import QWidget, QMessageBox, QCheckBox
 from PySide6.QtCore import QTimer, QThread, Signal
-from vtkmodules.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 
 # Import the UI form
 from frontend_pages.segmentation.ui_segmentation_window import Ui_Form
 from seg.embedding import create_vtk_pipeline, add_masks_to_pipeline
 from seg.totalseg import load_ct, get_all_available_bones
 from classes.objects import SingletonPatient, Context
+from classes.utils import ProgressDialogMixin
 import os
 
 
@@ -27,7 +27,7 @@ class SegmentationWorker(QThread):
         self.finished.emit(success)
 
 
-class Segmentation(QWidget):
+class Segmentation(QWidget, ProgressDialogMixin):
     def __init__(self, ct_dir: str = None, mask_dir: str = None):
         super().__init__()
         instance = SingletonPatient.get_instance()
@@ -90,9 +90,6 @@ class Segmentation(QWidget):
             self.ui.proceed_calibration_btn.clicked.connect(self.proceed_to_calibration)
             print("Connected proceed to calibration button")
         
-        # Set up VTK widget
-        self.setupVTKWidget()
-        
         # Initialize ROI selection
         self.setup_roi_selection()
         
@@ -146,35 +143,6 @@ class Segmentation(QWidget):
                 self.selected_roi.remove(bone_name)
         
         print(f"Selected ROI updated: {self.selected_roi}")
-
-    def show_progress_dialog(self, title: str, message: str):
-        """Universal function to show progress dialog"""
-        self.close_progress_dialog()  # Close any existing dialog first
-        
-        self.progress_dialog = QMessageBox(self)
-        self.progress_dialog.setWindowTitle(title)
-        self.progress_dialog.setText(message)
-        self.progress_dialog.setStandardButtons(QMessageBox.NoButton)
-        self.progress_dialog.setModal(True)
-        self.progress_dialog.show()
-
-    def close_progress_dialog(self):
-        """Universal function to close progress dialog"""
-        if hasattr(self, 'progress_dialog') and self.progress_dialog:
-            self.progress_dialog.accept()
-            self.progress_dialog = None
-
-    def setupVTKWidget(self):
-        """Replace the placeholder QGraphicsView with VTK widget"""
-        parent_layout = self.ui.VTK_display.parent().layout()
-        vtk_display_index = parent_layout.indexOf(self.ui.VTK_display)
-        
-        parent_layout.removeWidget(self.ui.VTK_display)
-        self.ui.VTK_display.deleteLater()
-        
-        self.vtk_widget = QVTKRenderWindowInteractor()
-        parent_layout.insertWidget(vtk_display_index, self.vtk_widget, stretch=3)
-        self.ui.VTK_display = self.vtk_widget
 
     def set_editing_mode(self, editing_enabled: bool):
         """Toggle between browse and editing modes"""
@@ -456,7 +424,7 @@ class Segmentation(QWidget):
             import vtk
             vtk.vtkObject.GlobalWarningDisplayOff()
             
-            render_window = self.vtk_widget.GetRenderWindow()
+            render_window = self.ui.VTK_display.GetRenderWindow()
             
             # CRITICAL: Turn OFF on-screen rendering during loading
             render_window.SetOffScreenRendering(True)
@@ -526,7 +494,7 @@ class Segmentation(QWidget):
         """Final VTK initialization and rendering"""
         try:
             print("Final VTK initialization...")
-            self.vtk_widget.Initialize()
+            self.ui.VTK_display.Initialize()
             self._vtk_initialized = True
             
             # Render and then complete loading after successful render
@@ -541,7 +509,7 @@ class Segmentation(QWidget):
         """Render VTK and complete loading process"""
         try:
             print("Rendering VTK...")
-            rw = self.vtk_widget.GetRenderWindow()
+            rw = self.ui.VTK_display.GetRenderWindow()
             rw.Render()
             print("VTK rendering completed")
             
@@ -621,7 +589,7 @@ class Segmentation(QWidget):
             self.ui.segment_btn.setEnabled(False)
         
         if hasattr(self, 'vtk_widget'):
-            self.vtk_widget.setEnabled(False)
+            self.ui.VTK_display.setEnabled(False)
         
         # Start segmentation worker with custom ROI
         self.segmentation_worker = SegmentationWorker(self.context, self.selected_roi)
@@ -640,7 +608,7 @@ class Segmentation(QWidget):
             self.ui.segment_btn.setEnabled(True)
         
         if hasattr(self, 'vtk_widget'):
-            self.vtk_widget.setEnabled(True)
+            self.ui.VTK_display.setEnabled(True)
         
         if success:
             self.show_info("Segmentation completed successfully!")
@@ -686,7 +654,7 @@ class Segmentation(QWidget):
             return False
         
         try:
-            render_window = self.vtk_widget.GetRenderWindow()
+            render_window = self.ui.VTK_display.GetRenderWindow()
             
             # Use enhanced add_masks_to_pipeline with editing support
             success, editable_masks = add_masks_to_pipeline(
@@ -710,7 +678,7 @@ class Segmentation(QWidget):
                     self.editing_enabled = True
                     
                     # Find the UI elements that were created
-                    render_window = self.vtk_widget.GetRenderWindow()
+                    render_window = self.ui.VTK_display.GetRenderWindow()
                     renderers = render_window.GetRenderers()
                     
                     # Look for the legend overlay renderer (layer 1)
@@ -865,7 +833,7 @@ class Segmentation(QWidget):
         print("=== _render_vtk called ===")
         try:
             if hasattr(self, 'vtk_widget'):
-                rw = self.vtk_widget.GetRenderWindow()
+                rw = self.ui.VTK_display.GetRenderWindow()
                 rw.Render()
                 print("VTK rendering completed")
                     
@@ -881,4 +849,4 @@ class Segmentation(QWidget):
         """Handle resize events"""
         super().resizeEvent(event)
         if hasattr(self, 'vtk_widget') and self._vtk_initialized:
-            QTimer.singleShot(10, lambda: self.vtk_widget.GetRenderWindow().Render())
+            QTimer.singleShot(10, lambda: self.ui.VTK_display.GetRenderWindow().Render())

@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (QFormLayout, QFrame, QGraphicsView, QHBoxLayout,
 
 from widgets.sidebar.sidebar import Sidebar
 from widgets.titlebar.titlebar import Titlebar
+from vtkmodules.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 
 class Ui_Form(object):
     def setupUi(self, Form):
@@ -67,8 +68,7 @@ class Ui_Form(object):
         self.mainpanel.setFrameShadow(QFrame.Shadow.Raised)
         self.horizontalLayout_2 = QHBoxLayout(self.mainpanel)
         self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
-        self.VTK_display = QGraphicsView(self.mainpanel)
-        self.VTK_display.setObjectName(u"VTK_display")
+        self.VTK_display = QVTKRenderWindowInteractor(self.mainpanel)
 
         self.horizontalLayout_2.addWidget(self.VTK_display)
 
