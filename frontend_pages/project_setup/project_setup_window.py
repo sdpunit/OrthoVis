@@ -7,13 +7,14 @@ from frontend_pages.project_setup.ui_project_setup_window import Ui_Form
 
 # Import backend objects
 from classes.objects import SingletonPatient, Context, initialize_project, SegmentState
+from classes.utils import ProgressDialogMixin
 
 name = ""
 model = QStandardItemModel()
 path_list = []
 path_dict = {}
 
-class ProjectSetup(QWidget):
+class ProjectSetup(QWidget, ProgressDialogMixin):
     # Signal to notify when project is saved
     project_saved = Signal()
     
@@ -49,23 +50,6 @@ class ProjectSetup(QWidget):
                 text-align: center;}
         """
         )
-
-    def show_progress_dialog(self, title: str, message: str):
-        """Universal function to show progress dialog"""
-        self.close_progress_dialog()  # Close any existing dialog first
-        
-        self.progress_dialog = QMessageBox(self)
-        self.progress_dialog.setWindowTitle(title)
-        self.progress_dialog.setText(message)
-        self.progress_dialog.setStandardButtons(QMessageBox.NoButton)
-        self.progress_dialog.setModal(True)
-        self.progress_dialog.show()
-
-    def close_progress_dialog(self):
-        """Universal function to close progress dialog"""
-        if hasattr(self, 'progress_dialog') and self.progress_dialog:
-            self.progress_dialog.accept()
-            self.progress_dialog = None
 
     def handleSave(self):
         projectName = self.ui.projectNameInput.text()
