@@ -1,7 +1,7 @@
 # main_window.py
-from PySide6.QtWidgets import QMainWindow, QStackedWidget, QPushButton, QWidget, QVBoxLayout
+from PySide6.QtWidgets import QMainWindow, QStackedWidget
 from PySide6.QtCore import QTimer
-import os
+from PySide6.QtGui import QIcon
 
 # Import the application pages from frontend_pages.
 from frontend_pages.startup.startup_window import HomePage
@@ -22,6 +22,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("OrthoVis 2.0")
+        self.setWindowIcon(QIcon("assets/logo_small.png"))
 
         # Initialize backend context and singleton
         self.singleton = SingletonPatient.get_instance()
@@ -69,10 +70,6 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(self.stack)
 
         self.stack.setCurrentIndex(0)             # Start at the opening page
-
-    def get_segmentation_page(self):
-        """Get the segmentation page widget"""
-        return self.segmentation
 
     def on_project_saved(self):
         """Handle project saved event from project setup - FOR NEW PROJECTS"""

@@ -1,21 +1,20 @@
 # This file can open pop up for importing both CT and Fluroscopy
-from PySide6.QtWidgets import QWidget, QMessageBox, QApplication
+from PySide6.QtWidgets import QWidget, QMessageBox, QFileDialog, QHBoxLayout, QLabel, QPushButton, QWidget, QListWidgetItem
 from PySide6.QtGui import QStandardItemModel
-from PySide6.QtWidgets import (QApplication, QHBoxLayout, QLabel, QPushButton, QWidget, QListWidgetItem)
+from PySide6.QtCore import Signal
+
 from frontend_pages.project_setup.ui_project_setup_window import Ui_Form
-from PySide6.QtWidgets import QFileDialog
-from PySide6.QtWidgets import QWidget, QLabel, QPushButton, QHBoxLayout, QListWidgetItem, QMessageBox
-from PySide6.QtCore import Signal, QTimer
 
 # Import backend objects
 from classes.objects import SingletonPatient, Context, initialize_project, SegmentState
+from classes.utils import ProgressDialogMixin
 
 name = ""
 model = QStandardItemModel()
 path_list = []
 path_dict = {}
 
-class ProjectSetup(QWidget):
+class ProjectSetup(QWidget, ProgressDialogMixin):
     # Signal to notify when project is saved
     project_saved = Signal()
     
@@ -25,7 +24,7 @@ class ProjectSetup(QWidget):
         self.ui.setupUi(self)
         
         # Initialize attributes for dialog and transition handling
-        self.loading_msg = None
+        self.progress_dialog = None  # Single dialog for all progress messages
         self.pending_stacked_widget = None
         self.pending_main_window = None
 
@@ -72,9 +71,6 @@ class ProjectSetup(QWidget):
             return
 
         try:
-            # Show loading dialog and STAY on project setup page
-            self.show_loading_dialog_with_message("Loading data...")
-            
             # Get singleton and update patient data
             singleton = SingletonPatient.get_instance()
             patient = singleton.patient
@@ -99,7 +95,7 @@ class ProjectSetup(QWidget):
             context.request_save(singleton)
             
             # Transition to segmentation state
-            context.transition_to(SegmentState())
+            #context.transition_to(SegmentState())
             
             self.ui.save.setEnabled(False)
             
@@ -149,7 +145,7 @@ class ProjectSetup(QWidget):
                 else:
                     print("ERROR: No set_context method found")
                     self.show_error("Internal error: Cannot set context on segmentation page")
-                    self.force_close_loading_dialog()
+                    self.close_progress_dialog()
                     return
                 
                 # Store context in main window
@@ -163,78 +159,21 @@ class ProjectSetup(QWidget):
             else:
                 print("ERROR: Could not find segmentation page")
                 self.show_error("Internal error: Segmentation page not available")
-                self.force_close_loading_dialog()
+                self.close_progress_dialog()
 
         except FileNotFoundError as e:
-            self.show_error(f"File not found, make sure you select file with CT file(SE000003) and Fluoroscopy file(SE000001) in the same folder.")
-            self.force_close_loading_dialog()
+            self.show_error(f"File not found, make sure you select folder with CT and Fluoroscopy files in the same path.")
+            self.close_progress_dialog()
         except Exception as e:
             self.show_error(f"Error saving project: {str(e)}")
-            self.force_close_loading_dialog()
-
-    def show_loading_dialog_with_message(self, message: str):
-        """Show loading dialog with custom message"""
-        # Close any existing dialog first
-        if hasattr(self, 'loading_msg') and self.loading_msg:
-            self.loading_msg.close()
-            self.loading_msg = None
-        
-        self.loading_msg = QMessageBox(self)
-        self.loading_msg.setWindowTitle("Loading Project")
-        self.loading_msg.setText(message)
-        self.loading_msg.setStandardButtons(QMessageBox.NoButton)
-        self.loading_msg.setModal(False)  # Make non-modal to prevent blocking
-        self.loading_msg.show()
-        QApplication.processEvents()
-        print(f"Loading dialog shown: {message}")
-
-    def force_close_loading_dialog(self):
-        """Force close loading dialog with multiple methods"""
-        print("=== Force closing loading dialog ===")
-        
-        try:
-            if hasattr(self, 'loading_msg') and self.loading_msg:
-                print("Attempting to close loading dialog...")
-                
-                # Try multiple methods to close the dialog
-                self.loading_msg.setVisible(False)
-                self.loading_msg.close()
-                self.loading_msg.hide()
-                self.loading_msg.reject()
-                
-                # Process events multiple times
-                for i in range(5):
-                    QApplication.processEvents()
-                
-                # Delete the dialog
-                self.loading_msg.deleteLater()
-                self.loading_msg = None
-                
-                print("Loading dialog forcefully closed")
-                
-            else:
-                print("No loading dialog to close")
-                
-        except Exception as e:
-            print(f"Error force closing loading dialog: {e}")
-        
-        # Clean up attribute
-        if hasattr(self, 'loading_msg'):
-            try:
-                delattr(self, 'loading_msg')
-            except:
-                pass
-        
-        # Force additional UI updates
-        for i in range(3):
-            QTimer.singleShot(50 * (i + 1), lambda: QApplication.processEvents())
+            self.close_progress_dialog()
 
     def on_vtk_loading_complete(self):
         """Called when VTK loading is complete - transition to segmentation page"""
         print("VTK loading complete - transitioning to segmentation page")
         
-        # Force close the loading dialog
-        self.force_close_loading_dialog()
+        # Close the loading dialog
+        self.close_progress_dialog()
         
         if hasattr(self, 'pending_stacked_widget'):
             self.pending_stacked_widget.setCurrentIndex(2)
