@@ -1,6 +1,7 @@
 # main_window.py
 from PySide6.QtWidgets import QMainWindow, QStackedWidget
 from PySide6.QtCore import QTimer
+from PySide6.QtGui import QIcon
 
 # Import the application pages from frontend_pages.
 from frontend_pages.startup.startup_window import HomePage
@@ -21,6 +22,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("OrthoVis 2.0")
+        self.setWindowIcon(QIcon("assets/logo_small.png"))
 
         # Initialize backend context and singleton
         self.singleton = SingletonPatient.get_instance()
