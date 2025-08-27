@@ -15,8 +15,29 @@ import sys
 # totalseg_set_license -l <your-license-number>
 # totalseg_set_license -l aca_DBGCR896PIOE7A 
 
-# ROIs to segment - these are the only masks we'll keep
-roi = ["femur_right", "fibula", "patella", "tibia"] 
+def _initialize_path():
+    """Initialize PATH for TotalSegmentator at module import"""
+    scripts_path = os.path.join(sys.prefix, 'Scripts')
+    current_path = os.environ.get('PATH', '')
+
+    if scripts_path not in current_path:
+        os.environ['PATH'] = scripts_path + os.pathsep + current_path
+
+# Initialize path immediately when module is imported 
+_initialize_path
+
+total = ["sacrum", "humerus_left", "humerus_right", "scapula_left", "scapula_right",
+         "clavicula_left", "clavicula_right", "femur_left", "femur_right",
+         "hip_left", "hip_right", "spinal_cord", "sternum"
+         ]
+
+appendicular = ["patella", "tibia", "fibula", "tarsal", "metatarsal","phalanges_feet", 
+                "ulna", "radius", "carpal", "metacarpal", "phalanges_hand"
+                ]
+
+def get_all_available_bones():
+    """Get all available bones from both total and appendicular lists"""
+    return total + appendicular
 
 def setup_totalsegmentator():
     """Ensure TotalSegmentator can be run by setting up PATH and finding executable"""
@@ -30,9 +51,7 @@ def setup_totalsegmentator():
     # Try different ways to run TotalSegmentator
     methods = [
         ['TotalSegmentator'],  # Direct command
-        [os.path.join(scripts_path, 'TotalSegmentator')],  # Full path
-        [os.path.join(scripts_path, 'TotalSegmentator.exe')],  # Windows with .exe
-        [sys.executable, '-m', 'TotalSegmentator'],  # As module
+        [os.path.join(scripts_path, 'TotalSegmentator.exe')]
     ]
     
     for method in methods:
@@ -44,10 +63,17 @@ def setup_totalsegmentator():
                 return method
         except:
             continue
-    
-    raise RuntimeError("TotalSegmentator not found. Install with: pip install TotalSegmentator")
 
-def run_totalseg(ct_dir: str, seg_dir: str): 
+    try:
+        import totalsegmentator 
+        print(f"TotalSegmentator package found at: {totalsegmentator.__file__}")
+    except ImportError:
+        print("TotalSegmentator package not installed")
+    
+    raise RuntimeError("TotalSegmentator not found. Install with: pip install TotalSegmentator ")
+    
+
+def run_totalseg(ct_dir: str, seg_dir: str, custom_roi: list): 
     """
     Run TotalSegmentator on CT directory, outputting masks to separate seg_dir.
     Original CT files are never modified.
@@ -55,7 +81,14 @@ def run_totalseg(ct_dir: str, seg_dir: str):
     Args:
         ct_dir: Path to CT directory (DICOM files) - READ ONLY
         seg_dir: Output directory for segmentation masks - WRITE ONLY
+        custom_roi: List of bones to segment (REQUIRED - cannot be None or empty)
     """
+    # Validate custom ROI input
+    if not custom_roi or len(custom_roi) == 0:
+        raise ValueError("Custom ROI cannot be empty. Please select at least one bone to segment.")
+    
+    bones_to_segment = custom_roi
+    
     # Ensure output directory exists
     os.makedirs(seg_dir, exist_ok=True)
     
@@ -65,34 +98,55 @@ def run_totalseg(ct_dir: str, seg_dir: str):
     
     print(f"Reading CT from: {ct_dir} (READ ONLY)")
     print(f"Writing masks to: {seg_dir} (WRITE ONLY)")
+    print(f"Custom ROI bones: {bones_to_segment}")
     
     # Setup TotalSegmentator command
     ts_command = setup_totalsegmentator()
     
-    # Build commands
-    command_total = ts_command + ['-i', ct_dir, '-o', seg_dir, '--ta', 'total']
-    command_appendicular = ts_command + ['-i', ct_dir, '-o', seg_dir, '--ta', 'appendicular_bones']
-
-    # Run segmentation commands
-    print("Running TotalSegmentator (total)...")
-    print(f"Command: {' '.join(command_total)}")
-    subprocess.run(command_total)
+    # Determine which tasks need to be run based on custom ROI
+    needs_total = any(bone in total for bone in bones_to_segment)
+    needs_appendicular = any(bone in appendicular for bone in bones_to_segment)
     
-    print("Running TotalSegmentator (appendicular_bones)...")
-    print(f"Command: {' '.join(command_appendicular)}")
-    subprocess.run(command_appendicular)
+    print(f"Tasks needed - Total: {needs_total}, Appendicular: {needs_appendicular}")
     
-    # Clean up ONLY in seg_dir - never touch ct_dir
+    # Build and run commands based on what's needed
+    if needs_total:
+        command_total = ts_command + ['-i', ct_dir, '-o', seg_dir, '--ta', 'total']
+        print("Running TotalSegmentator (total)...")
+        print(f"Command: {' '.join(command_total)}")
+        
+        # Run without capturing output to show terminal messages
+        process = subprocess.Popen(command_total, stdout=None, stderr=None)
+        process.wait()
+        
+        if process.returncode != 0:
+            print(f"Warning: TotalSegmentator (total) returned code {process.returncode}")
+    
+    if needs_appendicular:
+        command_appendicular = ts_command + ['-i', ct_dir, '-o', seg_dir, '--ta', 'appendicular_bones']
+        print("Running TotalSegmentator (appendicular_bones)...")
+        print(f"Command: {' '.join(command_appendicular)}")
+        
+        # Run without capturing output to show terminal messages
+        process = subprocess.Popen(command_appendicular, stdout=None, stderr=None)
+        process.wait()
+        
+        if process.returncode != 0:
+            print(f"Warning: TotalSegmentator (appendicular_bones) returned code {process.returncode}")
+    
+    # Clean up unwanted masks - keep only the ones in custom ROI
     print("Cleaning up unwanted masks...")
-    rois = {f'{bone}.nii.gz' for bone in roi}
+    rois_to_keep = {f'{bone}.nii.gz' for bone in bones_to_segment}
     
     for f in os.listdir(seg_dir):
-        if f not in rois:
+        if f not in rois_to_keep:
             file_path = os.path.join(seg_dir, f)
             if os.path.isfile(file_path):
                 os.remove(file_path)
+                print(f"Removed unwanted mask: {f}")
             elif os.path.isdir(file_path):
                 shutil.rmtree(file_path)
+                print(f"Removed unwanted directory: {f}")
     
     # Verify original CT directory is untouched
     if not os.path.exists(ct_dir):
@@ -100,6 +154,7 @@ def run_totalseg(ct_dir: str, seg_dir: str):
     
     print(f"TotalSegmentator completed. Original CT preserved at: {ct_dir}")
     print(f"Masks saved to: {seg_dir}")
+    print(f"Generated masks for bones: {list(rois_to_keep)}")
 
 
 import SimpleITK as sitk 
@@ -216,7 +271,7 @@ def refine_mask_adaptive_otsu(mask_path: str, ct_path: str, output_path: str,
     print(f"Hybrid Otsu-adaptive refined mask saved to: {output_path}")
 
 
-def run_complete_segmentation(ct_dir: str, seg_dir: str):
+def run_complete_segmentation(ct_dir: str, seg_dir: str, custom_roi: list = None):
     """
     Complete segmentation pipeline: TotalSegmentator + Otsu refinement
     Original CT directory is never modified - only read from.
@@ -224,6 +279,7 @@ def run_complete_segmentation(ct_dir: str, seg_dir: str):
     Args:
         ct_dir: Path to CT directory (READ ONLY)
         seg_dir: Output directory for refined masks (WRITE ONLY)
+        custom_roi: List of bones to segment (REQUIRED - if None, will raise error)
         
     Returns:
         bool: True if successful, False otherwise
@@ -236,12 +292,19 @@ def run_complete_segmentation(ct_dir: str, seg_dir: str):
             print(f"ERROR: CT directory not found: {ct_dir}")
             return False
         
-        # Step 1: Run TotalSegmentator (only reads from ct_dir)
-        run_totalseg(ct_dir, seg_dir)
+        # Validate custom ROI input (required now since we removed default roi)
+        if not custom_roi or len(custom_roi) == 0:
+            print("ERROR: Custom ROI cannot be empty. Please select at least one bone to segment.")
+            return False
+            
+        print(f"Custom ROI: {custom_roi}")
+        
+        # Step 1: Run TotalSegmentator (only reads from ct_dir) with custom ROI
+        run_totalseg(ct_dir, seg_dir, custom_roi)
         
         # Step 2: Apply Otsu refinement (only works in seg_dir)
         print("Applying Otsu refinement...")
-        for mask_name in roi:
+        for mask_name in custom_roi:  # Use custom_roi instead of the removed roi variable
             original_mask = os.path.join(seg_dir, f"{mask_name}.nii.gz")
             refined_mask = os.path.join(seg_dir, f"{mask_name}_otsu.nii.gz")
             
@@ -253,9 +316,9 @@ def run_complete_segmentation(ct_dir: str, seg_dir: str):
         
         # Final verification that original CT is untouched
         if not os.path.exists(ct_dir):
-            raise Exception(f"CRITICAL: Original CT directory was deleted: {ct_dir}")
+            raise Exception(f"Critical: Original CT directory was deleted: {ct_dir}")
         
-        print("Segmentation completed! Original CT files preserved.")
+        print("Segmentation completed!")
         return True
         
     except Exception as e:
@@ -263,9 +326,6 @@ def run_complete_segmentation(ct_dir: str, seg_dir: str):
         return False
 
 
-if __name__ == "__main__":
-    # Example usage with hardcoded paths
-    ct_dir = r"C:/users/avery/Desktop/PI201/DICOM/P0000001/ST000001/SE000003"
-    seg_dir = r"C:/users/avery/Desktop/segmentation_masks"
-    
-    run_complete_segmentation(ct_dir, seg_dir)
+# if __name__ == "__main__":
+    # Example usage with predefined ct_dir, seg_dir
+    # run_complete_segmentation(ct_dir, seg_dir, custom_roi)
