@@ -1,6 +1,6 @@
 # frontend_pages/registration/registration_window.py
 
-from PySide6.QtCore import Qt, Signal, QSignalBlocker
+from PySide6.QtCore import Qt, Signal, QSignalBlocker, QEvent
 from PySide6.QtGui import QSurfaceFormat, QVector3D, QQuaternion
 from PySide6.QtWidgets import QWidget, QSizePolicy, QVBoxLayout
 
@@ -15,6 +15,14 @@ import vtkmodules.all as vtk
 #  Low-level VTK viewport
 # --------------------------
 class VTKView(QWidget):
+    # def setup_camera(self, fov=45.0, aspect=16/9, near=0.1, far=1000, position=(0,0,10), view_center=(0,0,0)):
+    #     camera = self.renderer.GetActiveCamera()
+    #     camera.SetViewAngle(fov)
+    #     camera.SetClippingRange(near, far)
+    #     camera.SetPosition(*position)
+    #     camera.SetFocalPoint(*view_center)
+    #     self.renderer.ResetCameraClippingRange()
+    #     self.render_window.Render()
     """Reusable VTK viewport; emits poseChanged(x,y,z, rx,ry,rz) for the primary actor."""
     poseChanged = Signal(float, float, float, float, float, float)
 
@@ -39,6 +47,7 @@ class VTKView(QWidget):
         self.render_window.AddRenderer(self.renderer)
 
         self.iren = self.vtk
+        self.iren.setMouseTracking(True)
         # Move the ACTOR with the mouse so pose actually changes:
         self.iren.SetInteractorStyle(vtk.vtkInteractorStyleTrackballActor())
         # Picker required for TrackballActor:
@@ -56,8 +65,124 @@ class VTKView(QWidget):
         # Emit pose while user interacts
         self.iren.AddObserver(vtk.vtkCommand.InteractionEvent, self._on_interaction)
         self.iren.AddObserver(vtk.vtkCommand.EndInteractionEvent, self._on_interaction)
+    # self.iren.AddObserver("LeftButtonPressEvent", self.mousePressEvent)  # Removed: VTK event does not have .pos()
 
         self.iren.Initialize()
+        self.last_mouse_pos = None
+
+        # self.setup_camera()
+
+        # Install event filter after initialization
+        self.vtk.installEventFilter(self)
+
+    def eventFilter(self, obj, event):
+        # Intercept mouse events from QVTKRenderWindowInteractor
+        if obj == self.vtk:
+            if event.type() == QEvent.MouseButtonPress:
+                self.last_mouse_pos = event.pos()
+                print(self.last_mouse_pos)
+                return True
+            
+            if event.type() == QEvent.MouseMove:
+                if self.last_mouse_pos is None:
+                    return False
+                dx = event.x() - self.last_mouse_pos.x()
+                dy = event.y() - self.last_mouse_pos.y()
+                self.last_mouse_pos = event.pos()
+                if self.actor:
+                    if event.modifiers() & Qt.ControlModifier:
+                        # Rotate with Ctrl
+                        rx, ry, rz = self.actor.GetOrientation()
+                        sensitivity = 0.1
+                        self.set_actor_rotation_euler(rx + dy*sensitivity, ry + dx*sensitivity, rz)
+                    else:
+                        # Translate with drag
+                        x, y, z = self.actor.GetPosition()
+                        sensitivity = 0.001
+                        self.set_actor_translation(x + dx * sensitivity, y - dy * sensitivity, z)
+                return True
+            if event.type() == QEvent.Wheel:
+                print("scroll")
+                if self.actor:
+                    x, y, z = self.actor.GetPosition()
+                    sensitivity = 0.1
+                    delta = event.angleDelta().y() / 120
+                    # Scroll up: move closer (increase Z), scroll down: move away (decrease Z)
+                    self.set_actor_translation(x, y, z + delta * sensitivity)
+                return True
+            
+            if event.type() == QEvent.MouseButtonRelease:
+                self.last_mouse_pos = None
+                return True
+            
+        return super().eventFilter(obj, event)
+
+    # --- Methods to handle mouse events   
+    # def mousePressEvent(self, *args):
+    #     print("mouse press")
+    #     event = args[0]
+    #     self.last_mouse_pos = event.pos()
+    #     super().mousePressEvent(event)
+
+    # def mouseMoveEvent(self, event):
+    #     if self.last_mouse_pos is None:
+    #         return
+
+    #     dx = event.x() - self.last_mouse_pos.x()
+    #     dy = event.y() - self.last_mouse_pos.y()
+    #     self.last_mouse_pos = event.pos()
+
+    #     # Rotate with Ctrl
+    #     if event.modifiers() & Qt.ControlModifier:
+    #         print("press + ctrl")
+    #         current_rot = self.transform.rotation()
+    #         rot_x = QQuaternion.fromAxisAndAngle(QVector3D(1, 0, 0), dy)
+    #         rot_y = QQuaternion.fromAxisAndAngle(QVector3D(0, 1, 0), dx)
+    #         # self.view.set_actor_rotation_euler(rot_x, rot_y, current_rot.z())
+    #         self.transform.setRotation(rot_x * rot_y * current_rot)
+
+    #     # Translate with Shift
+    #     else:
+    #         print("drag")
+    #         current_translation = self.transform.translation()
+    #         # Adjust sensitivity as needed
+    #         sensitivity = 0.01
+    #         new_translation = QVector3D(
+    #             current_translation.x() + dx * sensitivity,
+    #             current_translation.y() - dy * sensitivity,  # invert Y
+    #             current_translation.z()
+    #         )
+    #         tx = current_translation.x() + dx * sensitivity
+    #         ty = current_translation.y() - dy * sensitivity
+    #         # self.view.set_actor_translation(tx, ty, current_translation.z())
+    #         self.transform.setTranslation(new_translation)
+
+    #     super().mouseMoveEvent(event)
+
+    # def wheelEvent(self, event):
+    #     # Get current translation
+    #     current_translation = self.transform.translation()
+    #     print("scroll")
+        
+    #     # Adjust sensitivity
+    #     sensitivity = 0.5
+        
+    #     # Delta from the wheel event (positive = scroll up, negative = scroll down)
+    #     delta = event.angleDelta().y() / 120  # 1 step = 120 units
+        
+    #     # Update Z position
+    #     new_translation = QVector3D(
+    #         current_translation.x(),
+    #         current_translation.y(),
+    #         current_translation.z() - delta * sensitivity  # subtract to zoom in
+    #     )
+    #     # tz = current_translation.z() - delta * sensitivity
+    #     # self.view.set_actor_translation(current_translation.x(), current_translation.y(), tz)
+    #     self.transform.setTranslation(new_translation)
+
+    # def mouseReleaseEvent(self, a0):
+        self.last_mouse_pos = None
+        super().mouseReleaseEvent(a0)
 
     # ---- Public helpers -------------------------------------------------
     def add_cube(self, size, color=(0.27, 0.51, 0.71)):
@@ -71,7 +196,9 @@ class VTKView(QWidget):
         self.actor = actor
         self._emit_pose()              # sync axes first
         self.render_window.Render()    # then render
-        return actor
+
+
+        return actor    
 
     def set_background(self, r, g, b):
         self.renderer.SetBackground(r, g, b); self.render_window.Render()
@@ -82,12 +209,14 @@ class VTKView(QWidget):
     def set_actor_translation(self, x=0.0, y=0.0, z=0.0):
         if not self.actor: return
         self.actor.SetPosition(x, y, z)
+        self.renderer.ResetCameraClippingRange()
         self._emit_pose()              # sync axes first
         self.render_window.Render()    # then render
 
     def set_actor_rotation_euler(self, rx_deg=0.0, ry_deg=0.0, rz_deg=0.0):
         if not self.actor: return
         self.actor.SetOrientation(rx_deg, ry_deg, rz_deg)
+        self.renderer.ResetCameraClippingRange()
         self._emit_pose()              # sync axes first
         self.render_window.Render()    # then render
 
@@ -150,6 +279,7 @@ class VTKView(QWidget):
         t.SetMatrix(m)
         self._axes_actor.SetUserTransform(t)
         self._axes_actor.Modified()
+
 
 
 # --------------------------
@@ -217,74 +347,18 @@ class Registration(QWidget):
     # move actor when fields change
     def _on_pos_changed(self):
         try:
-            x = float(self.ui.pos_x.text())
-            y = float(self.ui.pos_y.text())
-            z = float(self.ui.pos_z.text())
+            x = 0.1* float(self.ui.pos_x.text())
+            y = 0.1* float(self.ui.pos_y.text())
+            z = 0.1* float(self.ui.pos_z.text())
         except ValueError:
             return
         self.view.set_actor_translation(x, y, z)
 
     def _on_rot_changed(self):
         try:
-            rx = float(self.ui.rotation_x.text())
-            ry = float(self.ui.rotation_y.text())
-            rz = float(self.ui.rotation_z.text())
+            rx = 0.1* float(self.ui.rotation_x.text())
+            ry = 0.1* float(self.ui.rotation_y.text())
+            rz = 0.1* float(self.ui.rotation_z.text())
         except ValueError:
             return
         self.view.set_actor_rotation_euler(rx, ry, rz)
-
-    def mousePressEvent(self, event):
-        self.last_mouse_pos = event.pos()
-        super().mousePressEvent(event)
-
-    def mouseMoveEvent(self, event):
-        if self.last_mouse_pos is None:
-            return
-
-        dx = event.x() - self.last_mouse_pos.x()
-        dy = event.y() - self.last_mouse_pos.y()
-        self.last_mouse_pos = event.pos()
-
-        # Rotate with Ctrl
-        if event.modifiers() & Qt.ControlModifier:
-            current_rot = self.transform.rotation()
-            rot_x = QQuaternion.fromAxisAndAngle(QVector3D(1, 0, 0), dy)
-            rot_y = QQuaternion.fromAxisAndAngle(QVector3D(0, 1, 0), dx)
-            self.transform.setRotation(rot_x * rot_y * current_rot)
-
-        # Translate with Shift
-        else:
-            current_translation = self.transform.translation()
-            # Adjust sensitivity as needed
-            sensitivity = 0.01
-            new_translation = QVector3D(
-                current_translation.x() + dx * sensitivity,
-                current_translation.y() - dy * sensitivity,  # invert Y
-                current_translation.z()
-            )
-            self.transform.setTranslation(new_translation)
-
-        super().mouseMoveEvent(event)
-
-    def wheelEvent(self, event):
-        # Get current translation
-        current_translation = self.transform.translation()
-        
-        # Adjust sensitivity
-        sensitivity = 0.5
-        
-        # Delta from the wheel event (positive = scroll up, negative = scroll down)
-        delta = event.angleDelta().y() / 120  # 1 step = 120 units
-        
-        # Update Z position
-        new_translation = QVector3D(
-            current_translation.x(),
-            current_translation.y(),
-            current_translation.z() - delta * sensitivity  # subtract to zoom in
-        )
-        
-        self.transform.setTranslation(new_translation)
-
-    def mouseReleaseEvent(self, a0):
-        self.last_mouse_pos = None
-        super().mouseReleaseEvent(a0)
