@@ -234,16 +234,24 @@ class Segmentation(QWidget, ProgressDialogMixin):
             <p class="shortcut-section">Edit Mode</p>
             <table class="shortcut-table">
                 <tr>
+                    <td class="shortcut-action">View Slices</td>
+                    <td class="shortcut-control">Scroll</td>
+                </tr>
+                <tr>
+                    <td class="shortcut-action">Zoom</td>
+                    <td class="shortcut-control">Ctrl + Scroll</td>
+                </tr>
+                <tr>
+                    <td class="shortcut-action">Pan</td>
+                    <td class="shortcut-control">Ctrl + Shift + Drag</td>
+                </tr>
+                <tr>
                     <td class="shortcut-action">Paint</td>
                     <td class="shortcut-control">Drag</td>
                 </tr>
                 <tr>
                     <td class="shortcut-action">Erase</td>
                     <td class="shortcut-control">Ctrl + Drag</td>
-                </tr>
-                <tr>
-                    <td class="shortcut-action">Pan</td>
-                    <td class="shortcut-control">Ctrl + Shift + Drag</td>
                 </tr>
                 <tr>
                     <td class="shortcut-action">Brush Size</td>
