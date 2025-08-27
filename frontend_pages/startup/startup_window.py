@@ -4,8 +4,7 @@ from PySide6.QtCore import QObject
 from frontend_pages.startup.ui_startup_window import Ui_HomePage
 from PySide6.QtWidgets import QFileDialog
 from classes.objects import *
-import json
-import os
+import json, os, datetime
 
 class HomePage(QWidget):
     def __init__(self):
@@ -114,6 +113,7 @@ class HomePage(QWidget):
                         if hasattr(main_window, 'context'):
                             main_window.context = context
                         
+                        
                         print("Project loaded - VTK loading started, staying on startup page...")
                     else:
                         print("ERROR: Could not find segmentation page")
@@ -133,6 +133,28 @@ class HomePage(QWidget):
                 )
             except Exception as e:
                 self.show_error(f"Error loading project: {str(e)}")
+
+    def append_entry(self, path: str, name: str):
+        """
+        Appends an entry to the text file in the format: name, D-M-YYYY
+        using today's date.
+        Creates the file if it does not exist.
+        """
+        file = f"{path}/opened_projects.txt"
+        today = datetime.today()
+    
+        # Format as D-M-YYYY
+        formatted_date = today.strftime("%d %B %Y")
+    
+        with open(file, "a", encoding="utf-8") as f:
+            f.write(f"{name}, {formatted_date}\n")
+            print("File entry added")
+
+        self.ui.fileName1.setText(name)
+        self.ui.lastAccess1.setText(formatted_date)
+        # self.ui.fileName2.
+
+
     
     def get_page(self, main_window : QObject, stacked_widget: QObject, state: str) -> QObject:
         page = None

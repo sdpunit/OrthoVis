@@ -288,9 +288,9 @@ class RawState(DataState):
         caligrid = patient_instance.caligrid
 
         # Extract the last folder name from the CT and fluoro paths
-        ct_last = os.path.basename(os.path.normpath(ct))
-        fluoro_last = os.path.basename(os.path.normpath(fluoro))
-        caligrid_last = os.path.basename(os.path.normpath(caligrid))
+        # ct_last = os.path.basename(os.path.normpath(ct))
+        # fluoro_last = os.path.basename(os.path.normpath(fluoro))
+        # caligrid_last = os.path.basename(os.path.normpath(caligrid))
 
         # Turns State object into its string representation
         state = patient._state.handle_to_string()
@@ -301,9 +301,9 @@ class RawState(DataState):
         parent_dir = current_dir.parent
         folder = parent_dir / "Projects" / name
 
-        CT_folder = folder / ct_last
-        fluoro_folder = folder / fluoro_last
-        caligrid_folder = folder / caligrid_last
+        CT_folder = folder / "CT"
+        fluoro_folder = folder / "fluoro"
+        caligrid_folder = folder / "caligrid"
 
 
         # Create the directories with those folder names
