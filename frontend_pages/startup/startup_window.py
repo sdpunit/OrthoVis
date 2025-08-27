@@ -13,8 +13,6 @@ class HomePage(QWidget):
         self.ui.setupUi(self)
         self.ui.pushButton.clicked.connect(self.handle_new_project)
         self.ui.pushButton_2.clicked.connect(self.handle_open_project)
-        self.ui.pushButton.setToolTip("Create a new OrthoVis project with CT and Fluoroscopy data.")
-        self.ui.pushButton_2.setToolTip("Open an existing OrthoVis project from your computer.")
         
         # Style the buttons
         button_style = """
