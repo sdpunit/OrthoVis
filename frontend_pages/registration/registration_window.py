@@ -5,10 +5,18 @@ from PySide6.QtGui import QSurfaceFormat, QVector3D, QQuaternion
 from PySide6.QtWidgets import QWidget, QSizePolicy, QVBoxLayout
 
 from frontend_pages.registration.ui_registration_window import Ui_Form
+from frontend_pages.registration.fluoro_frame_extractor import extract_dicom_frames
+from classes.objects import SingletonPatient, Context
+
+# Stdlib
+import os
 
 # VTK
 from vtkmodules.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 import vtkmodules.all as vtk
+from vtkmodules.vtkRenderingCore import vtkImageActor
+from vtkmodules.vtkIOImage import vtkPNGReader, vtkJPEGReader, vtkTIFFReader, vtkBMPReader
+from vtkmodules.vtkImagingColor import vtkImageMapToWindowLevelColors
 
 
 # --------------------------
@@ -35,7 +43,21 @@ class VTKView(QWidget):
         lay.addWidget(self.vtk)
 
         self.render_window = self.vtk.GetRenderWindow()
+
+        # --- background renderer for fluoroscopy frame (layer 0) ---
+        self.bg_renderer = vtk.vtkRenderer()
+        self.bg_renderer.SetLayer(0)
+        self.bg_renderer.SetInteractive(0)  # don't eat mouse events
+        self._bg_actor = None
+        self._bg_wl = None
+
+        # --- main 3D renderer on top (layer 1) ---
         self.renderer = vtk.vtkRenderer()
+        self.renderer.SetLayer(1)
+
+        # Enable layered rendering and add renderers
+        self.render_window.SetNumberOfLayers(2)
+        self.render_window.AddRenderer(self.bg_renderer)
         self.render_window.AddRenderer(self.renderer)
 
         self.iren = self.vtk
@@ -110,9 +132,52 @@ class VTKView(QWidget):
         self.render_window.Render()
         return widget
 
+    # --- NEW: set a 2D image file as background ---
+    def set_background_image(self, path: str):
+        """
+        Show image (png/jpg/tif/bmp) behind the 3D scene.
+        """
+        ext = os.path.splitext(path)[1].lower()
+        if ext in (".png",): reader = vtkPNGReader()
+        elif ext in (".jpg", ".jpeg"): reader = vtkJPEGReader()
+        elif ext in (".tif", ".tiff"): reader = vtkTIFFReader()
+        elif ext in (".bmp",): reader = vtkBMPReader()
+        else:
+            raise ValueError(f"Unsupported background image format: {ext}")
+
+        reader.SetFileName(path)
+        reader.Update()
+
+        # map to displayable colors with a basic window/level
+        wl = vtkImageMapToWindowLevelColors()
+        wl.SetInputConnection(reader.GetOutputPort())
+        mn, mx = reader.GetOutput().GetScalarRange()
+        wl.SetWindow(max(mx - mn, 1.0))
+        wl.SetLevel((mx + mn) * 0.5)
+        wl.Update()
+
+        actor = vtkImageActor()
+        actor.SetInputData(wl.GetOutput())
+
+        if self._bg_actor:
+            self.bg_renderer.RemoveActor(self._bg_actor)
+
+        self._bg_actor = actor
+        self._bg_wl = wl
+        self.bg_renderer.AddActor(actor)
+
+        cam = self.bg_renderer.GetActiveCamera()
+        cam.ParallelProjectionOn()
+        self.bg_renderer.ResetCamera()
+        self.render_window.Render()
+
     def clear(self):
         self.renderer.RemoveAllViewProps()
         self.actor = None
+        if self._bg_actor:
+            self.bg_renderer.RemoveActor(self._bg_actor)
+            self._bg_actor = None
+            self._bg_wl = None
         self.render_window.Render()
         self._emit_pose()
 
@@ -161,6 +226,7 @@ class Registration(QWidget):
 
         self.ui = Ui_Form()
         self.ui.setupUi(self)
+        self._fluoro_loaded = False
 
         self.ui.titlebar.ui.title.setText("Registration")
         self.ui.sidebar.ui.registration.setStyleSheet(
@@ -214,6 +280,37 @@ class Registration(QWidget):
             with QSignalBlocker(w):
                 w.setText(val)
 
+    # Load fluoro frames once when the page first shows
+    def showEvent(self, event):
+        super().showEvent(event)
+        if not self._fluoro_loaded:
+            self.load_fluoro()
+            self._fluoro_loaded = True
+
+    def load_fluoro(self):
+        singleton = SingletonPatient.get_instance()
+        patient = singleton.patient
+
+        frames_dir = f"{patient.fluoro}_frames"
+        # If frames directory is empty / missing, run extraction
+        need_extract = (not os.path.isdir(frames_dir)) or (not os.listdir(frames_dir))
+        if need_extract:
+            num, _ = extract_dicom_frames(patient.fluoro, frames_dir, 'png')
+            print(f"Extracted {num} frames to {frames_dir}")
+
+        # Pick first image in the frames directory
+        candidates = sorted(
+            f for f in os.listdir(frames_dir)
+            if f.lower().endswith((".png", ".jpg", ".jpeg", ".tif", ".tiff", ".bmp"))
+        )
+        if not candidates:
+            print(f"No frame images found in {frames_dir}")
+            return
+
+        first_frame_path = os.path.join(frames_dir, candidates[0])
+        print(f"Setting background image: {first_frame_path}")
+        self.view.set_background_image(first_frame_path)
+
     # move actor when fields change
     def _on_pos_changed(self):
         try:
@@ -233,14 +330,15 @@ class Registration(QWidget):
             return
         self.view.set_actor_rotation_euler(rx, ry, rz)
 
+    # (These mouse handlers below look like leftovers from a Qt3D approach;
+    #  they don't affect VTK, so leaving them untouched per your code.)
     def mousePressEvent(self, event):
         self.last_mouse_pos = event.pos()
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
-        if self.last_mouse_pos is None:
+        if getattr(self, "last_mouse_pos", None) is None:
             return
-
         dx = event.x() - self.last_mouse_pos.x()
         dy = event.y() - self.last_mouse_pos.y()
         self.last_mouse_pos = event.pos()
@@ -259,11 +357,10 @@ class Registration(QWidget):
             sensitivity = 0.01
             new_translation = QVector3D(
                 current_translation.x() + dx * sensitivity,
-                current_translation.y() - dy * sensitivity,  # invert Y
+                current_translation.y() - dy * sensitivity,
                 current_translation.z()
             )
             self.transform.setTranslation(new_translation)
-
         super().mouseMoveEvent(event)
 
     def wheelEvent(self, event):
@@ -280,9 +377,8 @@ class Registration(QWidget):
         new_translation = QVector3D(
             current_translation.x(),
             current_translation.y(),
-            current_translation.z() - delta * sensitivity  # subtract to zoom in
+            current_translation.z() - delta * sensitivity
         )
-        
         self.transform.setTranslation(new_translation)
 
     def mouseReleaseEvent(self, a0):
