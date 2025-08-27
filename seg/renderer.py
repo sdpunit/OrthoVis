@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-2D CT Quad-Viewer with Pixel Editing
+2D CT Quad-Viewer with Pixel Editing and Dynamic Brush Cursor
 
 Features:
  1. Single RenderWindow split into 3 active viewports (axial, coronal, sagittal). 
@@ -9,7 +9,8 @@ Features:
  4. Legend for segmentation masks in the top-right quadrant; default mask opacity 0.9.
  5. Pixel editing - Drag to paint, Ctrl+Drag to erase
  6. Adjustable brush size with +/- keys
- 7. Save edited masks functionality
+ 7. Dynamic cursor that changes size with brush size
+ 8. Save edited masks functionality
 """
 import os, glob, argparse, vtk 
 import SimpleITK as sitk
@@ -23,9 +24,12 @@ from vtkmodules.vtkRenderingCore import (
     vtkActor2D,
     vtkTextMapper,
     vtkTextProperty,
-    vtkTextActor
+    vtkTextActor,
+    vtkActor
 )
 from vtkmodules.vtkRenderingAnnotation import vtkLegendBoxActor
+from vtkmodules.vtkFiltersSources import vtkDiskSource
+from vtkmodules.vtkCommonDataModel import vtkPolyData
 from vtkmodules.util import numpy_support
 from totalseg import load_ct
 
@@ -55,6 +59,149 @@ def sitk_to_vtk(img):
     )
     vtk_img.GetPointData().SetScalars(vtk_arr)
     return vtk_img, arr
+
+
+class BrushCursor:
+    """Dynamic brush cursor that changes size with brush size"""
+    def __init__(self, render_window):
+        self.render_window = render_window
+        self.cursor_actors = {}  # One cursor actor per viewer
+        self.visible = False
+        self.current_size = 1
+        
+    def create_cursor_for_viewer(self, viewer):
+        """Create a cursor actor for a specific viewer"""
+        # Create a circle geometry
+        disk = vtkDiskSource()
+        disk.SetInnerRadius(0)
+        disk.SetOuterRadius(1.0)  # Will be scaled
+        disk.SetRadialResolution(1)
+        disk.SetCircumferentialResolution(16)
+        disk.Update()
+        
+        # Create mapper and actor
+        mapper = vtk.vtkPolyDataMapper()
+        mapper.SetInputConnection(disk.GetOutputPort())
+        
+        actor = vtkActor()
+        actor.SetMapper(mapper)
+        
+        # Set cursor properties - semi-transparent white circle
+        actor.GetProperty().SetColor(1.0, 1.0, 1.0)
+        actor.GetProperty().SetOpacity(0.8)
+        actor.GetProperty().SetRepresentationToWireframe()
+        actor.GetProperty().SetLineWidth(3)
+        
+        # Set orientation based on view
+        if viewer.name == 'Axial':
+            # Axial view: circle lies in X-Y plane. No rotation needed.
+            actor.SetOrientation(0, 0, 0)
+        elif viewer.name == 'Coronal':
+            # Coronal view: circle lies in X-Z plane. Rotate 90° around X-axis.
+            actor.SetOrientation(90, 0, 0)
+        elif viewer.name == 'Sagittal':
+            # Sagittal view: circle lies in Y-Z plane. Rotate 90° around Y-axis.
+            # FIX: Original code used (0, 0, 90), which is incorrect.
+            actor.SetOrientation(0, 90, 0)
+        
+        # Initially hide the cursor
+        actor.SetVisibility(False)
+        
+        # Add to renderer
+        viewer.viewer.GetRenderer().AddActor(actor)
+        
+        return actor
+    
+    def update_cursor_size(self, brush_size):
+        """Update cursor size for all viewers"""
+        self.current_size = brush_size
+        
+        for viewer, actor in self.cursor_actors.items():
+            # Get image spacing to calculate world size
+            img_data = viewer.viewer.GetInput()
+            spacing = img_data.GetSpacing()
+            
+            # Calculate radius in world coordinates based on view orientation
+            if viewer.name == 'Axial':
+                # X-Y plane: use X,Y spacing
+                min_spacing = min(spacing[0], spacing[1])
+            elif viewer.name == 'Coronal':
+                # X-Z plane: use X,Z spacing  
+                min_spacing = min(spacing[0], spacing[2])
+            elif viewer.name == 'Sagittal':
+                # Y-Z plane: use Y,Z spacing
+                min_spacing = min(spacing[1], spacing[2])
+            else:
+                min_spacing = min(spacing[:3])
+            
+            world_radius = brush_size * min_spacing
+            
+            # FIX: The vtkDiskSource is in its local XY plane. We scale it uniformly
+            # in X and Y to make it a circle. The actor's orientation handles
+            # placing this circle correctly in the world space for each view.
+            # The previous per-view scaling logic was incorrect.
+            actor.SetScale(world_radius, world_radius, 1.0)
+    
+    def update_cursor_position(self, viewer, world_pos):
+        """Update cursor position for a specific viewer"""
+        if viewer not in self.cursor_actors:
+            self.cursor_actors[viewer] = self.create_cursor_for_viewer(viewer)
+            self.update_cursor_size(self.current_size)
+        
+        actor = self.cursor_actors[viewer]
+        
+        # Position cursor based on view orientation
+        # For slice-based views, we need to position on the slice plane
+        if viewer.name == 'Axial':
+            # Axial view: cursor moves in X-Y plane, fixed at current Z slice
+            img_data = viewer.viewer.GetInput()
+            spacing = img_data.GetSpacing()
+            origin = img_data.GetOrigin()
+            slice_z = origin[2] + viewer.slice * spacing[2]
+            actor.SetPosition(world_pos[0], world_pos[1], slice_z)
+            
+        elif viewer.name == 'Coronal':
+            # Coronal view: cursor moves in X-Z plane, fixed at current Y slice
+            img_data = viewer.viewer.GetInput()
+            spacing = img_data.GetSpacing()
+            origin = img_data.GetOrigin()
+            slice_y = origin[1] + viewer.slice * spacing[1]
+            actor.SetPosition(world_pos[0], slice_y, world_pos[2])
+            
+        elif viewer.name == 'Sagittal':
+            # Sagittal view: cursor moves in Y-Z plane, fixed at current X slice
+            img_data = viewer.viewer.GetInput()
+            spacing = img_data.GetSpacing()
+            origin = img_data.GetOrigin()
+            slice_x = origin[0] + viewer.slice * spacing[0]
+            actor.SetPosition(slice_x, world_pos[1], world_pos[2])
+        
+        # Show cursor
+        if not self.visible:
+            self.show_cursor()
+    
+    def show_cursor(self):
+        """Show cursor in all viewers"""
+        self.visible = True
+        for actor in self.cursor_actors.values():
+            actor.SetVisibility(True)
+        self.render_window.Render()
+    
+    def hide_cursor(self):
+        """Hide cursor in all viewers"""
+        self.visible = False
+        for actor in self.cursor_actors.values():
+            actor.SetVisibility(False)
+        self.render_window.Render()
+    
+    def show_cursor_in_viewer(self, viewer):
+        """Show cursor only in a specific viewer"""
+        for v, actor in self.cursor_actors.items():
+            if v == viewer:
+                actor.SetVisibility(True)
+            else:
+                actor.SetVisibility(False)
+        self.render_window.Render()
 
 
 class EditableMask:
@@ -223,9 +370,7 @@ class SliceViewer:
         return i, j, k
     
     def edit_pixel(self, world_pos, mask_idx, operation, brush_size=1):
-        """Edit pixels in the mask at world position - OPTIMIZED version
-        operation: 'paint' to set to 1, 'erase' to set to 0
-        """
+        """Edit pixels in the mask at world position with proper spacing compensation"""
         if mask_idx >= len(self.editable_masks):
             return False
             
@@ -235,21 +380,53 @@ class SliceViewer:
         # Get mask dimensions (Z, Y, X) - numpy ordering
         Z, Y, X = mask.data.shape
         
+        # Get image spacing for proper circular brush scaling
+        img_data = self.viewer.GetInput()
+        spacing = img_data.GetSpacing()
+        
+        # Calculate brush radius in world units
+        if self.name == 'Axial':
+            # X-Y plane
+            min_spacing = min(spacing[0], spacing[1])
+            world_radius = brush_size * min_spacing
+            dx = world_radius / spacing[0]
+            dy = world_radius / spacing[1]
+        elif self.name == 'Coronal':
+            # X-Z plane
+            min_spacing = min(spacing[0], spacing[2])
+            world_radius = brush_size * min_spacing
+            dx = world_radius / spacing[0]
+            dy = world_radius / spacing[2]
+        elif self.name == 'Sagittal':
+            # Y-Z plane
+            min_spacing = min(spacing[1], spacing[2])
+            world_radius = brush_size * min_spacing
+            dx = world_radius / spacing[1]
+            dy = world_radius / spacing[2]
+        
+        # Convert to integer pixel radius, ensuring at least 1 pixel
+        rx = max(1, int(round(dx)))
+        ry = max(1, int(round(dy)))
+        
         # Collect all changes before updating VTK
         changed_pixels = []
         
         # Apply brush in 2D slice
-        for di in range(-brush_size, brush_size + 1):
-            for dj in range(-brush_size, brush_size + 1):
-                if di*di + dj*dj <= brush_size*brush_size:  # circular brush
+        for di in range(-rx, rx + 1):
+            for dj in range(-ry, ry + 1):
+                # Calculate normalized distance for circular brush
+                normalized_di = di * (spacing[0] if self.name in ['Axial', 'Coronal'] else spacing[1]) / world_radius
+                normalized_dj = dj * (spacing[1] if self.name == 'Axial' else spacing[2]) / world_radius
+                
+                if normalized_di**2 + normalized_dj**2 <= 1.0:  # circular brush
                     
                     # Calculate target coordinates based on view orientation
                     if self.name == 'Axial':
                         ni, nj, nk = i + di, j + dj, self.slice
                     elif self.name == 'Coronal':
-                        ni, nj, nk = i + di, self.slice, k + dj  
+                        ni, nj, nk = i + di, self.slice, k + dj
                     elif self.name == 'Sagittal':
-                        ni, nj, nk = self.slice, j + dj, k + di
+                        ni, nj, nk = self.slice, j + di, k + dj  # Changed from j + dj, k + di
                     else:
                         continue
                         
@@ -303,6 +480,10 @@ class QuadStyle(vtkInteractorStyleImage):
         self.mode_button = None
         self.brush_size = 1
         self.brush_label = None
+        
+        # Initialize brush cursor
+        self.brush_cursor = None  # Will be set later
+        
         self.update_selection_visuals()
 
         # Remove default wheel events and add custom ones
@@ -324,10 +505,16 @@ class QuadStyle(vtkInteractorStyleImage):
         self.AddObserver('MouseMoveEvent', self.on_mouse_move)
         self.AddObserver('LeftButtonReleaseEvent', self.on_left_button_release)
         self.AddObserver('KeyPressEvent', self.on_key_press)
+        self.AddObserver('EnterEvent', self.on_enter)
+        self.AddObserver('LeaveEvent', self.on_leave)
         
         # Set update method for viewers
         for viewer in self.viewers:
             viewer.update_all_viewers = self.update_all_viewers
+
+    def set_brush_cursor(self, brush_cursor):
+        """Set the brush cursor reference"""
+        self.brush_cursor = brush_cursor
 
     def update_all_viewers(self):
         """Force update of all viewers - LIGHTWEIGHT version"""
@@ -369,19 +556,63 @@ class QuadStyle(vtkInteractorStyleImage):
         return None
 
     def get_world_position(self, viewer):
-        """Get world position under mouse cursor"""
+        """Get world position under mouse cursor - Fixed for all orientations"""
         x, y = self.GetInteractor().GetEventPosition()
-        
-        # Use the same coordinate conversion approach that worked in the test
         renderer = viewer.viewer.GetRenderer()
         
-        # Convert window coordinates to world coordinates
-        renderer.SetDisplayPoint(x, y, 0)
-        renderer.DisplayToWorld()
-        world_pos = renderer.GetWorldPoint()
+        # CRITICAL FIX: Use the picker to get accurate world coordinates
+        # The previous method didn't account for different slice orientations
         
-        # Return the 3D world position
-        return world_pos[:3]
+        # Get the image actor from the viewer
+        image_actor = viewer.viewer.GetImageActor()
+        
+        # Use coordinate conversion that accounts for slice orientation
+        coordinate = vtk.vtkCoordinate()
+        coordinate.SetCoordinateSystemToDisplay()
+        coordinate.SetValue(x, y)
+        
+        # Convert to world coordinates in the context of this renderer
+        world_pos = coordinate.GetComputedWorldValue(renderer)
+        
+        # For slice viewers, we need to project onto the current slice plane
+        img_data = viewer.viewer.GetInput()
+        spacing = img_data.GetSpacing()
+        origin = img_data.GetOrigin()
+        
+        if viewer.name == 'Axial':
+            # Use X,Y from world position, Z from current slice
+            slice_z = origin[2] + viewer.slice * spacing[2] 
+            corrected_pos = (world_pos[0], world_pos[1], slice_z)
+            
+        elif viewer.name == 'Coronal':
+            # Use X,Z from world position, Y from current slice
+            slice_y = origin[1] + viewer.slice * spacing[1]
+            corrected_pos = (world_pos[0], slice_y, world_pos[2])
+            
+        elif viewer.name == 'Sagittal':
+            # Use Y,Z from world position, X from current slice  
+            slice_x = origin[0] + viewer.slice * spacing[0]
+            corrected_pos = (slice_x, world_pos[1], world_pos[2])
+        else:
+            corrected_pos = world_pos
+            
+        # print(f"[DEBUG] {viewer.name} - Raw world: {world_pos}, Corrected: {corrected_pos}")
+        return corrected_pos
+
+    def on_enter(self, obj, event):
+        """Show cursor when mouse enters window"""
+        if self.edit_mode and self.brush_cursor:
+            sv = self.pick_viewer()
+            if sv:
+                world_pos = self.get_world_position(sv)
+                if world_pos:
+                    self.brush_cursor.update_cursor_position(sv, world_pos)
+                    self.brush_cursor.show_cursor_in_viewer(sv)
+
+    def on_leave(self, obj, event):
+        """Hide cursor when mouse leaves window"""
+        if self.brush_cursor:
+            self.brush_cursor.hide_cursor()
 
     def on_left_button_press(self, obj, event):
         x, y = self.GetInteractor().GetEventPosition()
@@ -395,6 +626,19 @@ class QuadStyle(vtkInteractorStyleImage):
                 self.edit_mode = not self.edit_mode
                 self.mode_button.SetInput("Mode: Edit" if self.edit_mode else "Mode: Browse")
                 self.update_selection_visuals() 
+                
+                # Handle cursor visibility based on edit mode
+                if self.brush_cursor:
+                    if self.edit_mode:
+                        sv = self.pick_viewer()
+                        if sv:
+                            world_pos = self.get_world_position(sv)
+                            if world_pos:
+                                self.brush_cursor.update_cursor_position(sv, world_pos)
+                                self.brush_cursor.show_cursor_in_viewer(sv)
+                    else:
+                        self.brush_cursor.hide_cursor()
+                
                 self.GetInteractor().GetRenderWindow().Render()
                 return
 
@@ -448,6 +692,15 @@ class QuadStyle(vtkInteractorStyleImage):
             self.StartPan()
 
     def on_mouse_move(self, obj, event):
+        # Update cursor position in edit mode
+        if self.edit_mode and self.brush_cursor and not self.editing and not self.panning:
+            sv = self.pick_viewer()
+            if sv:
+                world_pos = self.get_world_position(sv)
+                if world_pos:
+                    self.brush_cursor.update_cursor_position(sv, world_pos)
+                    self.brush_cursor.show_cursor_in_viewer(sv)
+        
         # Handle panning
         if self.panning and self.active_viewer is not None:
             self.SetCurrentRenderer(self.active_viewer.viewer.GetRenderer())
@@ -466,6 +719,10 @@ class QuadStyle(vtkInteractorStyleImage):
                     
                     # Edit immediately without position checking for smoother editing
                     sv.edit_pixel(world_pos, self.selected_idx, operation, self.brush_size)
+                    
+                    # Update cursor position while editing
+                    if self.brush_cursor:
+                        self.brush_cursor.update_cursor_position(sv, world_pos)
 
     def on_left_button_release(self, obj, event):
         if self.panning and self.active_viewer is not None:
@@ -484,9 +741,13 @@ class QuadStyle(vtkInteractorStyleImage):
         if key == 'plus' or key == 'equal':
             self.brush_size = min(self.brush_size + 1, 10)
             self.update_brush_label()
+            if self.brush_cursor:
+                self.brush_cursor.update_cursor_size(self.brush_size)
         elif key == 'minus':
             self.brush_size = max(self.brush_size - 1, 1)
             self.update_brush_label()
+            if self.brush_cursor:
+                self.brush_cursor.update_cursor_size(self.brush_size)
         elif key == 's':
             # Save all modified masks
             self.save_masks()
@@ -588,6 +849,9 @@ def main(ct_path: str, mask_dir: str):
     render_window.SetSize(900, 900)
     render_window.SetNumberOfLayers(2)
 
+    # Create brush cursor
+    brush_cursor = BrushCursor(render_window)
+
     # Create quadrant slice viewers for each orientation 
     quads = {
         'Axial':    (0.0, 0.5, 0.5, 1.0),
@@ -682,6 +946,15 @@ def main(ct_path: str, mask_dir: str):
     brush_label.SetPosition(0.5, 0.9)
     legend_overlay.AddActor(brush_label)
 
+    # Add instructions
+    instructions = vtkTextActor()
+    instructions.SetInput("Instructions:\n+/- : Change brush size\nS : Save masks\nCtrl+Drag : Erase")
+    instructions.GetTextProperty().SetFontSize(12)
+    instructions.GetTextProperty().SetColor(0.7, 0.7, 0.7)
+    instructions.GetPositionCoordinate().SetCoordinateSystemToNormalizedViewport()
+    instructions.SetPosition(0.5, 0.05)
+    legend_overlay.AddActor(instructions)
+
     render_window.SetOffScreenRendering(False)
     render_window.Render()
 
@@ -690,12 +963,13 @@ def main(ct_path: str, mask_dir: str):
     style = QuadStyle(viewers, label_actors, editable_masks)
     style.mode_button = mode_btn
     style.brush_label = brush_label
+    style.set_brush_cursor(brush_cursor)
     interactor.SetInteractorStyle(style)
     interactor.Initialize()
     interactor.Start()
 
 if __name__=='__main__':
-    parser = argparse.ArgumentParser(description='CT Quad Viewer with Pixel Editing')
+    parser = argparse.ArgumentParser(description='CT Quad Viewer with Pixel Editing and Dynamic Brush Cursor')
     parser.add_argument('ct_file', help='Path to CT directory or file')
     parser.add_argument('mask_dir', help='Directory of segmentation mask files')
     args = parser.parse_args()
