@@ -469,6 +469,17 @@ class QuadStyle(vtkInteractorStyleImage):
             self.last_edit_pos = None
             self.update_selection_visuals()
             self.AddObserver('KeyPressEvent', self.on_key_press)
+        else:
+            # Initialize these attributes even when editing is disabled to prevent AttributeError
+            self.label_actors = []
+            self.editable_masks = []
+            self.selected_idx = 0
+            self.edit_mode = False
+            self.mode_button = None
+            self.brush_size = 1
+            self.brush_label = None
+            self.editing = False
+            self.last_edit_pos = None
 
         self.RemoveObservers('MouseWheelForwardEvent')
         self.RemoveObservers('MouseWheelBackwardEvent')
@@ -529,11 +540,22 @@ class QuadStyle(vtkInteractorStyleImage):
         actor.SetTextProperty(tp)
 
     def update_selection_visuals(self):
-        if not self.enable_editing: return
+        if not self.enable_editing: 
+            print("update_selection_visuals: editing not enabled")
+            return        
         for sv in self.viewers:
             if hasattr(sv, 'mask_actors') and sv.mask_actors:
                 for i, actor in enumerate(sv.mask_actors):
-                    actor.GetProperty().SetOpacity(1.0 if i == self.selected_idx and self.edit_mode else 0.9)
+                    if self.edit_mode:
+                        # In edit mode: selected mask is fully opaque, others are very faded
+                        opacity = 1.0 if i == self.selected_idx else 0.1
+                    else:
+                        # In browse mode: all masks are normally visible
+                        opacity = 0.9
+                    actor.GetProperty().SetOpacity(opacity)
+            else:
+                print(f"No mask actors found in {sv.name} viewer")
+                
         for i in range(len(self.label_actors)):
             self._apply_label_style(i, selected=(i == self.selected_idx))
 
@@ -553,11 +575,16 @@ class QuadStyle(vtkInteractorStyleImage):
         x, y = self.GetInteractor().GetEventPosition()
         w, h = self.GetInteractor().GetRenderWindow().GetSize()
         xn, yn = x / w, y / h
+        
         if self.enable_editing:
             if self.mode_button:
                 pos = self.mode_button.GetPosition()
+                # Debug: print click coordinates and button position
+                print(f"Click at normalized ({xn:.3f}, {yn:.3f}), Button at ({pos[0]:.3f}, {pos[1]:.3f})")
+                
                 if pos[0] <= xn <= pos[0]+0.2 and pos[1] <= yn <= pos[1]+0.05:
                     self.edit_mode = not self.edit_mode
+                    print(f"Mode toggled to: {'Edit' if self.edit_mode else 'Browse'}")
                     self.mode_button.SetInput("Mode: Edit" if self.edit_mode else "Mode: Browse")
                     self.update_selection_visuals()
                     if self.brush_cursor:
@@ -569,11 +596,13 @@ class QuadStyle(vtkInteractorStyleImage):
                         else: self.brush_cursor.hide_cursor()
                     self.GetInteractor().GetRenderWindow().Render()
                     return
+                    
             if self.edit_mode and len(self.label_actors) > 0:
                 for idx, actor in enumerate(self.label_actors):
                     pos = actor.GetPosition()
                     if pos[0]-0.01 <= xn <= pos[0]+0.35 and pos[1]-0.02 <= yn <= pos[1]+0.06:
                         self.selected_idx = idx
+                        print(f"Selected mask index: {idx}")
                         self.update_selection_visuals()
                         self.GetInteractor().GetRenderWindow().Render()
                         return
@@ -797,7 +826,6 @@ def create_vtk_pipeline(ct_path: str, mask_dir: str = None, render_window=None, 
     interactor_style.set_brush_cursor(brush_cursor)
 
     return interactor_style
-
 
 
 def add_masks_to_pipeline(viewers, img, mask_dir, render_window, enable_editing=False, save_callback=None):
