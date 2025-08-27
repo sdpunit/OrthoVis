@@ -5,7 +5,7 @@ from PySide6.QtCore import QTimer, QThread, Signal
 
 # Import the UI form
 from frontend_pages.segmentation.ui_segmentation_window import Ui_Form
-from seg.embedding import create_vtk_pipeline, add_masks_to_pipeline
+from seg.embedding import create_vtk_pipeline, add_masks_to_pipeline, update_interactor_style_for_editing
 from seg.totalseg import load_ct, get_all_available_bones
 from classes.objects import SingletonPatient, Context
 from classes.utils import ProgressDialogMixin
@@ -234,16 +234,24 @@ class Segmentation(QWidget, ProgressDialogMixin):
             <p class="shortcut-section">Edit Mode</p>
             <table class="shortcut-table">
                 <tr>
+                    <td class="shortcut-action">View Slices</td>
+                    <td class="shortcut-control">Scroll</td>
+                </tr>
+                <tr>
+                    <td class="shortcut-action">Zoom</td>
+                    <td class="shortcut-control">Ctrl + Scroll</td>
+                </tr>
+                <tr>
+                    <td class="shortcut-action">Pan</td>
+                    <td class="shortcut-control">Ctrl + Shift + Drag</td>
+                </tr>
+                <tr>
                     <td class="shortcut-action">Paint</td>
                     <td class="shortcut-control">Drag</td>
                 </tr>
                 <tr>
                     <td class="shortcut-action">Erase</td>
                     <td class="shortcut-control">Ctrl + Drag</td>
-                </tr>
-                <tr>
-                    <td class="shortcut-action">Pan</td>
-                    <td class="shortcut-control">Ctrl + Shift + Drag</td>
                 </tr>
                 <tr>
                     <td class="shortcut-action">Brush Size</td>
@@ -710,35 +718,17 @@ class Segmentation(QWidget, ProgressDialogMixin):
                                     # This is likely a mask label
                                     self.label_actors.append(actor)
                         
-                        # Update the interactor style with editing features
-                        if self.interactor_style and hasattr(self.interactor_style, 'enable_editing'):
-                            print("Enabling editing features on existing interactor style...")
-                            self.interactor_style.enable_editing = True
-                            self.interactor_style.label_actors = self.label_actors
-                            self.interactor_style.editable_masks = self.editable_masks
-                            self.interactor_style.mode_button = self.mode_button
-                            self.interactor_style.brush_label = self.brush_label
-                            self.interactor_style.selected_idx = 0
-                            self.interactor_style.edit_mode = False
-                            self.interactor_style.brush_size = 1
-                            self.interactor_style.editing = False
-                            self.interactor_style.last_edit_pos = None
-                            
-                            # Add editing event observers if not already present
-                            if not hasattr(self.interactor_style, '_editing_observers_added'):
-                                self.interactor_style.AddObserver('KeyPressEvent', self.interactor_style.on_key_press)
-                                self.interactor_style._editing_observers_added = True
-                            
-                            # Set save callback for 'S' key
-                            self.interactor_style.save_callback = self.on_save_shortcut
-                            
-                            # Update visual state
-                            if hasattr(self.interactor_style, 'update_selection_visuals'):
-                                self.interactor_style.update_selection_visuals()
-                            
-                            print(f"Editing enabled with {len(self.editable_masks)} editable masks")
-                        else:
-                            print("Warning: Could not enable editing on interactor style")
+                        # Update the interactor style with editing features using the helper function
+                        update_interactor_style_for_editing(
+                            self.interactor_style,
+                            self.label_actors,
+                            self.editable_masks,
+                            self.mode_button,
+                            self.brush_label,
+                            self.on_save_shortcut
+                        )
+                        
+                        print(f"Editing enabled with {len(self.editable_masks)} editable masks")
                     else:
                         print("Warning: Could not find legend renderer for UI elements")
             

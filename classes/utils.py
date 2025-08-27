@@ -25,14 +25,6 @@ class ProgressDialogMixin:
         layout = QHBoxLayout(content_widget)
         layout.setContentsMargins(10, 10, 10, 10)
         layout.setSpacing(15)
-
-        # Loading gif 
-        loading_label = QLabel()
-        movie = QMovie("assets/loading.gif")  # Loading gif 
-        movie.setScaledSize(QSize(int(20 * 1.15), int(20 * 1.15)))
-        loading_label.setMovie(movie)
-        movie.start()
-        layout.addWidget(loading_label)
         
         # Text label
         text_label = QLabel(message)

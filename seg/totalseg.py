@@ -15,6 +15,17 @@ import sys
 # totalseg_set_license -l <your-license-number>
 # totalseg_set_license -l aca_DBGCR896PIOE7A 
 
+def _initialize_path():
+    """Initialize PATH for TotalSegmentator at module import"""
+    scripts_path = os.path.join(sys.prefix, 'Scripts')
+    current_path = os.environ.get('PATH', '')
+
+    if scripts_path not in current_path:
+        os.environ['PATH'] = scripts_path + os.pathsep + current_path
+
+# Initialize path immediately when module is imported 
+_initialize_path
+
 total = ["sacrum", "humerus_left", "humerus_right", "scapula_left", "scapula_right",
          "clavicula_left", "clavicula_right", "femur_left", "femur_right",
          "hip_left", "hip_right", "spinal_cord", "sternum"
@@ -52,8 +63,15 @@ def setup_totalsegmentator():
                 return method
         except:
             continue
+
+    try:
+        import totalsegmentator 
+        print(f"TotalSegmentator package found at: {totalsegmentator.__file__}")
+    except ImportError:
+        print("TotalSegmentator package not installed")
     
-    raise RuntimeError("TotalSegmentator not found. Install with: pip install TotalSegmentator")
+    raise RuntimeError("TotalSegmentator not found. Install with: pip install TotalSegmentator ")
+    
 
 def run_totalseg(ct_dir: str, seg_dir: str, custom_roi: list): 
     """
