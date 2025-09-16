@@ -17,7 +17,7 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QApplication, QFormLayout, QFrame, QGraphicsView,
     QHBoxLayout, QLabel, QLineEdit, QPushButton,
-    QSizePolicy, QTextBrowser, QVBoxLayout, QWidget)
+    QSizePolicy, QVBoxLayout, QWidget)
 
 from widgets.sidebar.sidebar import Sidebar
 from widgets.titlebar.titlebar import Titlebar
@@ -83,6 +83,35 @@ class Ui_Form(object):
         self.verticalLayout_2 = QVBoxLayout(self.details)
         self.verticalLayout_2.setObjectName(u"verticalLayout_2")
         self.verticalLayout_2.setContentsMargins(0, 0, 0, 0)
+        self.next_frame = QPushButton(self.details)
+        self.next_frame.setObjectName(u"next_frame")
+        sizePolicy3 = QSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed)
+        sizePolicy3.setHorizontalStretch(0)
+        sizePolicy3.setVerticalStretch(0)
+        sizePolicy3.setHeightForWidth(self.next_frame.sizePolicy().hasHeightForWidth())
+        self.next_frame.setSizePolicy(sizePolicy3)
+        self.next_frame.setMinimumSize(QSize(0, 40))
+        self.next_frame.setStyleSheet(u"background-color: rgb(255, 215, 0);\n"
+"border-radius: 10px;\n"
+"border: none;\n"
+"font: 600 12pt \"Segoe UI\";\n"
+"")
+
+        self.verticalLayout_2.addWidget(self.next_frame)
+
+        self.prev_frame = QPushButton(self.details)
+        self.prev_frame.setObjectName(u"prev_frame")
+        sizePolicy3.setHeightForWidth(self.prev_frame.sizePolicy().hasHeightForWidth())
+        self.prev_frame.setSizePolicy(sizePolicy3)
+        self.prev_frame.setMinimumSize(QSize(0, 40))
+        self.prev_frame.setStyleSheet(u"background-color: rgb(255, 215, 0);\n"
+"border-radius: 10px;\n"
+"border: none;\n"
+"font: 600 12pt \"Segoe UI\";\n"
+"")
+
+        self.verticalLayout_2.addWidget(self.prev_frame)
+
         self.pushButton = QPushButton(self.details)
         self.pushButton.setObjectName(u"pushButton")
         self.pushButton.setMinimumSize(QSize(0, 40))
@@ -171,11 +200,6 @@ class Ui_Form(object):
 
         self.verticalLayout_2.addLayout(self.formLayout)
 
-        self.textBrowser = QTextBrowser(self.details)
-        self.textBrowser.setObjectName(u"textBrowser")
-
-        self.verticalLayout_2.addWidget(self.textBrowser)
-
 
         self.horizontalLayout_2.addWidget(self.details)
 
@@ -197,6 +221,8 @@ class Ui_Form(object):
 
     def retranslateUi(self, Form):
         Form.setWindowTitle(QCoreApplication.translate("Form", u"Form", None))
+        self.next_frame.setText(QCoreApplication.translate("Form", u"Prev Frame", None))
+        self.prev_frame.setText(QCoreApplication.translate("Form", u"Next Frame", None))
         self.pushButton.setText(QCoreApplication.translate("Form", u"Load Bone Mask", None))
         self.pushButton_2.setText(QCoreApplication.translate("Form", u"Register Current Bone", None))
         self.pos_xLabel.setText(QCoreApplication.translate("Form", u"pos_x", None))
@@ -211,18 +237,5 @@ class Ui_Form(object):
         self.rotation_y.setText(QCoreApplication.translate("Form", u"[link to object]", None))
         self.rotation_zLabel.setText(QCoreApplication.translate("Form", u"rotation_z", None))
         self.rotation_z.setText(QCoreApplication.translate("Form", u"[link to object]", None))
-        self.textBrowser.setHtml(QCoreApplication.translate("Form", u"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
-"<html><head><meta name=\"qrichtext\" content=\"1\" /><meta charset=\"utf-8\" /><style type=\"text/css\">\n"
-"p, li { white-space: pre-wrap; }\n"
-"hr { height: 1px; border-width: 0; }\n"
-"li.unchecked::marker { content: \"\\2610\"; }\n"
-"li.checked::marker { content: \"\\2612\"; }\n"
-"</style></head><body style=\" font-family:'.AppleSystemUIFont'; font-size:13pt; font-weight:400; font-style:normal;\">\n"
-"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">Starting with the Femur, load each bone mask onto the fluoroscopy frame. Align the bone mask with the correlating bone in the frame by manipulating themask with 6 DoF. Following the Femur, the Tibia and Fibula will need to be registered.</p>\n"
-"<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><"
-                        "br /></p>\n"
-"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">Use mouse interactions for translations and [inset interaction type] for rotations. You may also manually change the parameters of the mask using the above input fields.</p>\n"
-"<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><br /></p>\n"
-"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">Upon confirming registration of the current bone, our high powered AI model will register the current bone mask to the rest of the fluoroscopy frames.</p></body></html>", None))
     # retranslateUi
 
