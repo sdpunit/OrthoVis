@@ -3,6 +3,7 @@
 from PySide6.QtCore import Qt, Signal, QSignalBlocker, QEvent
 from PySide6.QtGui import QSurfaceFormat, QVector3D, QQuaternion
 from PySide6.QtWidgets import QWidget, QSizePolicy, QVBoxLayout
+from matplotlib.pylab import angle
 
 from frontend_pages.registration.ui_registration_window import Ui_Form
 from frontend_pages.registration.fluoro_frame_extractor import extract_dicom_frames
@@ -30,9 +31,39 @@ class VTKView(QWidget):
     #     camera.SetPosition(*position)
     #     camera.SetFocalPoint(*view_center)
     #     self.renderer.ResetCameraClippingRange()
-    #     self.render_window.Render()
+ 
+
+    def _quaternion_to_euler(self, q):
+        # Returns (rx, ry, rz) in degrees
+        w, x, y, z = q.scalar(), q.x(), q.y(), q.z()
+        import math
+        t0 = 2.0 * (w * x + y * z)
+        t1 = 1.0 - 2.0 * (x * x + y * y)
+        roll_x = math.degrees(math.atan2(t0, t1))
+
+        t2 = 2.0 * (w * y - z * x)
+        t2 = max(-1.0, min(1.0, t2))
+        pitch_y = math.degrees(math.asin(t2))
+
+        t3 = 2.0 * (w * z + x * y)
+        t4 = 1.0 - 2.0 * (y * y + z * z)
+        yaw_z = math.degrees(math.atan2(t3, t4))
+        return roll_x, pitch_y, yaw_z
+
+    def _get_actor_quaternion(self):
+        rx, ry, rz = self.actor.GetOrientation()
+        q = QQuaternion.fromEulerAngles(rx, ry, rz)
+        return q
+
+    def _set_actor_quaternion(self, q):
+        rx, ry, rz = self._quaternion_to_euler(q)
+        self.set_actor_rotation_euler(rx, ry, rz)   #     self.render_window.Render()
     """Reusable VTK viewport; emits poseChanged(x,y,z, rx,ry,rz) for the primary actor."""
     poseChanged = Signal(float, float, float, float, float, float)
+
+    def wrap_angle(angle):
+    # """Wrap angle to [-180, 180] degrees."""
+        return ((angle + 180) % 360) - 180
 
     def __init__(self, parent=None, bg=(0.10, 0.12, 0.14)):
         super().__init__(parent)
@@ -106,15 +137,24 @@ class VTKView(QWidget):
                 return True
             
             if event.type() == QEvent.MouseMove:
-                if self.last_mouse_pos is None:
+                if self.last_mouse_pos is None or event.buttons() == Qt.NoButton:
                     return False
                 dx = event.x() - self.last_mouse_pos.x()
                 dy = event.y() - self.last_mouse_pos.y()
                 self.last_mouse_pos = event.pos()
                 if self.actor:
-                    if event.modifiers() & Qt.ControlModifier:
-                        # Rotate with Ctrl
+                    if event.modifiers() & Qt.ControlModifier:# 
+                        # Rotate with Ctr# l
                         rx, ry, rz = self.actor.GetOrientation()
+                                # Quaternion-based rotation
+                        sensitivity = 0.1
+                        q = self._get_actor_quaternion()
+                        rot_x = QQuaternion.fromAxisAndAngle(QVector3D(1, 0, 0), dy * sensitivity)
+                        rot_y = QQuaternion.fromAxisAndAngle(QVector3D(0, 1, 0), dx * sensitivity)
+                        new_q = rot_x * rot_y * q
+                        self._set_actor_quaternion(new_q)                
+                        ry = ((ry + 180) % 360) - 180
+                        rz = ((rz + 180) % 360) - 180
                         sensitivity = 0.1
                         self.set_actor_rotation_euler(rx + dy*sensitivity, ry + dx*sensitivity, rz)
                     else:
