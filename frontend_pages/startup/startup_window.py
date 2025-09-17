@@ -4,7 +4,8 @@ from PySide6.QtCore import QObject
 from frontend_pages.startup.ui_startup_window import Ui_HomePage
 from PySide6.QtWidgets import QFileDialog
 from classes.objects import *
-import json, os, datetime
+from datetime import datetime
+import json, os
 
 class HomePage(QWidget):
     def __init__(self):
@@ -28,6 +29,7 @@ class HomePage(QWidget):
         """
         self.ui.pushButton.setStyleSheet(button_style)
         self.ui.pushButton_2.setStyleSheet(button_style)
+        self.read_entries()
 
     def handle_new_project(self):
         """Handle new project creation"""
@@ -51,6 +53,9 @@ class HomePage(QWidget):
                 print(f"=== Loading existing project ===")
                 print(f"Project folder: {folder_path}")
                 print(f"Project data: {project_data}")
+
+                # Whenever the new project is opened, append the entry to the opened_projects.txt
+                self.append_entry(project_data["name"])
                 
                 # Load project into backend singleton
                 success = self.load_project_into_backend(project_data, folder_path)
@@ -132,26 +137,69 @@ class HomePage(QWidget):
             except Exception as e:
                 self.show_error(f"Error loading project: {str(e)}")
 
-    def append_entry(self, path: str, name: str):
+
+    def append_entry(self, name, max_entries=3):
         """
-        Appends an entry to the text file in the format: name, D-M-YYYY
-        using today's date.
-        Creates the file if it does not exist.
+        Appends an entry in the format: name, D-M-YYYY to display the recently opened projects
+        If the file already has max_entries, deletes the last entry first.
         """
-        file = f"{path}/opened_projects.txt"
+        current_dir = Path(__file__).resolve().parent.parent
+        parent_dir = current_dir.parent
+        path = parent_dir / "Projects" / "opened_projects.txt" 
+
+        # Ensure parent folder exists
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.touch(exist_ok=True)
+        # Read existing lines (if any)
+        lines = []
+
+        with open(path, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+
+        # If file already has max_entries, drop the last one
+        if len(lines) >= max_entries:
+            lines = lines[:-1]
+
+        # Format today's date
         today = datetime.today()
-    
-        # Format as D-M-YYYY
-        formatted_date = today.strftime("%d %B %Y")
-    
-        with open(file, "a", encoding="utf-8") as f:
-            f.write(f"{name}, {formatted_date}\n")
-            print("File entry added")
+        try:
+            formatted_date = today.strftime("%-d-%-m-%Y")  # Linux/macOS
+        except ValueError:
+            formatted_date = today.strftime("%#d-%#m-%Y")  # Windows
 
-        self.ui.fileName1.setText(name)
-        self.ui.lastAccess1.setText(formatted_date)
-        # self.ui.fileName2.
+        # Add new entry at the top
+        lines.insert(0, f"{name}, {formatted_date}\n")
 
+        # Write everything back
+        with open(path, "w", encoding="utf-8") as f:
+            f.writelines(lines)
+
+    def read_entries(self):
+        """
+        Appends an entry in the format: name, D-M-YYYY to display the recently opened projects
+        If the file already has max_entries, deletes the last entry first.
+        """
+        current_dir = Path(__file__).resolve().parent.parent
+        parent_dir = current_dir.parent
+        path = parent_dir / "Projects" / "opened_projects.txt" 
+
+        lines = []
+
+        with open(path, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line:  # skip empty lines
+                    name, date = line.split(", ", 1)
+                    lines.append((name, date))
+
+        labels = [(self.ui.fileName1, self.ui.lastAccess1), (self.ui.fileName2, self.ui.lastAccess2),
+                  (self.ui.fileName3, self.ui.lastAccess3)]
+        
+        for i in range(len(lines)):
+            file, lastAccess = labels[i]
+            name, date = lines[i]
+            file.setText(name)
+            lastAccess.setText(date)
 
     
     def get_page(self, main_window : QObject, stacked_widget: QObject, state: str) -> QObject:

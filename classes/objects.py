@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from abc import ABC, abstractmethod
 from pathlib import Path
+from typing import Any
 import os
 
 def copy_directory(source_folder: str, destination_folder: str):  
@@ -173,12 +174,9 @@ class Context:
     The Context delegates part of its behavior to the current State object.
     """
 
-    def request_process(self) -> bool:
-        return self._singleton_data._state.handle_process()
-
-    def request_process_with_roi(self, custom_roi: list) -> bool:
+    def request_process(self, arg: Any = None) -> bool:
         """Request processing with custom ROI"""
-        return self._singleton_data._state.handle_process_with_roi(custom_roi)
+        return self._singleton_data._state.handle_process(arg)
 
     def request_save(self, patient: SingletonPatient) -> str:
         return self._singleton_data._state.handle_save(patient)
@@ -206,12 +204,8 @@ class DataState(ABC):
         self._context = context
 
     @abstractmethod
-    def handle_process(self) -> bool:
+    def handle_process(self, arg: Any = None) -> bool:
         pass
-
-    def handle_process_with_roi(self, custom_roi: list) -> bool:
-        """Handle processing with custom ROI - default implementation calls handle_process"""
-        return self.handle_process()
 
     @abstractmethod
     def handle_save(self, patient: SingletonPatient) -> str:
@@ -232,18 +226,13 @@ Context.
 
 class RawState(DataState):
 
-    def handle_process(self) -> bool:
-        """Handle segmentation in RawState - this should not be called directly anymore"""
-        print("RawState: handle_process called without ROI - use handle_process_with_roi instead")
-        return False
-
-    def handle_process_with_roi(self, custom_roi: list) -> bool:
+    def handle_process(self, arg: Any = None) -> bool:
         """Handle segmentation in RawState with custom ROI"""
         try:
             from seg.totalseg import run_complete_segmentation
             
             # Validate custom ROI
-            if not custom_roi or len(custom_roi) == 0:
+            if not arg or len(arg) == 0:
                 print("RawState: Custom ROI is empty - segmentation cannot proceed")
                 return False
             
@@ -257,9 +246,9 @@ class RawState(DataState):
             
             print(f"RawState: Running segmentation on {ct_dir}")
             print(f"RawState: Output directory {seg_dir}")
-            print(f"RawState: Custom ROI: {custom_roi}")
+            print(f"RawState: Custom ROI: {arg}")
             
-            success = run_complete_segmentation(ct_dir, seg_dir, custom_roi)
+            success = run_complete_segmentation(ct_dir, seg_dir, arg)
             
             if success:
                 print("RawState: Segmentation completed successfully")
@@ -363,11 +352,7 @@ class RawState(DataState):
 
 class SegmentState(DataState):
 
-    def handle_process(self) -> bool:
-        print("SegmentState wants to change the state of the context.")
-        return False
-
-    def handle_process_with_roi(self, custom_roi: list) -> bool:
+    def handle_process(self, arg: Any = None) -> bool:
         print("SegmentState: Already segmented - no additional processing needed")
         return True
  
@@ -381,12 +366,8 @@ class SegmentState(DataState):
 
 class CalibrationState(DataState):
 
-    def handle_process(self) -> bool:
-        print("CalibrationState wants to change the state of the context.")
-        self.context.transition_to(SegmentState())
-
-    def handle_process_with_roi(self, custom_roi: list) -> bool:
-        return self.handle_process()
+    def handle_process(self, arg: Any = None) -> bool:
+        return True
 
     def handle_save(self, patient: SingletonPatient) -> str:
         print("CalibrationState wants to change the state of the context.")
@@ -398,12 +379,8 @@ class CalibrationState(DataState):
 
 class RegistrationState(DataState):
 
-    def handle_process(self) -> bool:
-        print("RegistrationState wants to change the state of the context.")
-        self.context.transition_to(SegmentState())
-
-    def handle_process_with_roi(self, custom_roi: list) -> bool:
-        return self.handle_process()
+    def handle_process(self, arg: Any = None) -> bool:
+        return True
 
     def handle_save(self, patient: SingletonPatient) -> str:
         print("RegistrationState wants to change the state of the context.")
@@ -415,12 +392,8 @@ class RegistrationState(DataState):
 
 class ReferenceSysState(DataState):
 
-    def handle_process(self) -> bool:
-        print("ReferenceSysState wants to change the state of the context.")
-        self.context.transition_to(SegmentState())
-
-    def handle_process_with_roi(self, custom_roi: list) -> bool:
-        return self.handle_process()
+    def handle_process(self, arg: Any = None) -> bool:
+        return True
 
     def handle_save(self, patient: SingletonPatient) -> str:
         print("ReferenceSysState wants to change the state of the context.")
@@ -432,12 +405,8 @@ class ReferenceSysState(DataState):
 
 class MotionState(DataState):
 
-    def handle_process(self) -> bool:
-        print("MotionState wants to change the state of the context.")
-        self.context.transition_to(SegmentState())
-
-    def handle_process_with_roi(self, custom_roi: list) -> bool:
-        return self.handle_process()
+    def handle_process(self, arg: Any = None) -> bool:
+        return True
 
     def handle_save(self, patient: SingletonPatient) -> str:
         print("MotionState wants to change the state of the context.")
@@ -450,12 +419,8 @@ class MotionState(DataState):
 
 class VisualState(DataState):
 
-    def handle_process(self) -> bool:
-        print("VisualState wants to change the state of the context.")
-        self.context.transition_to(SegmentState())
-
-    def handle_process_with_roi(self, custom_roi: list) -> bool:
-        return self.handle_process()
+    def handle_process(self, arg: Any = None) -> bool:
+        return True
 
     def handle_save(self, patient: SingletonPatient) -> str:
         print("VisualState wants to change the state of the context.")
