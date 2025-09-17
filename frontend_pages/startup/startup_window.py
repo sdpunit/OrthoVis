@@ -29,7 +29,12 @@ class HomePage(QWidget):
         """
         self.ui.pushButton.setStyleSheet(button_style)
         self.ui.pushButton_2.setStyleSheet(button_style)
-        self.read_entries()
+
+        current_dir = Path(__file__).resolve().parent.parent
+        parent_dir = current_dir.parent
+        path = parent_dir / "Projects" / "opened_projects.txt"
+        if os.path.isfile(path):
+            self.read_entries()  
 
     def handle_new_project(self):
         """Handle new project creation"""
