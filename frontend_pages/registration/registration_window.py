@@ -324,6 +324,10 @@ class Registration(QWidget):
             """
         )
 
+        # Collapsible help section
+        self.ui.help_section.setVisible(False)
+        self.ui.help_btn.clicked.connect(self._toggle_help)
+
         # Swap placeholder with our VTKView
         self.view = VTKView(self.ui.mainpanel, bg=(0.10, 0.12, 0.14))
         self.ui.horizontalLayout_2.replaceWidget(self.ui.VTK_display, self.view)
@@ -409,3 +413,9 @@ class Registration(QWidget):
         except ValueError:
             return
         self.view.set_actor_rotation_euler(rx, ry, rz)
+
+    def _toggle_help(self):
+        if self.ui.help_section.isVisible():
+            self.ui.help_section.setVisible(False)
+        else:
+            self.ui.help_section.setVisible(True)
