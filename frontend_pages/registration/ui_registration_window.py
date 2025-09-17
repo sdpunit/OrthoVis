@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'registration_window.ui'
+## Form generated from reading UI file 'registration_windowmcSCLd.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.9.1
+## Created by: Qt User Interface Compiler version 6.9.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -17,7 +17,7 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QApplication, QFormLayout, QFrame, QGraphicsView,
     QHBoxLayout, QLabel, QLineEdit, QPushButton,
-    QSizePolicy, QVBoxLayout, QWidget)
+    QSizePolicy, QTextBrowser, QVBoxLayout, QWidget)
 
 from widgets.sidebar.sidebar import Sidebar
 from widgets.titlebar.titlebar import Titlebar
@@ -210,6 +210,31 @@ class Ui_Form(object):
 
         self.verticalLayout_2.addLayout(self.formLayout)
 
+        self.help_btn = QPushButton(self.details)
+        self.help_btn.setObjectName(u"help_btn")
+        sizePolicy4 = QSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        sizePolicy4.setHorizontalStretch(0)
+        sizePolicy4.setVerticalStretch(0)
+        sizePolicy4.setHeightForWidth(self.help_btn.sizePolicy().hasHeightForWidth())
+        self.help_btn.setSizePolicy(sizePolicy4)
+        self.help_btn.setMinimumSize(QSize(30, 30))
+        self.help_btn.setStyleSheet(u"background-color: rgb(255, 215, 0);\n"
+"border-radius: 10px;\n"
+"border: none;")
+        icon = QIcon(QIcon.fromTheme(QIcon.ThemeIcon.HelpFaq))
+        self.help_btn.setIcon(icon)
+
+        self.verticalLayout_2.addWidget(self.help_btn)
+
+        self.help_section = QTextBrowser(self.details)
+        self.help_section.setObjectName(u"help_section")
+        sizePolicy2.setHeightForWidth(self.help_section.sizePolicy().hasHeightForWidth())
+        self.help_section.setSizePolicy(sizePolicy2)
+        self.help_section.setMinimumSize(QSize(0, 330))
+        self.help_section.setBaseSize(QSize(0, 100))
+
+        self.verticalLayout_2.addWidget(self.help_section)
+
 
         self.horizontalLayout_2.addWidget(self.details, 0, Qt.AlignmentFlag.AlignTop)
 
@@ -248,5 +273,26 @@ class Ui_Form(object):
         self.label.setText(QCoreApplication.translate("Form", u"Frame", None))
         self.next_frame.setText(QCoreApplication.translate("Form", u"Prev Frame", None))
         self.prev_frame.setText(QCoreApplication.translate("Form", u"Next Frame", None))
+        self.help_btn.setText("")
+        self.help_section.setHtml(QCoreApplication.translate("Form", u"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
+"<html><head><meta name=\"qrichtext\" content=\"1\" /><meta charset=\"utf-8\" /><style type=\"text/css\">\n"
+"p, li { white-space: pre-wrap; }\n"
+"hr { height: 1px; border-width: 0; }\n"
+"li.unchecked::marker { content: \"\\2610\"; }\n"
+"li.checked::marker { content: \"\\2612\"; }\n"
+"</style></head><body style=\" font-family:'Segoe UI'; font-size:10.5pt; font-weight:400; font-style:normal;\">\n"
+"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">- Start with the Femur, load each bone mask onto the fluoroscopy frame. </p>\n"
+"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">- Align the bone mask with the correlating bone in the frame by manipulating the mask with 6 DoF. </p>\n"
+"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-"
+                        "indent:0; text-indent:0px;\">- Following the Femur, the Tibia and Fibula will need to be registered.</p>\n"
+"<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><br /></p>\n"
+"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">- Mouse interactions:</p>\n"
+"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">  - Drag: translation</p>\n"
+"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">  - Ctrl + Drag: rotation</p>\n"
+"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">  - Scroll: Zoom in/out (move along z-axis)</p>\n"
+"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">- Yo"
+                        "u may also manually change the parameters of the mask using the above input fields.</p>\n"
+"<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><br /></p>\n"
+"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">- Upon confirming registration of the current bone, our high powered AI model will register the current bone mask to the rest of the fluoroscopy frames.</p></body></html>", None))
     # retranslateUi
 
