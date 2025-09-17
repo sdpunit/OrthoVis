@@ -23,7 +23,7 @@ class SegmentationWorker(QThread):
     
     def run(self):
         # Pass custom ROI to the context for processing
-        success = self.context.request_process_with_roi(self.custom_roi)
+        success = self.context.request_process(self.custom_roi)
         self.finished.emit(success)
 
 
