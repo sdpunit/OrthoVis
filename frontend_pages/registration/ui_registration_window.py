@@ -83,35 +83,6 @@ class Ui_Form(object):
         self.verticalLayout_2 = QVBoxLayout(self.details)
         self.verticalLayout_2.setObjectName(u"verticalLayout_2")
         self.verticalLayout_2.setContentsMargins(0, 0, 0, 0)
-        self.next_frame = QPushButton(self.details)
-        self.next_frame.setObjectName(u"next_frame")
-        sizePolicy3 = QSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed)
-        sizePolicy3.setHorizontalStretch(0)
-        sizePolicy3.setVerticalStretch(0)
-        sizePolicy3.setHeightForWidth(self.next_frame.sizePolicy().hasHeightForWidth())
-        self.next_frame.setSizePolicy(sizePolicy3)
-        self.next_frame.setMinimumSize(QSize(0, 40))
-        self.next_frame.setStyleSheet(u"background-color: rgb(255, 215, 0);\n"
-"border-radius: 10px;\n"
-"border: none;\n"
-"font: 600 12pt \"Segoe UI\";\n"
-"")
-
-        self.verticalLayout_2.addWidget(self.next_frame)
-
-        self.prev_frame = QPushButton(self.details)
-        self.prev_frame.setObjectName(u"prev_frame")
-        sizePolicy3.setHeightForWidth(self.prev_frame.sizePolicy().hasHeightForWidth())
-        self.prev_frame.setSizePolicy(sizePolicy3)
-        self.prev_frame.setMinimumSize(QSize(0, 40))
-        self.prev_frame.setStyleSheet(u"background-color: rgb(255, 215, 0);\n"
-"border-radius: 10px;\n"
-"border: none;\n"
-"font: 600 12pt \"Segoe UI\";\n"
-"")
-
-        self.verticalLayout_2.addWidget(self.prev_frame)
-
         self.pushButton = QPushButton(self.details)
         self.pushButton.setObjectName(u"pushButton")
         self.pushButton.setMinimumSize(QSize(0, 40))
@@ -197,11 +168,50 @@ class Ui_Form(object):
 
         self.formLayout.setWidget(5, QFormLayout.ItemRole.FieldRole, self.rotation_z)
 
+        self.frame_indicator = QLineEdit(self.details)
+        self.frame_indicator.setObjectName(u"frame_indicator")
+
+        self.formLayout.setWidget(6, QFormLayout.ItemRole.FieldRole, self.frame_indicator)
+
+        self.label = QLabel(self.details)
+        self.label.setObjectName(u"label")
+
+        self.formLayout.setWidget(6, QFormLayout.ItemRole.LabelRole, self.label)
+
+        self.next_frame = QPushButton(self.details)
+        self.next_frame.setObjectName(u"next_frame")
+        sizePolicy3 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        sizePolicy3.setHorizontalStretch(1)
+        sizePolicy3.setVerticalStretch(0)
+        sizePolicy3.setHeightForWidth(self.next_frame.sizePolicy().hasHeightForWidth())
+        self.next_frame.setSizePolicy(sizePolicy3)
+        self.next_frame.setMinimumSize(QSize(100, 40))
+        self.next_frame.setStyleSheet(u"background-color: rgb(255, 215, 0);\n"
+"border-radius: 10px;\n"
+"border: none;\n"
+"font: 600 12pt \"Segoe UI\";\n"
+"")
+
+        self.formLayout.setWidget(7, QFormLayout.ItemRole.FieldRole, self.next_frame)
+
+        self.prev_frame = QPushButton(self.details)
+        self.prev_frame.setObjectName(u"prev_frame")
+        sizePolicy3.setHeightForWidth(self.prev_frame.sizePolicy().hasHeightForWidth())
+        self.prev_frame.setSizePolicy(sizePolicy3)
+        self.prev_frame.setMinimumSize(QSize(100, 40))
+        self.prev_frame.setStyleSheet(u"background-color: rgb(255, 215, 0);\n"
+"border-radius: 10px;\n"
+"border: none;\n"
+"font: 600 12pt \"Segoe UI\";\n"
+"")
+
+        self.formLayout.setWidget(7, QFormLayout.ItemRole.LabelRole, self.prev_frame)
+
 
         self.verticalLayout_2.addLayout(self.formLayout)
 
 
-        self.horizontalLayout_2.addWidget(self.details)
+        self.horizontalLayout_2.addWidget(self.details, 0, Qt.AlignmentFlag.AlignTop)
 
         self.horizontalLayout_2.setStretch(0, 3)
         self.horizontalLayout_2.setStretch(1, 1)
@@ -221,8 +231,6 @@ class Ui_Form(object):
 
     def retranslateUi(self, Form):
         Form.setWindowTitle(QCoreApplication.translate("Form", u"Form", None))
-        self.next_frame.setText(QCoreApplication.translate("Form", u"Prev Frame", None))
-        self.prev_frame.setText(QCoreApplication.translate("Form", u"Next Frame", None))
         self.pushButton.setText(QCoreApplication.translate("Form", u"Load Bone Mask", None))
         self.pushButton_2.setText(QCoreApplication.translate("Form", u"Register Current Bone", None))
         self.pos_xLabel.setText(QCoreApplication.translate("Form", u"pos_x", None))
@@ -237,5 +245,8 @@ class Ui_Form(object):
         self.rotation_y.setText(QCoreApplication.translate("Form", u"[link to object]", None))
         self.rotation_zLabel.setText(QCoreApplication.translate("Form", u"rotation_z", None))
         self.rotation_z.setText(QCoreApplication.translate("Form", u"[link to object]", None))
+        self.label.setText(QCoreApplication.translate("Form", u"Frame", None))
+        self.next_frame.setText(QCoreApplication.translate("Form", u"Prev Frame", None))
+        self.prev_frame.setText(QCoreApplication.translate("Form", u"Next Frame", None))
     # retranslateUi
 

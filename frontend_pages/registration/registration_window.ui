@@ -100,12 +100,12 @@
          <item>
           <widget class="QGraphicsView" name="VTK_display"/>
          </item>
-         <item>
+         <item alignment="Qt::AlignmentFlag::AlignTop">
           <widget class="QWidget" name="details" native="true">
            <property name="styleSheet">
             <string notr="true"/>
            </property>
-           <layout class="QVBoxLayout" name="verticalLayout_2" stretch="0,0,0,0,0">
+           <layout class="QVBoxLayout" name="verticalLayout_2" stretch="0,0,0">
             <property name="leftMargin">
              <number>0</number>
             </property>
@@ -118,58 +118,6 @@
             <property name="bottomMargin">
              <number>0</number>
             </property>
-            <item>
-             <widget class="QPushButton" name="next_frame">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>40</height>
-               </size>
-              </property>
-              <property name="styleSheet">
-               <string notr="true">background-color: rgb(255, 215, 0);
-border-radius: 10px;
-border: none;
-font: 600 12pt &quot;Segoe UI&quot;;
-</string>
-              </property>
-              <property name="text">
-               <string>Prev Frame</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QPushButton" name="prev_frame">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>40</height>
-               </size>
-              </property>
-              <property name="styleSheet">
-               <string notr="true">background-color: rgb(255, 215, 0);
-border-radius: 10px;
-border: none;
-font: 600 12pt &quot;Segoe UI&quot;;
-</string>
-              </property>
-              <property name="text">
-               <string>Next Frame</string>
-              </property>
-             </widget>
-            </item>
             <item>
              <widget class="QPushButton" name="pushButton">
               <property name="minimumSize">
@@ -296,6 +244,68 @@ font: 600 12pt &quot;Segoe UI&quot;;
                <widget class="QLineEdit" name="rotation_z">
                 <property name="text">
                  <string>[link to object]</string>
+                </property>
+               </widget>
+              </item>
+              <item row="6" column="1">
+               <widget class="QLineEdit" name="frame_indicator"/>
+              </item>
+              <item row="6" column="0">
+               <widget class="QLabel" name="label">
+                <property name="text">
+                 <string>Frame</string>
+                </property>
+               </widget>
+              </item>
+              <item row="7" column="1">
+               <widget class="QPushButton" name="next_frame">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                  <horstretch>1</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="minimumSize">
+                 <size>
+                  <width>100</width>
+                  <height>40</height>
+                 </size>
+                </property>
+                <property name="styleSheet">
+                 <string notr="true">background-color: rgb(255, 215, 0);
+border-radius: 10px;
+border: none;
+font: 600 12pt &quot;Segoe UI&quot;;
+</string>
+                </property>
+                <property name="text">
+                 <string>Prev Frame</string>
+                </property>
+               </widget>
+              </item>
+              <item row="7" column="0">
+               <widget class="QPushButton" name="prev_frame">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                  <horstretch>1</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="minimumSize">
+                 <size>
+                  <width>100</width>
+                  <height>40</height>
+                 </size>
+                </property>
+                <property name="styleSheet">
+                 <string notr="true">background-color: rgb(255, 215, 0);
+border-radius: 10px;
+border: none;
+font: 600 12pt &quot;Segoe UI&quot;;
+</string>
+                </property>
+                <property name="text">
+                 <string>Next Frame</string>
                 </property>
                </widget>
               </item>
