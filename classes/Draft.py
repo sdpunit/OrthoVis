@@ -42,7 +42,7 @@ def apply_similarity_uv(uv, scale=1.0, theta=0.0, tx=0.0, ty=0.0, center=(256.0,
     return ((uv - c) @ R.T) * scale + c + np.array([tx, ty])
 
 def interactive_adjust_grid(img512, uv_init, center=(256.0,256.0),
-                            step_move=5.0, step_rot_deg=1.0, step_scale=1.01):
+                            step_move=1.0, step_rot_deg=1.0, step_scale=1.01):
     """
     键盘调网格：
       ← → ↑ ↓ : 平移（Shift ×5）
@@ -75,7 +75,7 @@ def interactive_adjust_grid(img512, uv_init, center=(256.0,256.0),
     def on_key(e):
         nonlocal help_visible
         k = (e.key or "").lower()
-        accel = 5.0 if ("shift" in (e.key or "")) else 1.0
+        accel = 1.0 if ("shift" in (e.key or "")) else 0.1
         moved = False
         if   k == "left":  params["tx"] -= step_move*accel; moved=True
         elif k == "right": params["tx"] += step_move*accel; moved=True
