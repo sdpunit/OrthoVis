@@ -747,30 +747,30 @@ class Segmentation(QWidget, ProgressDialogMixin):
         self.show_info(message)
 
     def save_edited_masks(self):
-        """Save all edited masks - triggered by button"""
-        if not self.editing_enabled or not self.editable_masks:
-            print("No editable masks available")
-            self.show_info("No editable masks available")
-            return False
+        self.context.request_save(self)
+        # if not self.editing_enabled or not self.editable_masks:
+        #     print("No editable masks available")
+        #     self.show_info("No editable masks available")
+        #     return False
         
-        try:
-            saved_count = 0
-            for mask in self.editable_masks:
-                if hasattr(mask, 'modified') and mask.modified:
-                    mask.save_mask()
-                    saved_count += 1
+        # try:
+        #     saved_count = 0
+        #     for mask in self.editable_masks:
+        #         if hasattr(mask, 'modified') and mask.modified:
+        #             mask.save_mask()
+        #             saved_count += 1
             
-            # Always show the message, even if no masks were modified
-            message = "Saved edits to masks"
-            print(message)
-            self.show_info(message)
+        #     # Always show the message, even if no masks were modified
+        #     message = "Saved edits to masks"
+        #     print(message)
+        #     self.show_info(message)
             
-            return True
+        #     return True
                 
-        except Exception as e:
-            print(f"Error saving masks: {e}")
-            self.show_error(f"Error saving masks: {e}")
-            return False
+        # except Exception as e:
+        #     print(f"Error saving masks: {e}")
+        #     self.show_error(f"Error saving masks: {e}")
+        #     return False
 
     def proceed_to_calibration(self):
         """Proceed to calibration step"""
