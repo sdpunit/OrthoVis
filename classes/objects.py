@@ -354,11 +354,11 @@ class SegmentState(DataState):
 
     def handle_process(self, arg: Any = None) -> bool:
         print("SegmentState: Already segmented - no additional processing needed")
+        self.context.transition_to(CalibrationState())
         return True
  
     def handle_save(self, patient: SingletonPatient) -> str:
         print("SegmentState wants to change the state of the context.")
-        self.context.transition_to(SegmentState())
 
     def handle_to_string(self) -> str:
         return "SegmentState"
@@ -367,11 +367,11 @@ class SegmentState(DataState):
 class CalibrationState(DataState):
 
     def handle_process(self, arg: Any = None) -> bool:
+        self.context.transition_to(RegistrationState())
         return True
 
     def handle_save(self, patient: SingletonPatient) -> str:
         print("CalibrationState wants to change the state of the context.")
-        self.context.transition_to(SegmentState())
 
     def handle_to_string(self) -> str:
         return "CalibrationState"
@@ -380,11 +380,11 @@ class CalibrationState(DataState):
 class RegistrationState(DataState):
 
     def handle_process(self, arg: Any = None) -> bool:
+        self.context.transition_to(ReferenceSysState())
         return True
 
     def handle_save(self, patient: SingletonPatient) -> str:
         print("RegistrationState wants to change the state of the context.")
-        self.context.transition_to(SegmentState())
     
     def handle_to_string(self) -> str:
         return "RegistrationState"
@@ -393,11 +393,11 @@ class RegistrationState(DataState):
 class ReferenceSysState(DataState):
 
     def handle_process(self, arg: Any = None) -> bool:
+        self.context.transition_to(MotionState())
         return True
 
     def handle_save(self, patient: SingletonPatient) -> str:
         print("ReferenceSysState wants to change the state of the context.")
-        self.context.transition_to(SegmentState())
 
     def handle_to_string(self) -> str:
         return "ReferenceSysState"
@@ -406,11 +406,11 @@ class ReferenceSysState(DataState):
 class MotionState(DataState):
 
     def handle_process(self, arg: Any = None) -> bool:
+        self.context.transition_to(VisualState())
         return True
 
     def handle_save(self, patient: SingletonPatient) -> str:
         print("MotionState wants to change the state of the context.")
-        self.context.transition_to(SegmentState())
 
     def handle_to_string(self) -> str:
         return "MotionState"
