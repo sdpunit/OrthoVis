@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'registration_windowmcSCLd.ui'
+## Form generated from reading UI file 'registration_windowwWGaBs.ui'
 ##
 ## Created by: Qt User Interface Compiler version 6.9.0
 ##
@@ -26,7 +26,7 @@ class Ui_Form(object):
     def setupUi(self, Form):
         if not Form.objectName():
             Form.setObjectName(u"Form")
-        Form.resize(862, 550)
+        Form.resize(862, 806)
         Form.setStyleSheet(u"")
         self.horizontalLayout = QHBoxLayout(Form)
         self.horizontalLayout.setSpacing(0)
@@ -113,8 +113,9 @@ class Ui_Form(object):
 
         self.formLayout.setWidget(0, QFormLayout.ItemRole.LabelRole, self.pos_xLabel)
 
-        self.pos_x = QLineEdit(self.details)
+        self.pos_x = QLineEdit("")
         self.pos_x.setObjectName(u"pos_x")
+        self.pos_x.setCursorPosition(0)
 
         self.formLayout.setWidget(0, QFormLayout.ItemRole.FieldRole, self.pos_x)
 
@@ -259,7 +260,7 @@ class Ui_Form(object):
         self.pushButton.setText(QCoreApplication.translate("Form", u"Load Bone Mask", None))
         self.pushButton_2.setText(QCoreApplication.translate("Form", u"Register Current Bone", None))
         self.pos_xLabel.setText(QCoreApplication.translate("Form", u"pos_x", None))
-        self.pos_x.setText(QCoreApplication.translate("Form", u"[link to object]", None))
+        self.pos_x.setText("")
         self.pos_yLabel.setText(QCoreApplication.translate("Form", u"pos_y", None))
         self.pos_y.setText(QCoreApplication.translate("Form", u"[link to object]", None))
         self.pos_zLabel.setText(QCoreApplication.translate("Form", u"pos_z", None))

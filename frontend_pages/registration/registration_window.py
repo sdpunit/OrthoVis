@@ -1,7 +1,7 @@
 # frontend_pages/registration/registration_window.py
 
-from PySide6.QtCore import Qt, Signal, QSignalBlocker
-from PySide6.QtGui import QSurfaceFormat
+from PySide6.QtCore import Qt, Signal, QSignalBlocker, QEvent
+from PySide6.QtGui import QSurfaceFormat, QQuaternion, QVector3D
 from PySide6.QtWidgets import QWidget, QSizePolicy, QVBoxLayout, QLabel, QApplication
 
 from frontend_pages.registration.ui_registration_window import Ui_Form
@@ -26,6 +26,32 @@ class VTKView(QWidget):
     """Shows a 2D DICOM frame as background (via pydicom + vtkImageImport) and a 3D actor on top."""
     poseChanged = Signal(float, float, float, float, float, float)
     frameChanged = Signal(int, int)  # (current_index, total_frames)
+
+    def _quaternion_to_euler(self, q):
+        # Returns (rx, ry, rz) in degrees
+        w, x, y, z = q.scalar(), q.x(), q.y(), q.z()
+        import math
+        t0 = 2.0 * (w * x + y * z)
+        t1 = 1.0 - 2.0 * (x * x + y * y)
+        roll_x = math.degrees(math.atan2(t0, t1))
+
+        t2 = 2.0 * (w * y - z * x)
+        t2 = max(-1.0, min(1.0, t2))
+        pitch_y = math.degrees(math.asin(t2))
+
+        t3 = 2.0 * (w * z + x * y)
+        t4 = 1.0 - 2.0 * (y * y + z * z)
+        yaw_z = math.degrees(math.atan2(t3, t4))
+        return roll_x, pitch_y, yaw_z
+
+    def _get_actor_quaternion(self):
+        rx, ry, rz = self.actor.GetOrientation()
+        q = QQuaternion.fromEulerAngles(rx, ry, rz)
+        return q
+
+    def _set_actor_quaternion(self, q):
+        rx, ry, rz = self._quaternion_to_euler(q)
+        self.set_actor_rotation_euler(rx, ry, rz)   #     self.render_window.Render()
 
     def __init__(self, parent=None, bg=(0.10, 0.12, 0.14)):
         super().__init__(parent)
@@ -89,6 +115,61 @@ class VTKView(QWidget):
         self._wl: vtkImageMapToWindowLevelColors | None = None
         self._bg_actor: vtkImageActor | None = None
         self._last_shape: tuple[int, int] | None = None  # (H, W)
+
+        # Mouse interaction state
+        self.last_mouse_pos = None
+        self.vtk.installEventFilter(self)  # intercept mouse events
+
+    def eventFilter(self, obj, event):
+        # Intercept mouse events from QVTKRenderWindowInteractor
+        if obj == self.vtk:
+            if event.type() == QEvent.MouseButtonPress:
+                self.last_mouse_pos = event.pos()
+                print(self.last_mouse_pos)
+                return True
+            
+            if event.type() == QEvent.MouseMove:
+                if self.last_mouse_pos is None or event.buttons() == Qt.NoButton:
+                    return False
+                dx = event.x() - self.last_mouse_pos.x()
+                dy = event.y() - self.last_mouse_pos.y()
+                self.last_mouse_pos = event.pos()
+                if self.actor:
+                    if event.modifiers() & Qt.ControlModifier:# 
+                        # Rotate with Ctr# l
+                        rx, ry, rz = self.actor.GetOrientation()
+                                # Quaternion-based rotation
+                        sensitivity = 0.05
+                        q = self._get_actor_quaternion()
+                        rot_x = QQuaternion.fromAxisAndAngle(QVector3D(1, 0, 0), dy * sensitivity)
+                        rot_y = QQuaternion.fromAxisAndAngle(QVector3D(0, 1, 0), dx * sensitivity)
+                        new_q = rot_x * rot_y * q
+                        self._set_actor_quaternion(new_q)                
+                        ry = ((ry + 180) % 360) - 180
+                        rz = ((rz + 180) % 360) - 180
+                        sensitivity = 0.05
+                        self.set_actor_rotation_euler(rx + dy*sensitivity, ry + dx*sensitivity, rz)
+                    else:
+                        # Translate with drag
+                        x, y, z = self.actor.GetPosition()
+                        sensitivity = 0.01
+                        self.set_actor_translation(x + dx * sensitivity, y - dy * sensitivity, z)
+                return True
+            if event.type() == QEvent.Wheel:
+                if self.actor:
+                    x, y, z = self.actor.GetPosition()
+                    sensitivity = 0.1
+                    delta = event.angleDelta().y() / 120
+                    # Scroll up: move closer (increase Z), scroll down: move away (decrease Z)
+                    self.set_actor_translation(x, y, z + delta * sensitivity)
+                return True
+            
+            if event.type() == QEvent.MouseButtonRelease:
+                self.last_mouse_pos = None
+                return True
+            
+        return super().eventFilter(obj, event)
+
 
     # ---------- wheel handlers ----------
     def _on_wheel_forward(self, caller, evt):
@@ -223,8 +304,22 @@ class VTKView(QWidget):
         return actor
 
     def reset_camera(self):
-        self.renderer.ResetCamera()
+        # Set up camera for wider viewing area
+        camera = self.renderer.GetActiveCamera()
+        
+        # Position camera further back to see wider area
+        camera.SetPosition(0, 0, 10)  # Move camera further back
+        camera.SetFocalPoint(0, 0, 0)  # Look at origin
+        camera.SetViewUp(0, 1, 0)  # Y is up
+        
+        # Set a wider field of view
+        camera.SetViewAngle(45)  # Wider angle (default is usually 30)
+        
+        # Set appropriate clipping range for our expanded bounds
+        camera.SetClippingRange(0.1, 1000)
+        
         self.render_window.Render()
+
 
     def set_actor_translation(self, x=0.0, y=0.0, z=0.0):
         if not self.actor:
@@ -346,12 +441,12 @@ class Registration(QWidget):
         self.view.reset_camera()
 
         # Inputs <-> cube
-        self.ui.pos_x.textChanged.connect(self._on_pos_changed)
-        self.ui.pos_y.textChanged.connect(self._on_pos_changed)
-        self.ui.pos_z.textChanged.connect(self._on_pos_changed)
-        self.ui.rotation_x.textChanged.connect(self._on_rot_changed)
-        self.ui.rotation_y.textChanged.connect(self._on_rot_changed)
-        self.ui.rotation_z.textChanged.connect(self._on_rot_changed)
+        self.ui.pos_x.textEdited.connect(self._on_pos_changed)
+        self.ui.pos_y.textEdited.connect(self._on_pos_changed)
+        self.ui.pos_z.textEdited.connect(self._on_pos_changed)
+        self.ui.rotation_x.textEdited.connect(self._on_rot_changed)
+        self.ui.rotation_y.textEdited.connect(self._on_rot_changed)
+        self.ui.rotation_z.textEdited.connect(self._on_rot_changed)
         self.view.poseChanged.connect(self._update_fields_from_pose)
 
         # Frame stepping buttons
@@ -393,8 +488,10 @@ class Registration(QWidget):
             (self.ui.rotation_z, f"{rz:.2f}"),
         ]
         for w, val in pairs:
-            with QSignalBlocker(w):
-                w.setText(val)
+            # Only update if the field doesn't have focus (user isn't editing it)
+            if not w.hasFocus():
+                with QSignalBlocker(w):
+                    w.setText(val)
 
     def _on_pos_changed(self):
         try:
@@ -403,6 +500,20 @@ class Registration(QWidget):
             z = float(self.ui.pos_z.text())
         except ValueError:
             return
+        
+        # Setting the bounds (expanded for better visibility)
+        if x < -2.0:
+            x = -2.0
+        if x > 2.0:
+            x = 2.0
+        if y < -2.0:
+            y = -2.0
+        if y > 2.0:
+            y = 2.0     
+        if z < -5.0:
+            z = -5.0
+        if z > 5.0:
+            z = 5.0
         self.view.set_actor_translation(x, y, z)
 
     def _on_rot_changed(self):
