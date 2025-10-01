@@ -388,3 +388,193 @@ class HomePage(QWidget):
         msg.setText(message)
         msg.exec()
         print(f"Error: {message}")
+
+
+
+
+        
+'''
+from PySide6.QtWidgets import QWidget, QMessageBox, QFileDialog, QSizePolicy, QVBoxLayout
+from PySide6.QtCore import QObject, Qt
+from frontend_pages.startup.ui_startup_window import Ui_HomePage
+from classes.objects import *
+from datetime import datetime
+from pathlib import Path
+import json, os
+
+class HomePage(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.ui = Ui_HomePage()
+        self.ui.setupUi(self)
+        self.ui.pushButton.clicked.connect(self.handle_new_project)
+        self.ui.pushButton_2.clicked.connect(self.handle_open_project)
+        
+
+        self.setup_responsive_layouts()
+        self.apply_styles()
+        self.update_button_sizes()
+
+        current_dir = Path(__file__).resolve().parent.parent
+        parent_dir = current_dir.parent
+        path = parent_dir / "Projects" / "opened_projects.txt"
+        if os.path.isfile(path):
+            self.read_entries()
+
+    def setup_responsive_layouts(self):
+        """Adjust spacing and size policies for a responsive rounded layout."""
+
+        self.setMinimumSize(960, 640)
+
+        self.ui.gridLayout_2.setContentsMargins(32, 32, 32, 32)
+        self.ui.gridLayout_2.setHorizontalSpacing(24)
+        self.ui.gridLayout_2.setVerticalSpacing(24)
+
+        self.ui.mainLayout.setContentsMargins(0, 0, 0, 0)
+        self.ui.mainLayout.setSpacing(32)
+
+        self.ui.leftLayout.setContentsMargins(0, 0, 0, 0)
+        self.ui.leftLayout.setHorizontalSpacing(0)
+        self.ui.leftLayout.setVerticalSpacing(0)
+
+        self.ui.gridLayout_4.setContentsMargins(32, 32, 32, 32)
+        self.ui.gridLayout_4.setHorizontalSpacing(12)
+        self.ui.gridLayout_4.setVerticalSpacing(12)
+
+        self.ui.rightLayout.setContentsMargins(0, 0, 0, 0)
+        self.ui.rightLayout.setSpacing(0)
+
+        self.ui.gridLayout_3.setContentsMargins(32, 32, 32, 32)
+        self.ui.gridLayout_3.setHorizontalSpacing(24)
+        self.ui.gridLayout_3.setVerticalSpacing(24)
+        self.ui.gridLayout_3.setRowStretch(3, 3)
+        self.ui.gridLayout_3.setRowStretch(4, 4)
+
+        self.ui.selectionLayout.setSpacing(18)
+        self.ui.texts.setSpacing(24)
+
+        self.ui.buttonsLayout.setContentsMargins(0, 0, 0, 0)
+        self.ui.buttonsLayout.setSpacing(24)
+        self.ui.buttonsLayout.setStretch(0, 1)
+        self.ui.buttonsLayout.setStretch(1, 1)
+
+        self.ui.verticalLayout_3.setContentsMargins(24, 24, 24, 24)
+        self.ui.verticalLayout_3.setSpacing(16)
+
+        header_layouts = [
+            self.ui.horizontalLayout,
+            self.ui.horizontalLayout_3,
+            self.ui.horizontalLayout_4,
+            self.ui.horizontalLayout_5,
+        ]
+        for layout in header_layouts:
+            layout.setContentsMargins(16, 12, 16, 12)
+            layout.setSpacing(18)
+
+        for frame in (self.ui.project1Frame, self.ui.project2Frame, self.ui.project3Frame):
+            frame.setMinimumHeight(72)
+
+        self.ui.headers.setMinimumHeight(64)
+
+        button_policy = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        for frame, button in (
+            (self.ui.newProjectFrame, self.ui.pushButton),
+            (self.ui.openProjectFrame, self.ui.pushButton_2),
+        ):
+            if frame.layout() is None:
+                frame_layout = QVBoxLayout(frame)
+            else:
+                frame_layout = frame.layout()
+                while frame_layout.count():
+                    item = frame_layout.takeAt(0)
+                    if widget := item.widget():
+                        widget.setParent(None)
+            frame_layout.setContentsMargins(0, 0, 0, 0)
+            frame_layout.addWidget(button)
+            frame_layout.setAlignment(Qt.AlignmentFlag.AlignVCenter)
+
+            button.setSizePolicy(button_policy)
+            button.setMinimumHeight(64)
+            button.setCursor(Qt.CursorShape.PointingHandCursor)
+
+    def apply_styles(self):
+        """Apply a rounded, modern visual style to the startup window."""
+
+        base_styles = """
+            QWidget#HomePage {
+                background-color: #0b1120;
+            }
+            QFrame#leftFrame {
+                background-color: #1d3461;
+                border-radius: 32px;
+            }
+            QLabel#lblOrthoVis {
+                color: #f8fafc;
+                letter-spacing: 1.5px;
+            }
+            QFrame#rightFrame {
+                background-color: rgba(15, 23, 42, 0.75);
+                border-radius: 32px;
+                border: 1px solid rgba(148, 163, 184, 0.25);
+            }
+            QLabel#lblWelcome,
+            QLabel#newPfoject,
+            QLabel#openProject,
+            QLabel#recentsLabel {
+                color: #f8fafc;
+            }
+            QLabel#lblIntro,
+            QLabel#newProjectText,
+            QLabel#createProjectText {
+                color: rgba(226, 232, 240, 0.85);
+            }
+            QFrame#recentsFrame {
+                background-color: rgba(15, 23, 42, 0.55);
+                border-radius: 24px;
+                border: 1px solid rgba(148, 163, 184, 0.15);
+            }
+            QFrame#headers {
+                background-color: rgba(148, 163, 184, 0.2);
+                border-radius: 18px;
+            }
+            QLabel#fileNameLabel,
+            QLabel#lastAccessLabel {
+                color: rgba(226, 232, 240, 0.8);
+            }
+            QFrame#project1Frame,
+            QFrame#project2Frame,
+            QFrame#project3Frame {
+                background-color: rgba(15, 23, 42, 0.6);
+                border-radius: 18px;
+                border: 1px solid rgba(148, 163, 184, 0.12);
+            }
+            QLabel#fileName1,
+            QLabel#fileName2,
+            QLabel#fileName3 {
+                color: #f8fafc;
+            }
+            QLabel#lastAccess1,
+            QLabel#lastAccess2,
+            QLabel#lastAccess3 {
+                color: rgba(226, 232, 240, 0.7);
+            }
+            QPushButton {
+                background-color: #facc15;
+                color: #0f172a;
+                border-radius: 24px;
+                padding: 18px 28px;
+                font-weight: 600;
+                border: none;
+            }
+            QPushButton:hover {
+                background-color: #fde047;
+            }
+            QPushButton:pressed {
+                background-color: #eab308;
+            }
+        """
+
+
+        self.setStyleSheet(base_styles)
+
+'''

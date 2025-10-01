@@ -96,16 +96,26 @@
         <property name="frameShadow">
          <enum>QFrame::Shadow::Raised</enum>
         </property>
-        <layout class="QHBoxLayout" name="horizontalLayout_2" stretch="3,1">
+        <layout class="QHBoxLayout" name="horizontalLayout_2" stretch="3,0">
          <item>
-          <widget class="QGraphicsView" name="VTK_display"/>
+          <widget class="QGraphicsView" name="VTK_display">
+           <property name="enabled">
+            <bool>true</bool>
+           </property>
+           <property name="frameShape">
+            <enum>QFrame::Shape::Box</enum>
+           </property>
+          </widget>
          </item>
-         <item>
+         <item alignment="Qt::AlignmentFlag::AlignTop">
           <widget class="QWidget" name="details" native="true">
            <property name="styleSheet">
             <string notr="true"/>
            </property>
-           <layout class="QVBoxLayout" name="verticalLayout_2">
+           <layout class="QVBoxLayout" name="verticalLayout_2" stretch="0,0,0,0,0">
+            <property name="spacing">
+             <number>15</number>
+            </property>
             <property name="leftMargin">
              <number>0</number>
             </property>
@@ -119,7 +129,179 @@
              <number>0</number>
             </property>
             <item>
-             <widget class="QGraphicsView" name="graphicsView"/>
+             <widget class="QPushButton" name="pushButton">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>20</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>160</width>
+                <height>40</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>16777215</width>
+                <height>90</height>
+               </size>
+              </property>
+              <property name="layoutDirection">
+               <enum>Qt::LayoutDirection::LeftToRight</enum>
+              </property>
+              <property name="styleSheet">
+               <string notr="true">background-color: #FFD700;
+border-radius: 10px;
+border: none;
+font: 600 12pt &quot;Segoe UI&quot;;
+</string>
+              </property>
+              <property name="text">
+               <string>Load Calibration Grid</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="pushButton_2">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>20</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>160</width>
+                <height>40</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>16777215</width>
+                <height>90</height>
+               </size>
+              </property>
+              <property name="layoutDirection">
+               <enum>Qt::LayoutDirection::LeftToRight</enum>
+              </property>
+              <property name="styleSheet">
+               <string notr="true">background-color: #FFD700;
+border-radius: 10px;
+border: none;
+font: 600 12pt &quot;Segoe UI&quot;;
+</string>
+              </property>
+              <property name="text">
+               <string>Invert Grid</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="pushButton_3">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>20</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>160</width>
+                <height>40</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>16777215</width>
+                <height>90</height>
+               </size>
+              </property>
+              <property name="layoutDirection">
+               <enum>Qt::LayoutDirection::LeftToRight</enum>
+              </property>
+              <property name="styleSheet">
+               <string>background-color: #FFD700;
+border-radius: 10px;
+border: none;
+font: 600 12pt &quot;Segoe UI&quot;;
+</string>
+              </property>
+              <property name="text">
+               <string>Overlay Square Grid</string>
+              </property>
+             </widget>
+            </item>
+            <item alignment="Qt::AlignmentFlag::AlignVCenter">
+             <widget class="QPushButton" name="pushButton_4">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>20</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>160</width>
+                <height>40</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>16777215</width>
+                <height>90</height>
+               </size>
+              </property>
+              <property name="layoutDirection">
+               <enum>Qt::LayoutDirection::LeftToRight</enum>
+              </property>
+              <property name="styleSheet">
+               <string>background-color: #FFD700;
+border-radius: 10px;
+border: none;
+font: 600 12pt &quot;Segoe UI&quot;;
+</string>
+              </property>
+              <property name="text">
+               <string>Snap to Beads</string>
+              </property>
+             </widget>
+            </item>
+            <item alignment="Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter">
+             <widget class="QPushButton" name="pushButton_5">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>20</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>160</width>
+                <height>40</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>16777215</width>
+                <height>90</height>
+               </size>
+              </property>
+              <property name="layoutDirection">
+               <enum>Qt::LayoutDirection::LeftToRight</enum>
+              </property>
+              <property name="styleSheet">
+               <string>background-color: #FFD700;
+border-radius: 10px;
+border: none;
+font: 600 12pt &quot;Segoe UI&quot;;
+</string>
+              </property>
+              <property name="text">
+               <string>Correct Distortion</string>
+              </property>
+             </widget>
             </item>
            </layout>
           </widget>
