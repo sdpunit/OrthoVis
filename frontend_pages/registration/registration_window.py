@@ -1,8 +1,6 @@
-# frontend_pages/registration/registration_window.py
-
 from PySide6.QtCore import Qt, Signal, QSignalBlocker, QEvent
 from PySide6.QtGui import QSurfaceFormat, QQuaternion, QVector3D
-from PySide6.QtWidgets import QWidget, QSizePolicy, QVBoxLayout, QLabel, QApplication
+from PySide6.QtWidgets import QWidget, QSizePolicy, QVBoxLayout
 
 from frontend_pages.registration.ui_registration_window import Ui_Form
 from classes.objects import SingletonPatient
@@ -18,40 +16,38 @@ from vtkmodules.vtkRenderingCore import vtkImageActor
 from vtkmodules.vtkImagingColor import vtkImageMapToWindowLevelColors
 from vtkmodules.vtkIOImage import vtkImageImport
 
+# OUR EDGE GENERATOR
+from frontend_pages.registration.edge_map import generate_edge_map_np
 
-# --------------------------
-#  Low-level VTK viewport
-# --------------------------
+
 class VTKView(QWidget):
-    """Shows a 2D DICOM frame as background (via pydicom + vtkImageImport) and a 3D actor on top."""
+    """Shows a 2D DICOM frame as background and a foreground actor (our edge map)."""
     poseChanged = Signal(float, float, float, float, float, float)
     frameChanged = Signal(int, int)  # (current_index, total_frames)
 
     def _quaternion_to_euler(self, q):
-        # Returns (rx, ry, rz) in degrees
         w, x, y, z = q.scalar(), q.x(), q.y(), q.z()
         import math
         t0 = 2.0 * (w * x + y * z)
         t1 = 1.0 - 2.0 * (x * x + y * y)
         roll_x = math.degrees(math.atan2(t0, t1))
-
         t2 = 2.0 * (w * y - z * x)
         t2 = max(-1.0, min(1.0, t2))
         pitch_y = math.degrees(math.asin(t2))
-
         t3 = 2.0 * (w * z + x * y)
         t4 = 1.0 - 2.0 * (y * y + z * z)
         yaw_z = math.degrees(math.atan2(t3, t4))
         return roll_x, pitch_y, yaw_z
 
     def _get_actor_quaternion(self):
+        if not self.actor:
+            return QQuaternion()
         rx, ry, rz = self.actor.GetOrientation()
-        q = QQuaternion.fromEulerAngles(rx, ry, rz)
-        return q
+        return QQuaternion.fromEulerAngles(rx, ry, rz)
 
     def _set_actor_quaternion(self, q):
         rx, ry, rz = self._quaternion_to_euler(q)
-        self.set_actor_rotation_euler(rx, ry, rz)   #     self.render_window.Render()
+        self.set_actor_rotation_euler(rx, ry, rz)
 
     def __init__(self, parent=None, bg=(0.10, 0.12, 0.14)):
         super().__init__(parent)
@@ -70,20 +66,29 @@ class VTKView(QWidget):
         lay.addWidget(self.vtk)
 
         self.render_window = self.vtk.GetRenderWindow()
+        self.render_window.SetAlphaBitPlanes(1)
+        self.render_window.SetMultiSamples(0)
 
-        # Background renderer (layer 0) for the fluoroscopy frame
+        # background renderer (fluoro)
         self.bg_renderer = vtk.vtkRenderer()
         self.bg_renderer.SetLayer(0)
         self.bg_renderer.SetInteractive(0)
+        self.bg_renderer.SetErase(1)                 # clear color/depth
+        self.bg_renderer.SetPreserveDepthBuffer(0)   # don't carry depth into next layer
 
-        # Foreground renderer (layer 1) for 3D content
+        # foreground renderer (edge actor)
         self.renderer = vtk.vtkRenderer()
         self.renderer.SetLayer(1)
         self.renderer.SetBackground(*bg)
+        self.renderer.SetErase(0)                    # draw over background without clearing
+        self.renderer.SetPreserveDepthBuffer(0)      # IGNORE background depth (no occlusion)
 
         self.render_window.SetNumberOfLayers(2)
         self.render_window.AddRenderer(self.bg_renderer)
         self.render_window.AddRenderer(self.renderer)
+
+        # Share one camera between both renderers
+        self.renderer.SetActiveCamera(self.bg_renderer.GetActiveCamera())
 
         # Interactor
         self.iren = self.vtk
@@ -94,110 +99,162 @@ class VTKView(QWidget):
         self.iren.AddObserver(vtk.vtkCommand.EndInteractionEvent, self._on_interaction)
         self.iren.Initialize()
 
-        # --- custom wheel-to-Z handling ---
-        self._wheel_step = 0.05  # adjust sensitivity
+        # wheel -> translate z
+        self._wheel_step = 0.05
         self.iren.AddObserver("MouseWheelForwardEvent", self._on_wheel_forward, 1.0)
         self.iren.AddObserver("MouseWheelBackwardEvent", self._on_wheel_backward, 1.0)
 
-        # 3D state
+        # State
         self.actor = None
         self._axes_widget = None
         self._axes_actor = None
         self._axes_follow = "actor"
 
         # DICOM/frame state
-        self._frames_u8: np.ndarray | None = None  # shape (N, H, W), uint8
-        self._num_frames: int = 0
-        self._frame: int = 0
+        self._frames_u8 = None
+        self._num_frames = 0
+        self._frame = 0
 
-        # VTK image pipeline (numpy -> importer -> window/level -> image actor)
-        self._importer: vtkImageImport | None = None
-        self._wl: vtkImageMapToWindowLevelColors | None = None
-        self._bg_actor: vtkImageActor | None = None
-        self._last_shape: tuple[int, int] | None = None  # (H, W)
+        self._importer = None
+        self._wl = None
+        self._bg_actor = None
+        self._last_shape = None
 
-        # Mouse interaction state
         self.last_mouse_pos = None
         self.vtk.installEventFilter(self)  # intercept mouse events
 
+    # ---------- show binary edge map as transparent RGBA image ----------
+    def add_edge_map(self, edge_img: np.ndarray, color=(0, 0, 0)):
+        # normalize to 0/255 uint8
+        if edge_img.dtype != np.uint8:
+            edge_u8 = (edge_img.astype(np.uint8) * 255) if edge_img.max() <= 1 else edge_img.astype(np.uint8)
+        else:
+            edge_u8 = edge_img
+        edge_u8 = np.clip(edge_u8, 0, 255)
+
+        H, W = edge_u8.shape
+        rgba = np.zeros((H, W, 4), dtype=np.uint8)
+        r, g, b = [int(c) for c in color]
+        rgba[..., :3] = (r, g, b)
+        rgba[..., 3] = edge_u8
+
+        data = np.ascontiguousarray(np.flipud(rgba))
+
+        importer = vtk.vtkImageImport()
+        importer.CopyImportVoidPointer(data.data, data.nbytes)
+        importer.SetDataScalarTypeToUnsignedChar()
+        importer.SetNumberOfScalarComponents(4)
+        importer.SetWholeExtent(0, W - 1, 0, H - 1, 0, 0)
+        importer.SetDataExtentToWholeExtent()
+        importer.Modified()
+
+        actor = vtk.vtkImageActor()
+        actor.GetMapper().SetInputConnection(importer.GetOutputPort())
+
+        # rotate around image center
+        actor.SetOrigin(W / 2.0, H / 2.0, 0.0)
+
+        # overlay config
+        prop = actor.GetProperty()
+        prop.SetOpacity(1.0)
+        prop.SetInterpolationTypeToNearest()
+
+        if self.actor:
+            self.renderer.RemoveActor(self.actor)
+
+        self.renderer.AddActor(actor)
+        self.actor = actor
+        self.render_window.Render()
+        return actor
+
+        # ---------- interaction plumbing ----------
     def eventFilter(self, obj, event):
-        # Intercept mouse events from QVTKRenderWindowInteractor
         if obj == self.vtk:
             if event.type() == QEvent.MouseButtonPress:
                 self.last_mouse_pos = event.pos()
-                print(self.last_mouse_pos)
                 return True
-            
+
             if event.type() == QEvent.MouseMove:
                 if self.last_mouse_pos is None or event.buttons() == Qt.NoButton:
                     return False
+
                 dx = event.x() - self.last_mouse_pos.x()
                 dy = event.y() - self.last_mouse_pos.y()
                 self.last_mouse_pos = event.pos()
+
                 if self.actor:
-                    if event.modifiers() & Qt.ControlModifier:# 
-                        # Rotate with Ctr# l
+                    if event.modifiers() & Qt.ControlModifier:
+                        # --- rotation with ctrl+drag ---
                         rx, ry, rz = self.actor.GetOrientation()
-                                # Quaternion-based rotation
-                        sensitivity = 0.05
-                        q = self._get_actor_quaternion()
-                        rot_x = QQuaternion.fromAxisAndAngle(QVector3D(1, 0, 0), dy * sensitivity)
-                        rot_y = QQuaternion.fromAxisAndAngle(QVector3D(0, 1, 0), dx * sensitivity)
-                        new_q = rot_x * rot_y * q
-                        self._set_actor_quaternion(new_q)                
-                        ry = ((ry + 180) % 360) - 180
-                        rz = ((rz + 180) % 360) - 180
-                        sensitivity = 0.05
-                        self.set_actor_rotation_euler(rx + dy*sensitivity, ry + dx*sensitivity, rz)
+                        s = 0.4
+                        new_rx = rx + dy * s   # pitch (X)
+                        new_ry = ry            # (could also map dx to yaw if desired)
+                        new_rz = rz + dx * s   # spin (Z)
+
+                        if abs(new_rx) > 1e-3 or abs(new_ry) > 1e-3:
+                            # recompute projection from CT
+                            from classes.objects import SingletonPatient
+                            singleton = SingletonPatient.get_instance()
+                            patient = singleton.patient
+                            dicom_dir = patient.CT
+                            mask_path = os.path.join(patient.seg_masks_dir, "femur_right_otsu.nii.gz")
+
+                            edge = generate_edge_map_np(
+                                dicom_dir=dicom_dir,
+                                mask_path=mask_path,
+                                view="sagittal",
+                                rx_deg=new_rx,
+                                ry_deg=new_ry,
+                                rz_deg=new_rz,
+                                use_gradient_projection=True,
+                                pre_smooth_sigma=0.8,
+                                canny_sigma=1.6,
+                                canny_perc_lo=60, canny_perc_hi=90,
+                                clahe=False
+                            )
+                            self.add_edge_map(edge, color=(0, 0, 0))
+                        else:
+                            # pure Z spin: rotate 2D actor
+                            self.set_actor_rotation_euler(rx, ry, new_rz)
+
                     else:
-                        # Translate with drag
+                        # --- translation ---
                         x, y, z = self.actor.GetPosition()
-                        sensitivity = 0.01
-                        self.set_actor_translation(x + dx * sensitivity, y - dy * sensitivity, z)
+                        s = 0.4
+                        self.set_actor_translation(x + dx * s, y - dy * s, z)
                 return True
+
             if event.type() == QEvent.Wheel:
                 if self.actor:
                     x, y, z = self.actor.GetPosition()
-                    sensitivity = 0.1
                     delta = event.angleDelta().y() / 120
-                    # Scroll up: move closer (increase Z), scroll down: move away (decrease Z)
-                    self.set_actor_translation(x, y, z + delta * sensitivity)
+                    self.set_actor_translation(x, y, z + 0.5 * delta)
                 return True
-            
+
             if event.type() == QEvent.MouseButtonRelease:
                 self.last_mouse_pos = None
                 return True
-            
+
         return super().eventFilter(obj, event)
 
-
-    # ---------- wheel handlers ----------
     def _on_wheel_forward(self, caller, evt):
         if self.actor:
             x, y, z = self.actor.GetPosition()
             self.set_actor_translation(x, y, z + self._wheel_step)
-            caller.SetAbortFlag(1)  # stop default zoom
+            caller.SetAbortFlag(1)
 
     def _on_wheel_backward(self, caller, evt):
         if self.actor:
             x, y, z = self.actor.GetPosition()
             self.set_actor_translation(x, y, z - self._wheel_step)
-            caller.SetAbortFlag(1)  # stop default zoom
+            caller.SetAbortFlag(1)
 
     # ---------- DICOM ----------
     def _resolve_dicom_path(self, path: str) -> str:
-        """Allow either a DICOM file or a folder with one file."""
         if os.path.isdir(path):
             for name in sorted(os.listdir(path)):
                 p = os.path.join(path, name)
                 if os.path.isfile(p):
-                    try:
-                        with open(p, "rb") as f:
-                            f.seek(128)
-                            if f.read(4) == b"DICM":
-                                return p
-                    except Exception:
-                        pass
                     return p
             raise FileNotFoundError(f"No files in folder: {path}")
         return path
@@ -216,7 +273,7 @@ class VTKView(QWidget):
         if wc is not None and ww is not None:
             wc = float(wc[0]) if hasattr(wc, "__getitem__") else float(wc)
             ww = float(ww[0]) if hasattr(ww, "__getitem__") else float(ww)
-            low, high = wc - ww / 2, wc + ww / 2
+            low, high = wc - ww/2, wc + ww/2
             arr = np.clip(arr, low, high)
         min_v, max_v = float(arr.min()), float(arr.max())
         if max_v > min_v:
@@ -229,9 +286,12 @@ class VTKView(QWidget):
         self._frame = 0
         self._ensure_bg_pipeline(frames_u8.shape[1], frames_u8.shape[2])
         self._push_frame_to_vtk(frames_u8[0])
+
+        # CAMERA: perspective and wide clip range
         cam = self.bg_renderer.GetActiveCamera()
-        cam.ParallelProjectionOn()
-        self.bg_renderer.ResetCamera()
+        cam.ParallelProjectionOff()
+        self.bg_renderer.ResetCamera()          # fit background first
+        cam.SetClippingRange(0.1, 10000.0)      # then force huge clip range
         self.render_window.Render()
         self.frameChanged.emit(self._frame, self._num_frames)
 
@@ -240,7 +300,7 @@ class VTKView(QWidget):
             return
         self._frame = max(0, min(index, self._num_frames - 1))
         self._push_frame_to_vtk(self._frames_u8[self._frame])
-        self.bg_renderer.ResetCameraClippingRange()
+        # no ResetCameraClippingRange here
         self.render_window.Render()
         self.frameChanged.emit(self._frame, self._num_frames)
 
@@ -285,47 +345,23 @@ class VTKView(QWidget):
         if self._bg_actor:
             self._bg_actor.Modified()
 
-    def add_cube(self, size, color=(0.27, 0.51, 0.71)):
-        cube = vtk.vtkCubeSource()
-        cube.SetXLength(size)
-        cube.SetYLength(size)
-        cube.SetZLength(size)
-        mapper = vtk.vtkPolyDataMapper()
-        mapper.SetInputConnection(cube.GetOutputPort())
-        actor = vtk.vtkActor()
-        actor.SetMapper(mapper)
-        actor.GetProperty().SetColor(*color)
-        actor.PickableOn()
-        self.renderer.AddActor(actor)
-        self.renderer.ResetCamera()
-        self.actor = actor
-        self._emit_pose()
-        self.render_window.Render()
-        return actor
-
+    # ---------- actor transforms ----------
     def reset_camera(self):
-        # Set up camera for wider viewing area
-        camera = self.renderer.GetActiveCamera()
-        
-        # Position camera further back to see wider area
-        camera.SetPosition(0, 0, 10)  # Move camera further back
-        camera.SetFocalPoint(0, 0, 0)  # Look at origin
-        camera.SetViewUp(0, 1, 0)  # Y is up
-        
-        # Set a wider field of view
-        camera.SetViewAngle(45)  # Wider angle (default is usually 30)
-        
-        # Set appropriate clipping range for our expanded bounds
-        camera.SetClippingRange(0.1, 1000)
-        
+        cam = self.bg_renderer.GetActiveCamera()
+        self.renderer.SetActiveCamera(cam)
+        self.bg_renderer.ResetCamera()           # fit the fluoro
+        cam.SetClippingRange(0.1, 10000.0)       # fixed, wide
+        cam.SetPosition(0, 0, 800)
+        cam.SetFocalPoint(0, 0, 0)
+        cam.SetViewUp(0, 1, 0)
+        cam.SetViewAngle(45)
         self.render_window.Render()
-
 
     def set_actor_translation(self, x=0.0, y=0.0, z=0.0):
         if not self.actor:
             return
         self.actor.SetPosition(x, y, z)
-        self.renderer.ResetCameraClippingRange()
+        # no ResetCameraClippingRange
         self._emit_pose()
         self.render_window.Render()
 
@@ -333,7 +369,7 @@ class VTKView(QWidget):
         if not self.actor:
             return
         self.actor.SetOrientation(rx_deg, ry_deg, rz_deg)
-        self.renderer.ResetCameraClippingRange()
+        # no ResetCameraClippingRange
         self._emit_pose()
         self.render_window.Render()
 
@@ -383,22 +419,12 @@ class VTKView(QWidget):
             return
         m = vtk.vtkMatrix4x4()
         self.actor.GetMatrix(m)
-        m.SetElement(0, 3, 0.0)
-        m.SetElement(1, 3, 0.0)
-        m.SetElement(2, 3, 0.0)
-        m.SetElement(3, 0, 0.0)
-        m.SetElement(3, 1, 0.0)
-        m.SetElement(3, 2, 0.0)
-        m.SetElement(3, 3, 1.0)
-        t = vtk.vtkTransform()
-        t.SetMatrix(m)
-        self._axes_actor.SetUserTransform(t)
-        self._axes_actor.Modified()
+        m.SetElement(0, 3, 0.0); m.SetElement(1, 3, 0.0); m.SetElement(2, 3, 0.0)
+        m.SetElement(3, 0, 0.0); m.SetElement(3, 1, 0.0); m.SetElement(3, 2, 0.0); m.SetElement(3, 3, 1.0)
+        t = vtk.vtkTransform(); t.SetMatrix(m)
+        self._axes_actor.SetUserTransform(t); self._axes_actor.Modified()
 
 
-# --------------------------
-#  Registration widget
-# --------------------------
 class Registration(QWidget):
     def __init__(self):
         super().__init__()
@@ -409,38 +435,25 @@ class Registration(QWidget):
 
         self.ui.titlebar.ui.title.setText("Registration")
         self.ui.sidebar.ui.registration.setStyleSheet(
-            """
-            QPushButton { 
-                color: white; 
-                background-color: #6f8ab7; 
-                border: none; 
-                padding: 10px 25px;  
-                text-align: center;}
-            """
+            "QPushButton { color: white; background-color: #6f8ab7; border: none; padding: 10px 25px; }"
         )
 
-        # Collapsible help section
         self.ui.help_section.setVisible(False)
         self.ui.help_btn.clicked.connect(self._toggle_help)
 
-        # Swap placeholder with our VTKView
         self.view = VTKView(self.ui.mainpanel, bg=(0.10, 0.12, 0.14))
         self.ui.horizontalLayout_2.replaceWidget(self.ui.VTK_display, self.view)
         self.ui.VTK_display.setParent(None)
         self.ui.VTK_display.deleteLater()
 
-        # Use the QLineEdit from Designer as the frame indicator
         self.frame_field = self.ui.frame_indicator
         self.frame_field.setReadOnly(True)
         self.frame_field.setAlignment(Qt.AlignRight)
         self.frame_field.setText("0 / 0")
 
-        # Scene
-        self.view.add_cube(size=0.5, color=(0.27, 0.51, 0.71))
         self.view.add_axes_widget(size=0.18, follow="actor")
         self.view.reset_camera()
 
-        # Inputs <-> cube
         self.ui.pos_x.textEdited.connect(self._on_pos_changed)
         self.ui.pos_y.textEdited.connect(self._on_pos_changed)
         self.ui.pos_z.textEdited.connect(self._on_pos_changed)
@@ -449,19 +462,16 @@ class Registration(QWidget):
         self.ui.rotation_z.textEdited.connect(self._on_rot_changed)
         self.view.poseChanged.connect(self._update_fields_from_pose)
 
-        # Frame stepping buttons
         if hasattr(self.ui, "next_frame"):
             self.ui.next_frame.clicked.connect(lambda: self.view.step_frame(-1))
         if hasattr(self.ui, "prev_frame"):
             self.ui.prev_frame.clicked.connect(lambda: self.view.step_frame(+1))
-
-        # Update frame indicator
         self.view.frameChanged.connect(self._on_frame_changed)
 
-        # Seed pose UI
-        x, y, z = self.view.actor.GetPosition()
-        rx, ry, rz = self.view.actor.GetOrientation()
-        self._update_fields_from_pose(x, y, z, rx, ry, rz)
+        if hasattr(self.ui, "pushButton"):
+            self.ui.pushButton.clicked.connect(self._on_load_bone_mask)
+
+        self._update_fields_from_pose(0, 0, 0, 0, 0, 0)
 
     def _on_frame_changed(self, idx: int, total: int):
         self.frame_field.setText(f"{idx+1} / {total}")
@@ -478,6 +488,27 @@ class Registration(QWidget):
         self.view.load_dicom(patient.fluoro)
         self.view.show_frame(0)
 
+    def _on_load_bone_mask(self):
+        singleton = SingletonPatient.get_instance()
+        patient = singleton.patient
+
+        dicom_dir = patient.CT
+        mask_path = os.path.join(patient.seg_masks_dir, "femur_right_otsu.nii.gz")
+
+        edge = generate_edge_map_np(
+            dicom_dir=dicom_dir,
+            mask_path=mask_path,
+            view="sagittal",
+            rx_deg=0.0, ry_deg=0.0,
+            use_gradient_projection=True,
+            pre_smooth_sigma=0.8,
+            canny_sigma=1.6,
+            canny_perc_lo=60, canny_perc_hi=90,
+            clahe=False
+        )
+
+        self.view.add_edge_map(edge, color=(0, 0, 0))
+
     def _update_fields_from_pose(self, x, y, z, rx, ry, rz):
         pairs = [
             (self.ui.pos_x, f"{x:.3f}"),
@@ -488,32 +519,15 @@ class Registration(QWidget):
             (self.ui.rotation_z, f"{rz:.2f}"),
         ]
         for w, val in pairs:
-            # Only update if the field doesn't have focus (user isn't editing it)
             if not w.hasFocus():
                 with QSignalBlocker(w):
                     w.setText(val)
 
     def _on_pos_changed(self):
         try:
-            x = float(self.ui.pos_x.text())
-            y = float(self.ui.pos_y.text())
-            z = float(self.ui.pos_z.text())
+            x = float(self.ui.pos_x.text()); y = float(self.ui.pos_y.text()); z = float(self.ui.pos_z.text())
         except ValueError:
             return
-        
-        # Setting the bounds (expanded for better visibility)
-        if x < -2.0:
-            x = -2.0
-        if x > 2.0:
-            x = 2.0
-        if y < -2.0:
-            y = -2.0
-        if y > 2.0:
-            y = 2.0     
-        if z < -5.0:
-            z = -5.0
-        if z > 5.0:
-            z = 5.0
         self.view.set_actor_translation(x, y, z)
 
     def _on_rot_changed(self):
@@ -523,10 +537,26 @@ class Registration(QWidget):
             rz = float(self.ui.rotation_z.text())
         except ValueError:
             return
-        self.view.set_actor_rotation_euler(rx, ry, rz)
+
+        if abs(rx) > 1e-3 or abs(ry) > 1e-3:
+            # recompute from CT
+            singleton = SingletonPatient.get_instance()
+            patient = singleton.patient
+            edge = generate_edge_map_np(
+                dicom_dir=patient.CT,
+                mask_path=os.path.join(patient.seg_masks_dir, "femur_right_otsu.nii.gz"),
+                view="sagittal",
+                rx_deg=rx, ry_deg=ry, rz_deg=rz,
+                use_gradient_projection=True,
+                pre_smooth_sigma=0.8,
+                canny_sigma=1.6,
+                canny_perc_lo=60, canny_perc_hi=90,
+                clahe=False
+            )
+            self.view.add_edge_map(edge, color=(0, 0, 0))
+        else:
+            # Z only → rotate 2D actor
+            self.view.set_actor_rotation_euler(rx, ry, rz)
 
     def _toggle_help(self):
-        if self.ui.help_section.isVisible():
-            self.ui.help_section.setVisible(False)
-        else:
-            self.ui.help_section.setVisible(True)
+        self.ui.help_section.setVisible(not self.ui.help_section.isVisible())
