@@ -1,324 +1,368 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Strict-compatible Fluoro Calibration (v4, clean)
-- python3 Draft.py --dcm Data/DICOM/P0000001/ST000002/SE000003/IN000001 --out dist_data.mat
-- 标定平面 S=512, 中心(256,256)
-- 7x7x2 珠点板: px = mm / (2 * ImagerPixelSpacing)  (与旧版一致)
-- 旧版投影: u = d1/(d2+Z)*(X - yc) + yc; v = d1/(d2+Z)*(Y - xc) + xc
-- 交互式整体相似变换(蓝色网格): 平移/旋转/缩放
-- 半吸附: 阈值→最大连通域→质心 (window=60)
-- 观测↔模型匹配: Hungarian + 门限剔除
-- 微调 d1/d2, 三次多项式畸变拟合(9基)
-- 输出:
-  - dist_data.mat  (bpx/bpy/gpx/gpy, 匹配到的成对点, 坐标均为 512 平面)
-  - dist_coeff.mat (ax/ay + d1/d2/xc/yc + 相似变换参数)
+AutoAlign v0.3
+思路：一层一层地生成 7x7 板子，手动整体调整 → 保存 → 再生成下一层
+避免一次性操作两层的混乱
 """
+## python3 Draft.py --dcm Data/DICOM/P0000001/ST000002/SE000003/IN000001
 
 import argparse, os, math
 import numpy as np
-import pydicom
-import matplotlib.pyplot as plt
+import cv2, pydicom
 import scipy.io as sio
-from scipy.optimize import least_squares, linear_sum_assignment
-import cv2
-from numpy.linalg import svd
+import matplotlib.pyplot as plt
 
-# ------------------- 常量（与旧版一致） -------------------
-S  = 512
-XC = 256.0
-YC = 256.0
-D1 = 2019.0
-D2 = 1119.0
+# ---- 常量 ----
+S = 512
+XC, YC = 256.0, 256.0
+D1, D2 = 2019.0, 1119.0  # 固定常数
 
-# ------------------- 相似变换 + 交互调网格 -------------------
-def apply_similarity_uv(uv, scale=1.0, theta=0.0, tx=0.0, ty=0.0, center=(256.0, 256.0), **_):
-    """对 2D 网格 uv 应用相似变换（等比缩放 + 旋转 + 平移）。"""
-    uv = np.asarray(uv, dtype=float)
-    c  = np.asarray(center, dtype=float)
-    th = math.radians(theta)
+# ---------- 相似变换 ----------
+def apply_similarity_uv(uv, scale=1.0, theta_deg=0.0, tx=0.0, ty=0.0, center=(256,256)):
+    uv = np.asarray(uv, float)
+    c  = np.asarray(center, float)
+    th = math.radians(theta_deg)
     R  = np.array([[math.cos(th), -math.sin(th)],
-                   [math.sin(th),  math.cos(th)]], dtype=float)
-    return ((uv - c) @ R.T) * scale + c + np.array([tx, ty])
+                   [math.sin(th),  math.cos(th)]], float)
+    return ((uv - c) @ R.T) * scale + c + np.array([tx, ty], float)
 
-def interactive_adjust_grid(img512, uv_init, center=(256.0,256.0),
-                            step_move=1.0, step_rot_deg=1.0, step_scale=1.01):
+# ---------- 手动交互 ----------
+def interactive_manual_snap(
+    img,
+    uv0,
+    obs,
+    center=(256, 256),
+    attach_px=8.0,
+    detach_px=14.0,
+    step_move=1.0,
+    step_rot_deg=1.0,
+    step_scale=1.01,
+    prev_layers=None,              # 形如 [(uv_prev, "yellow"), ...]，仅显示、不可吸附
+    exclude_prev_from_obs=True,    # 将与 prev_layers 重合的观测点排除，不参与吸附
+):
     """
-    键盘调网格：
-      ← → ↑ ↓ : 平移（Shift ×5）
-      A / D   : 旋转 -/+ (1°；Shift ×5)
-      - / =   : 缩放 ×1.01 / ÷1.01（Shift 幂次）
-      R       : 重置   H: 帮助
-      Enter   : 确认   Esc/Q: 取消
+    手动整体调整 + 吸附/脱离（保存=所见即所得）
+    - 红点：观测点（可吸附）
+    - 黄点：上一层（只显示，不参与吸附）
+    - 蓝点：当前未吸附的模型点
+    - 绿点：当前已吸附到观测点的模型点
+    键位：←→↑↓ 平移（Shift×5），A/D 旋转，-/= 缩放，Enter 确认，Esc/Q 取消
     """
-    params = dict(scale=1.0, theta=0.0, tx=0.0, ty=0.0)
-    uv0 = np.array(uv_init, dtype=float)
+    import math
+    import numpy as np
+    import matplotlib.pyplot as plt
+
+    uv0 = np.asarray(uv0, float)
+    obs = np.asarray(obs, float)
+    sim = dict(scale=1.0, theta_deg=0.0, tx=0.0, ty=0.0)
+    locks = {}  # {model_idx: obs_idx}
+    last_uv_disp = uv0.copy()  # 记录“屏幕上看到”的最终点
+
+    # 准备一个用于吸附的观测点副本（可滤除与上一层重合的点）
+    obs_snap = obs.copy()
+    if prev_layers and exclude_prev_from_obs:
+        prev_all = np.vstack([np.asarray(u, float) for (u, _) in prev_layers if len(u)])
+        if prev_all.size > 0:
+            keep_mask = np.ones(len(obs_snap), dtype=bool)
+            # 把与上一层重合(很近)的观测点排掉，避免吸附到黄点当前位置
+            for p in prev_all:
+                d = np.linalg.norm(obs_snap - p, axis=1)
+                j = np.argmin(d)
+                if d[j] < 1.5:  # 距离阈值可调
+                    keep_mask[j] = False
+            obs_snap = obs_snap[keep_mask]
 
     fig, ax = plt.subplots()
-    ax.imshow(img512, cmap="gray")
-    scat = ax.scatter(uv0[:,0], uv0[:,1], c="b", s=12, label="grid (adjust)")
-    ax.set_title("Adjust grid: ←↑→↓ move, A/D rotate, -/= scale, R reset, H help, Enter done")
-    ax.legend(loc="upper right")
-    txt = ax.text(5, 10, "", color="w", va="top", ha="left")
-    help_visible = False
+    ax.imshow(img, cmap="gray")
 
-    def render():
-        uv_show = apply_similarity_uv(uv0, **params, center=center)
-        scat.set_offsets(uv_show)
-        txt.set_text(
-            f"tx={params['tx']:.1f}, ty={params['ty']:.1f}, θ={params['theta']:.1f}°, s={params['scale']:.4f}"
-            + ("\n←↑→↓ move, A/D rotate, -/= scale, R reset, Enter OK, ESC cancel" if help_visible else "")
-        )
+    # 先画红点（观测）
+    scat_obs = ax.scatter(obs[:, 0], obs[:, 1], c="r", s=16, label="obs (red)", zorder=3)
+
+    # 再画上一层黄点（在最上层，确保不会被遮盖；也不参与吸附）
+    if prev_layers:
+        for uv_prev, color in prev_layers:
+            uv_prev = np.asarray(uv_prev, float)
+            ax.scatter(uv_prev[:, 0], uv_prev[:, 1], c=color, s=22, alpha=0.95,
+                       label="prev layer", zorder=6)
+
+    # 当前层：拆成“未吸附(蓝)”与“已吸附(绿)”两组显示，保证绿点在最上层且更显眼
+    scat_free = ax.scatter([], [], c="b", s=18, label="model free (blue)", zorder=4)
+    scat_snap = ax.scatter([], [], c="g", s=30, label="model snapped (green)", zorder=7)
+
+    txt = ax.text(6, 12, "", color="yellow", va="top", ha="left")
+    ax.legend(loc="upper right")
+
+    def current_uv():
+        th = math.radians(sim["theta_deg"])
+        R = np.array([[math.cos(th), -math.sin(th)],
+                      [math.sin(th),  math.cos(th)]], float)
+        return ((uv0 - center) @ R.T) * sim["scale"] + center + np.array([sim["tx"], sim["ty"]], float)
+
+    def update_locks(uv):
+        """进入 attach_px 吸附；离开 detach_px 脱离；可就近切换。"""
+        new_locks = {}
+        for i, p in enumerate(uv):
+            d = np.linalg.norm(obs_snap - p, axis=1)
+            if len(d) == 0:
+                continue
+            if i in locks:
+                j = locks[i]
+                # 注意：locks[i] 是基于 obs_snap 的索引
+                if 0 <= j < len(obs_snap) and d[j] <= detach_px:
+                    new_locks[i] = j
+                else:
+                    j2 = np.argmin(d)
+                    if d[j2] < attach_px:
+                        new_locks[i] = j2
+            else:
+                j = np.argmin(d)
+                if d[j] < attach_px:
+                    new_locks[i] = j
+        locks.clear()
+        locks.update(new_locks)
+
+    def build_uv_disp(uv):
+        """构造用于显示/保存的点集（所见即所得）"""
+        snapped_idx = sorted(locks.keys())
+        if snapped_idx:
+            uv_snap = obs_snap[[locks[i] for i in snapped_idx]]  # 绿点直接用观测点坐标
+        else:
+            uv_snap = np.empty((0, 2), float)
+
+        # 未吸附的保持几何变换后的蓝点
+        if len(uv) > 0:
+            mask = np.ones(len(uv), dtype=bool)
+            if snapped_idx:
+                mask[snapped_idx] = False
+            uv_free = uv[mask]
+        else:
+            uv_free = np.empty((0, 2), float)
+        return uv_free, uv_snap
+
+    def redraw():
+        nonlocal last_uv_disp
+        uv = current_uv()
+        update_locks(uv)
+
+        uv_free, uv_snap = build_uv_disp(uv)
+
+        scat_free.set_offsets(uv_free)
+        scat_snap.set_offsets(uv_snap)
+
+        # 文本状态
+        txt.set_text(f"tx={sim['tx']:.1f}, ty={sim['ty']:.1f}, "
+                     f"θ={sim['theta_deg']:.1f}°, s={sim['scale']:.3f}, "
+                     f"locks={len(locks)}")
         fig.canvas.draw_idle()
 
-    done, canceled = [False], [False]
+        # 组合“屏幕可见”的最终点，供返回保存
+        if len(uv) == 0:
+            last_uv_disp = uv.copy()
+        else:
+            uv_disp = uv.copy()
+            for i, j in locks.items():
+                uv_disp[i] = obs_snap[j]
+            last_uv_disp = uv_disp
+        return last_uv_disp
+
     def on_key(e):
-        nonlocal help_visible
-        k = (e.key or "").lower()
-        accel = 1.0 if ("shift" in (e.key or "")) else 0.1
+        if not e.key:
+            return
+        k = e.key.lower()
+        accel = 5.0 if ("shift" in k) else 1.0
         moved = False
-        if   k == "left":  params["tx"] -= step_move*accel; moved=True
-        elif k == "right": params["tx"] += step_move*accel; moved=True
-        elif k == "up":    params["ty"] -= step_move*accel; moved=True
-        elif k == "down":  params["ty"] += step_move*accel; moved=True
-        elif k == "a":     params["theta"] -= step_rot_deg*accel; moved=True
-        elif k == "d":     params["theta"] += step_rot_deg*accel; moved=True
-        elif k in ("-", "minus"): params["scale"] /= (step_scale**accel); moved=True
-        elif k in ("=", "+"):     params["scale"] *= (step_scale**accel); moved=True
-        elif k == "r":     params.update(scale=1.0, theta=0.0, tx=0.0, ty=0.0); moved=True
-        elif k in ("enter","return"): done[0]=True; plt.close(fig)
-        elif k in ("escape","esc","q"): canceled[0]=True; plt.close(fig)
-        elif k == "h": help_visible = not help_visible; moved=True
-        if moved: render()
+        if "left" in k:   sim["tx"] -= step_move * accel; moved = True
+        elif "right" in k: sim["tx"] += step_move * accel; moved = True
+        elif "up" in k:    sim["ty"] -= step_move * accel; moved = True
+        elif "down" in k:  sim["ty"] += step_move * accel; moved = True
+        elif k == "a":     sim["theta_deg"] -= step_rot_deg * accel; moved = True
+        elif k == "d":     sim["theta_deg"] += step_rot_deg * accel; moved = True
+        elif k in ("-", "minus"): sim["scale"] /= (step_scale ** accel); moved = True
+        elif k in ("=", "+"):     sim["scale"] *= (step_scale ** accel); moved = True
+        elif k in ("enter", "return", "escape", "esc", "q"):
+            redraw()  # 关闭前再绘一次，确保 last_uv_disp 为最新
+            plt.close(fig); return
+        if moved:
+            redraw()
 
     fig.canvas.mpl_connect("key_press_event", on_key)
-    render(); plt.show()
+    redraw()
+    plt.show()
 
-    if canceled[0]:
-        return uv_init, dict(scale=1.0, theta=0.0, tx=0.0, ty=0.0)
-    return apply_similarity_uv(uv0, **params, center=center), params
+    # 返回索引：注意这里索引是基于“模型点”的；obs 索引无法直接还原到原 obs，
+    # 因为我们可能对 obs_snap 做了过滤。若需要原始 obs 索引，可在外层做最近邻回找。
+    idx_model = list(locks.keys())
+    idx_obs_snap = [locks[i] for i in idx_model]  # 基于 obs_snap 的索引
 
-def collect_points_with_snap(ax, img512, snap_fn, stop_keys=("enter","return","escape")):
-    """左键添加并吸附；右键/中键或 Enter/Return/Escape 结束；实时显示"""
-    clicked, snapped = [], []
-    scat_click, = ax.plot([], [], 'r+', ms=10, label='clicks')
-    scat_snap,  = ax.plot([], [], 'yx', ms=7,  label='snapped')
-    def on_click(event):
-        if event.inaxes != ax: return
-        if event.button == 1:
-            x, y = float(event.xdata), float(event.ydata)
-            sx, sy = snap_fn(img512, x, y, window=60)
-            clicked.append((x, y)); snapped.append((sx, sy))
-            scat_click.set_data([c[0] for c in clicked], [c[1] for c in clicked])
-            scat_snap.set_data([s[0] for s in snapped], [s[1] for s in snapped])
-            ax.figure.canvas.draw_idle()
-        elif event.button in (2,3):
-            plt.close(ax.figure)
-    def on_key(event):
-        if event.key and event.key.lower() in stop_keys:
-            plt.close(ax.figure)
-    fig = ax.figure
-    cid1 = fig.canvas.mpl_connect('button_press_event', on_click)
-    cid2 = fig.canvas.mpl_connect('key_press_event', on_key)
-    ax.legend(loc="upper right"); plt.show()
-    fig.canvas.mpl_disconnect(cid1); fig.canvas.mpl_disconnect(cid2)
-    if len(snapped)==0: return np.empty((0,2)), np.empty((0,2))
-    return np.array(clicked, dtype=float), np.array(snapped, dtype=float)
+    # 所见即所得（未吸附=蓝点最终位置；已吸附=红点位置）
+    return last_uv_disp.copy(), dict(locks), sim.copy(), idx_model, idx_obs_snap
 
-# ------------------- 粗检亮点 + 相似对齐（可选） -------------------
-def detect_beads_centroids(img512, thr=None):
-    im = cv2.normalize(img512, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
-    im = cv2.GaussianBlur(im, (5,5), 0)
-    if thr is None:
-        _, mask = cv2.threshold(im, 0, 255, cv2.THRESH_BINARY+cv2.THRESH_OTSU)
-    else:
-        _, mask = cv2.threshold(im, thr, 255, cv2.THRESH_BINARY)
-    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, np.ones((3,3), np.uint8))
-    num, _, stats, cents = cv2.connectedComponentsWithStats(mask)
-    keep = []
-    for i in range(1, num):
-        area = stats[i, cv2.CC_STAT_AREA]
-        if 3 <= area <= 200:
-            keep.append(cents[i])
-    if not keep: return np.empty((0,2), np.float32)
-    return np.array(keep, dtype=np.float32)
 
-def procrustes_similarity(X, Y):
-    Xc = X - X.mean(axis=0, keepdims=True)
-    Yc = Y - Y.mean(axis=0, keepdims=True)
-    U, Svals, Vt = svd(Xc.T @ Yc)
-    R = U @ Vt
-    if np.linalg.det(R) < 0:
-        U[:, -1] *= -1; R = U @ Vt
-    scale = (Svals.sum() / (Xc**2).sum())
-    t = Y.mean(axis=0) - X.mean(axis=0) @ (scale * R)
-    return scale, R, t
-
-# ------------------- 网格 & 投影（旧版） -------------------
-def build_grid_px(f_pix_mm, bead_mm=20.0, face_mm=200.0):
+# ---------- 构建网格 ----------
+def build_grid_single(f_pix_mm, bead_mm=20.0, Z=0.0, offset_frac=(0,0)):
     bead_px = bead_mm / (2.0 * f_pix_mm)
-    face_px = face_mm / (2.0 * f_pix_mm)
-    coords3d = []
-    for z in [0.0, face_px]:
-        for j in range(-3, 4):
-            for i in range(-3, 4):
-                X = XC + i * bead_px
-                Y = YC + j * bead_px
-                coords3d.append([X, Y, z])
-    return np.array(coords3d, dtype=np.float64)  # (98,3)
+    coords = []
+    dx = offset_frac[0] * bead_px
+    dy = offset_frac[1] * bead_px
+    for j in range(-3,4):
+        for i in range(-3,4):
+            X = XC + i * bead_px + dx
+            Y = YC + j * bead_px + dy
+            coords.append([X, Y, Z])
+    return np.array(coords, dtype=np.float64)
 
-def apply_perspective_calibrate(XYZ, d1=D1, d2=D2, xc=XC, yc=YC):
-    X = XYZ[:, 0]; Y = XYZ[:, 1]; Z = XYZ[:, 2]
+def apply_perspective(XYZ, d1=D1, d2=D2, xc=XC, yc=YC):
+    X, Y, Z = XYZ[:,0], XYZ[:,1], XYZ[:,2]
     s = d1 / (d2 + Z)
-    u = s * (X - yc) + yc
-    v = s * (Y - xc) + xc
-    return np.stack([u, v], axis=1)
+    u = s*(X - xc) + xc
+    v = s*(Y - yc) + yc
+    return np.stack([u,v], axis=1)
 
-# ------------------- 半吸附 -------------------
-def snap_to_bead(img512, x, y, window=60):
+# ---------- 候选点检测 + 手动补点 ----------
+def detect_candidates(img512, border=40):
     H, W = img512.shape
-    x0, x1 = int(max(0, x-window)), int(min(W, x+window))
-    y0, y1 = int(max(0, y-window)), int(min(H, y+window))
-    roi = img512[y0:y1, x0:x1]
-    if roi.size == 0: return x, y
-    roi = cv2.normalize(roi, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
-    roi = cv2.GaussianBlur(roi, (5,5), 0)
-    _, mask = cv2.threshold(roi, 0, 255, cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+    cropped = img512[border:H-border, border:W-border]
+    im = cv2.normalize(cropped, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
+    im = cv2.GaussianBlur(im, (3,3), 0)
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (9,9))
+    tophat = cv2.morphologyEx(im, cv2.MORPH_TOPHAT, kernel)
+    _, mask = cv2.threshold(tophat, 0, 255, cv2.THRESH_BINARY+cv2.THRESH_OTSU)
     num, _, stats, cents = cv2.connectedComponentsWithStats(mask)
-    if num <= 1: return x, y
-    idx = 1 + np.argmax(stats[1:, cv2.CC_STAT_AREA])
-    cx, cy = cents[idx]
-    return x0 + cx, y0 + cy
+    cands=[]
+    for i in range(1,num):
+        area=stats[i,cv2.CC_STAT_AREA]
+        if 5<=area<=100:
+            w,h=stats[i,2],stats[i,3]
+            if max(w,h)/(min(w,h)+1e-6)<2.0:
+                cx,cy=cents[i]; cands.append((cx+border,cy+border))
+    return np.array(cands,np.float32)
 
-# ------------------- 畸变拟合（9基） -------------------
-def poly_features(u, v):
-    x = u - S/2.0
-    y = v - S/2.0
-    Xv = np.stack([x, y, x**2, x*y, y**2, x**3, (x**2)*y, x*(y**2), y**3], axis=1)
-    Yv = np.stack([y, x, y**2, y*x, x**2, y**3, (y**2)*x, y*(x**2), x**3], axis=1)
-    return Xv, Yv
+def manual_add_points(img, existing_points, candidates=None, snap_dist=10):
+    fig,ax=plt.subplots(); ax.imshow(img,cmap="gray")
+    if len(existing_points)>0:
+        ax.scatter(existing_points[:,0],existing_points[:,1],c="r",s=20,label="auto")
+    ax.set_title("Left key = add, Enter/right key = end"); ax.legend()
+    added=[]
+    def onclick(e):
+        if e.inaxes is None or e.button!=1: return
+        pt=np.array([e.xdata,e.ydata])
+        if candidates is not None and len(candidates)>0:
+            d=np.linalg.norm(candidates-pt,axis=1); j=np.argmin(d)
+            if d[j]<snap_dist: pt=candidates[j]
+        added.append(pt); ax.scatter([pt[0]],[pt[1]],c="b",s=20); fig.canvas.draw_idle()
+    cid=fig.canvas.mpl_connect("button_press_event",onclick)
+    plt.show(); fig.canvas.mpl_disconnect(cid)
+    if len(added)>0: return np.vstack([existing_points,np.array(added,np.float32)])
+    return existing_points
 
-def fit_distortion(u_obs, v_obs, u_ref, v_ref):
-    Xv, Yv = poly_features(u_obs, v_obs)
-    du = (u_ref - u_obs)
-    dv = (v_ref - v_obs)
-    ax, _, _, _ = np.linalg.lstsq(Xv, du, rcond=None)
-    ay, _, _, _ = np.linalg.lstsq(Yv, dv, rcond=None)
-    return ax.astype(np.float64), ay.astype(np.float64)
+# ---------- 主流程 ----------
+def main():
+    ap=argparse.ArgumentParser()
+    ap.add_argument("--dcm",required=True,help="DICOM 文件路径")
+    ap.add_argument("--outdir",default="out",help="输出目录")
+    ap.add_argument("--bead-mm",type=float,default=20.0)
+    ap.add_argument("--face-mm",type=float,default=200.0)
+    ap.add_argument("--plane-offset",default="0.5,0.5")
+    args=ap.parse_args(); os.makedirs(args.outdir,exist_ok=True)
 
-# ------------------- 匹配（Hungarian + 门限） -------------------
-def match_points(uv_model, uv_obs, gate=25.0):
-    from scipy.spatial.distance import cdist
-    D = cdist(uv_obs, uv_model)  # M x N
-    rows, cols = linear_sum_assignment(D)
-    keep = [k for k,(r,c) in enumerate(zip(rows, cols)) if D[r, c] <= gate]
-    if len(keep) == 0:
-        return np.empty((0,2)), np.empty((0,2)), [], []
-    rows = rows[keep]; cols = cols[keep]
-    return uv_obs[rows], uv_model[cols], rows.tolist(), cols.tolist()
+    ds=pydicom.dcmread(args.dcm); img=ds.pixel_array.astype(np.float32)
+    img512=cv2.resize(img,(S,S),interpolation=cv2.INTER_AREA)
+    f_pix_mm=float(ds.ImagerPixelSpacing[0])
+    ox,oy=map(float,args.plane_offset.split(","))
 
-# ------------------- 主流程 -------------------
+    # 自动候选 + 手动补点
+    cands=detect_candidates(img512,border=40)
+    obs_all=manual_add_points(img512,cands,candidates=cands,snap_dist=10)
+    if obs_all.shape[0]<6: print("Too few observation points"); return
+
+    # --- Step1: 第一层 ---
+    XYZ0 = build_grid_single(f_pix_mm, bead_mm=args.bead_mm, Z=0.0)
+    uv_model0 = apply_perspective(XYZ0)
+    uv_adj0, locks0, sim0, idx_model0, idx_obs0 = interactive_manual_snap(
+        img512, uv_model0, obs_all, center=(S / 2, S / 2))
+    sio.savemat(os.path.join(args.outdir, "layer0.mat"),
+                {"uv": uv_adj0, "sim": sim0, "idx_model": idx_model0, "idx_obs": idx_obs0})
+
+
+    # --- Step2: 第二层，显示第一层作为参考 ---
+    face_px = args.face_mm / (2.0 * f_pix_mm)
+    XYZ1 = build_grid_single(f_pix_mm, bead_mm=args.bead_mm, Z=face_px,
+                             offset_frac=(ox, oy))
+    uv_model1 = apply_perspective(XYZ1)
+    uv_adj1, locks1, sim1, idx_model1, idx_obs1 = interactive_manual_snap(
+        img512, uv_model1, obs_all, center=(S / 2, S / 2), fixed_layers=uv_adj0)
+    sio.savemat(os.path.join(args.outdir, "layer1.mat"),
+                {"uv": uv_adj1, "sim": sim1, "idx_model": idx_model1, "idx_obs": idx_obs1})
+
+    # 合并保存
+    uv_all=np.vstack([uv_adj0,uv_adj1])
+    idx_model_all=np.hstack([idx_model0,idx_model1])
+    idx_obs_all=np.hstack([idx_obs0,idx_obs1])
+    sio.savemat(os.path.join(args.outdir,"dist_data.mat"),
+                {"uv":uv_all,"idx_model":idx_model_all,"idx_obs":idx_obs_all})
+    print("🎯 All done, dist_data.mat has been saved")
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--dcm", required=True, help="DICOM 文件路径")
     ap.add_argument("--outdir", default="out", help="输出目录")
-    ap.add_argument("--gate", type=float, default=25.0, help="匹配门限(像素, 512坐标系)")
-    ap.add_argument("--no-auto-init", action="store_true", help="关闭自动预对齐")
+    ap.add_argument("--bead-mm", type=float, default=20.0, help="单层格距(mm)")
+    ap.add_argument("--face-mm", type=float, default=200.0, help="层间距(mm)")
+    ap.add_argument("--plane-offset", default="0.5,0.5", help="第二层偏移(以格距为单位)，如 0.5,0.5")
     args = ap.parse_args()
     os.makedirs(args.outdir, exist_ok=True)
 
-    # 读 DICOM -> 缩放到 512
-    ds  = pydicom.dcmread(args.dcm)
+    # --- Step0: DICOM 读图 ---
+    ds = pydicom.dcmread(args.dcm)
     img = ds.pixel_array.astype(np.float32)
     img512 = cv2.resize(img, (S, S), interpolation=cv2.INTER_AREA)
-
-    if "ImagerPixelSpacing" not in ds:
-        raise RuntimeError("DICOM 缺少 ImagerPixelSpacing")
     f_pix_mm = float(ds.ImagerPixelSpacing[0])
 
-    # 3D grid & 初始投影（旧版）
-    XYZ = build_grid_px(f_pix_mm=f_pix_mm)
-    uv0 = apply_perspective_calibrate(XYZ)  # (98,2) on 512
+    ox, oy = map(float, args.plane_offset.split(","))
 
-    # ——(可选) 自动预对齐：用粗检亮点的质心做相似变换——
-    if not args.no_auto_init:
-        cand = detect_beads_centroids(img512)  # (M,2)
-        if cand.shape[0] >= 30:
-            center = np.array([[S/2, S/2]])
-            k = min(len(uv0), len(cand))
-            idx_c = np.argsort(np.linalg.norm(cand - center, axis=1))[:k]
-            idx_m = np.argsort(np.linalg.norm(uv0  - center, axis=1))[:k]
-            s, R2, t = procrustes_similarity(uv0[idx_m], cand[idx_c])
-            uv0 = (uv0 @ (s * R2)) + t
+    # --- Step1: 自动候选 + 手动添加 ---
+    cands = detect_candidates(img512, border=40)
+    obs_all = manual_add_points(img512, cands, candidates=cands, snap_dist=10)
+    if obs_all.shape[0] < 6:
+        print("⚠️ 观测点太少(<6)，退出")
+        return
 
-    # ——交互整体调网格：平移/旋转/缩放——
-    uv0_adj, sim_params = interactive_adjust_grid(
-        img512, uv0, center=(S/2, S/2),
-        step_move=5.0, step_rot_deg=1.0, step_scale=1.01
+    # --- Step2: 第一层 ---
+    XYZ0 = build_grid_single(f_pix_mm, bead_mm=args.bead_mm, Z=0.0)
+    uv_model0 = apply_perspective(XYZ0)
+    uv_adj0, locks0, sim0, idx_m0, idx_o0 = interactive_manual_snap(
+        img512, uv_model0, obs_all, center=(S / 2, S / 2)
     )
-    print(f"[init adjust] {sim_params}")
 
-    # ——点击 + 半吸附（实时显示）——
-    fig, ax = plt.subplots()
-    ax.imshow(img512, cmap="gray")
-    ax.scatter(uv0_adj[:,0], uv0_adj[:,1], c="b", s=12, label="init grid (adjusted)")
-    ax.set_title("Click near beads (Left click = Add and attach, right click /Enter= End)")
-    _, snapped = collect_points_with_snap(ax, img512, snap_to_bead)
-    plt.close(fig)
-    if snapped.shape[0] < 6:
-        print("有效点少于6，退出。")
-        sio.savemat(os.path.join(args.outdir, "dist_data.mat"),
-                    {"bpx": snapped[:,0], "bpy": snapped[:,1], "gpx": [], "gpy": []})
-        return
+    print("✅ 第一层完成，保存中...")
+    sio.savemat(os.path.join(args.outdir, "layer0.mat"),
+                {"uv": uv_adj0, "sim": sim0,
+                 "idx_model": idx_m0, "idx_obs": idx_o0,
+                 "locks": locks0})  # 👈 保存锁定信息
 
-    # ——匹配：观测 ↔ 模型（基于调整后的 uv0_adj）——
-    obs_sel, model_sel, idx_obs, idx_model = match_points(uv0_adj, snapped, gate=args.gate)
-    if obs_sel.shape[0] < 6:
-        print("匹配后有效对数 < 6，请多点些、或调整 --gate。")
-        sio.savemat(os.path.join(args.outdir, "dist_data.mat"),
-                    {"bpx": snapped[:,0], "bpy": snapped[:,1], "gpx": [], "gpy": []})
-        return
+    # --- Step3: 第二层 (显示第一层结果，黄色) ---
+    face_px = args.face_mm / (2.0 * f_pix_mm)
+    XYZ1 = build_grid_single(f_pix_mm, bead_mm=args.bead_mm, Z=face_px,
+                             offset_frac=(ox, oy))
+    uv_model1 = apply_perspective(XYZ1)
+    uv_adj1, locks1, sim1, idx_m1, idx_o1 = interactive_manual_snap(
+        img512, uv_model1, obs_all, center=(S / 2, S / 2),
+        prev_layers=[(uv_adj0, "yellow")],  # 仅显示
+        exclude_prev_from_obs=True  # 不参与吸附
+    )
+    print("✅ 第二层完成，保存中...")
+    sio.savemat(os.path.join(args.outdir, "layer1.mat"),
+                {"uv": uv_adj1, "sim": sim1, "idx_model": idx_m1, "idx_obs": idx_o1})
 
-    # ——微调 d1/d2（仅在匹配到的索引上）——
-    def resid_dd(p):
-        d1, d2 = p
-        uv = apply_perspective_calibrate(XYZ[idx_model], d1=d1, d2=d2, xc=XC, yc=YC)
-        return (uv - obs_sel).ravel()
-    try:
-        res = least_squares(resid_dd, x0=np.array([D1, D2]),
-                            bounds=([D1-200, D2-200], [D1+200, D2+200]),
-                            verbose=0)
-        d1_opt, d2_opt = float(res.x[0]), float(res.x[1])
-    except Exception:
-        d1_opt, d2_opt = D1, D2
-
-    uv_opt = apply_perspective_calibrate(XYZ[idx_model], d1=d1_opt, d2=d2_opt, xc=XC, yc=YC)
-
-    # ——畸变拟合(9基)——
-    ax_coef, ay_coef = fit_distortion(obs_sel[:,0], obs_sel[:,1], uv_opt[:,0], uv_opt[:,1])
-
-    # ——保存（512坐标系）——
+    # --- Step4: 合并 ---
+    uv_all = np.vstack([uv_adj0, uv_adj1])
+    idx_model_all = np.hstack([idx_m0, idx_m1])
+    idx_obs_all   = np.hstack([idx_o0, idx_o1])
     sio.savemat(os.path.join(args.outdir, "dist_data.mat"),
-                {"bpx": obs_sel[:,0], "bpy": obs_sel[:,1],
-                 "gpx": uv_opt[:,0], "gpy": uv_opt[:,1],
-                 "matched_obs_idx": np.array(idx_obs, dtype=np.int32),
-                 "matched_model_idx": np.array(idx_model, dtype=np.int32)})
-    sio.savemat(os.path.join(args.outdir, "dist_coeff.mat"),
-                {"ax": ax_coef, "ay": ay_coef,
-                 "d1": d1_opt, "d2": d2_opt, "xc": XC, "yc": YC,
-                 "sim_scale": sim_params.get("scale",1.0),
-                 "sim_theta_deg": sim_params.get("theta",0.0),
-                 "sim_tx": sim_params.get("tx",0.0),
-                 "sim_ty": sim_params.get("ty",0.0)})
-    print(f"✅ 保存 dist_data.mat / dist_coeff.mat  (pairs={len(idx_obs)}, d1={d1_opt:.1f}, d2={d2_opt:.1f})")
+                {"uv": uv_all, "idx_model": idx_model_all, "idx_obs": idx_obs_all})
+    print("🎯 全部完成，dist_data.mat 已保存")
 
-    # ——可视化结果——
-    plt.imshow(img512, cmap="gray")
-    plt.scatter(obs_sel[:,0], obs_sel[:,1], c="r", s=14, label="beads (snapped, used)")
-    plt.scatter(uv_opt[:,0],  uv_opt[:,1],  c="g", s=14, label="grid (matched, tuned)")
-    plt.legend(); plt.title("Calibration (matched)")
-    plt.show()
-
-if __name__ == "__main__":
+if __name__=="__main__":
     main()
 
