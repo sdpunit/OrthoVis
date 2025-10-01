@@ -178,8 +178,8 @@ class Context:
         """Request processing with custom ROI"""
         return self._singleton_data._state.handle_process(arg)
 
-    def request_save(self, patient: SingletonPatient) -> str:
-        return self._singleton_data._state.handle_save(patient)
+    def request_save(self, arg: Any) -> str:
+        return self._singleton_data._state.handle_save(arg)
     
     def request_string(self) -> str:
         return self._singleton_data._state.handle_to_string()
@@ -208,7 +208,7 @@ class DataState(ABC):
         pass
 
     @abstractmethod
-    def handle_save(self, patient: SingletonPatient) -> str:
+    def handle_save(self, arg: Any) -> str:
         pass
 
     @abstractmethod
@@ -266,9 +266,14 @@ class RawState(DataState):
             return False
 
 
-    def handle_save(self, patient: SingletonPatient) -> str:
+    def handle_save(self, arg: Any) -> str:
+
         print("RawState wants to save the context to local space.")
-        patient_instance = patient._patient
+
+        if not isinstance(arg, SingletonPatient):
+            return ""
+        
+        patient_instance = arg._patient
         # Retrieve the fields of the patient
         name = patient_instance._name
         desc = patient_instance._description
@@ -282,7 +287,7 @@ class RawState(DataState):
         # caligrid_last = os.path.basename(os.path.normpath(caligrid))
 
         # Turns State object into its string representation
-        state = patient._state.handle_to_string()
+        state = arg._state.handle_to_string()
 
         # Create the Projects folder with the name
         # Append the last folder names extracted from the step above 
@@ -357,7 +362,32 @@ class SegmentState(DataState):
         self.context.transition_to(CalibrationState())
         return True
  
-    def handle_save(self, patient: SingletonPatient) -> str:
+    def handle_save(self, arg: Any) -> str:
+        """Save all edited masks - triggered by button"""
+        if not arg.editing_enabled or not arg.editable_masks:
+            print(type(arg))
+            print("No editable masks available")
+            arg.show_info("No editable masks available")
+            return False
+        
+        try:
+            saved_count = 0
+            for mask in arg.editable_masks:
+                if hasattr(mask, 'modified') and mask.modified:
+                    mask.save_mask()
+                    saved_count += 1
+            
+            # Always show the message, even if no masks were modified
+            message = "Saved edits to masks"
+            print(message)
+            arg.show_info(message)
+            
+            return True
+                
+        except Exception as e:
+            print(f"Error saving masks: {e}")
+            arg.show_error(f"Error saving masks: {e}")
+            return False
         print("SegmentState wants to change the state of the context.")
 
     def handle_to_string(self) -> str:
@@ -370,7 +400,7 @@ class CalibrationState(DataState):
         self.context.transition_to(RegistrationState())
         return True
 
-    def handle_save(self, patient: SingletonPatient) -> str:
+    def handle_save(self, arg: Any) -> str:
         print("CalibrationState wants to change the state of the context.")
 
     def handle_to_string(self) -> str:
@@ -383,7 +413,7 @@ class RegistrationState(DataState):
         self.context.transition_to(ReferenceSysState())
         return True
 
-    def handle_save(self, patient: SingletonPatient) -> str:
+    def handle_save(self, arg: Any) -> str:
         print("RegistrationState wants to change the state of the context.")
     
     def handle_to_string(self) -> str:
@@ -396,7 +426,7 @@ class ReferenceSysState(DataState):
         self.context.transition_to(MotionState())
         return True
 
-    def handle_save(self, patient: SingletonPatient) -> str:
+    def handle_save(self, arg: Any) -> str:
         print("ReferenceSysState wants to change the state of the context.")
 
     def handle_to_string(self) -> str:
@@ -409,7 +439,7 @@ class MotionState(DataState):
         self.context.transition_to(VisualState())
         return True
 
-    def handle_save(self, patient: SingletonPatient) -> str:
+    def handle_save(self, arg: Any) -> str:
         print("MotionState wants to change the state of the context.")
 
     def handle_to_string(self) -> str:
@@ -422,7 +452,7 @@ class VisualState(DataState):
     def handle_process(self, arg: Any = None) -> bool:
         return True
 
-    def handle_save(self, patient: SingletonPatient) -> str:
+    def handle_save(self, arg: Any) -> str:
         print("VisualState wants to change the state of the context.")
         self.context.transition_to(SegmentState())
 
