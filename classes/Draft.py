@@ -257,51 +257,7 @@ def manual_add_points(img, existing_points, candidates=None, snap_dist=10):
     return existing_points
 
 # ---------- 主流程 ----------
-def main():
-    ap=argparse.ArgumentParser()
-    ap.add_argument("--dcm",required=True,help="DICOM 文件路径")
-    ap.add_argument("--outdir",default="out",help="输出目录")
-    ap.add_argument("--bead-mm",type=float,default=20.0)
-    ap.add_argument("--face-mm",type=float,default=200.0)
-    ap.add_argument("--plane-offset",default="0.5,0.5")
-    args=ap.parse_args(); os.makedirs(args.outdir,exist_ok=True)
 
-    ds=pydicom.dcmread(args.dcm); img=ds.pixel_array.astype(np.float32)
-    img512=cv2.resize(img,(S,S),interpolation=cv2.INTER_AREA)
-    f_pix_mm=float(ds.ImagerPixelSpacing[0])
-    ox,oy=map(float,args.plane_offset.split(","))
-
-    # 自动候选 + 手动补点
-    cands=detect_candidates(img512,border=40)
-    obs_all=manual_add_points(img512,cands,candidates=cands,snap_dist=10)
-    if obs_all.shape[0]<6: print("Too few observation points"); return
-
-    # --- Step1: 第一层 ---
-    XYZ0 = build_grid_single(f_pix_mm, bead_mm=args.bead_mm, Z=0.0)
-    uv_model0 = apply_perspective(XYZ0)
-    uv_adj0, locks0, sim0, idx_model0, idx_obs0 = interactive_manual_snap(
-        img512, uv_model0, obs_all, center=(S / 2, S / 2))
-    sio.savemat(os.path.join(args.outdir, "layer0.mat"),
-                {"uv": uv_adj0, "sim": sim0, "idx_model": idx_model0, "idx_obs": idx_obs0})
-
-
-    # --- Step2: 第二层，显示第一层作为参考 ---
-    face_px = args.face_mm / (2.0 * f_pix_mm)
-    XYZ1 = build_grid_single(f_pix_mm, bead_mm=args.bead_mm, Z=face_px,
-                             offset_frac=(ox, oy))
-    uv_model1 = apply_perspective(XYZ1)
-    uv_adj1, locks1, sim1, idx_model1, idx_obs1 = interactive_manual_snap(
-        img512, uv_model1, obs_all, center=(S / 2, S / 2), fixed_layers=uv_adj0)
-    sio.savemat(os.path.join(args.outdir, "layer1.mat"),
-                {"uv": uv_adj1, "sim": sim1, "idx_model": idx_model1, "idx_obs": idx_obs1})
-
-    # 合并保存
-    uv_all=np.vstack([uv_adj0,uv_adj1])
-    idx_model_all=np.hstack([idx_model0,idx_model1])
-    idx_obs_all=np.hstack([idx_obs0,idx_obs1])
-    sio.savemat(os.path.join(args.outdir,"dist_data.mat"),
-                {"uv":uv_all,"idx_model":idx_model_all,"idx_obs":idx_obs_all})
-    print("🎯 All done, dist_data.mat has been saved")
 
 def main():
     ap = argparse.ArgumentParser()
