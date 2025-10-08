@@ -4,7 +4,8 @@ from PySide6.QtCore import QObject
 from frontend_pages.startup.ui_startup_window import Ui_HomePage
 from PySide6.QtWidgets import QFileDialog
 from classes.objects import *
-import json, os, datetime
+from datetime import datetime
+import json, os
 
 class HomePage(QWidget):
     def __init__(self):
@@ -29,6 +30,12 @@ class HomePage(QWidget):
         self.ui.pushButton.setStyleSheet(button_style)
         self.ui.pushButton_2.setStyleSheet(button_style)
 
+        current_dir = Path(__file__).resolve().parent.parent
+        parent_dir = current_dir.parent
+        path = parent_dir / "Projects" / "opened_projects.txt"
+        if os.path.isfile(path):
+            self.read_entries()  
+
     def handle_new_project(self):
         """Handle new project creation"""
         self.parent().setCurrentIndex(1)
@@ -51,6 +58,9 @@ class HomePage(QWidget):
                 print(f"=== Loading existing project ===")
                 print(f"Project folder: {folder_path}")
                 print(f"Project data: {project_data}")
+
+                # Whenever the new project is opened, append the entry to the opened_projects.txt
+                self.append_entry(project_data["name"])
                 
                 # Load project into backend singleton
                 success = self.load_project_into_backend(project_data, folder_path)
@@ -132,26 +142,69 @@ class HomePage(QWidget):
             except Exception as e:
                 self.show_error(f"Error loading project: {str(e)}")
 
-    def append_entry(self, path: str, name: str):
+
+    def append_entry(self, name, max_entries=3):
         """
-        Appends an entry to the text file in the format: name, D-M-YYYY
-        using today's date.
-        Creates the file if it does not exist.
+        Appends an entry in the format: name, D-M-YYYY to display the recently opened projects
+        If the file already has max_entries, deletes the last entry first.
         """
-        file = f"{path}/opened_projects.txt"
+        current_dir = Path(__file__).resolve().parent.parent
+        parent_dir = current_dir.parent
+        path = parent_dir / "Projects" / "opened_projects.txt" 
+
+        # Ensure parent folder exists
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.touch(exist_ok=True)
+        # Read existing lines (if any)
+        lines = []
+
+        with open(path, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+
+        # If file already has max_entries, drop the last one
+        if len(lines) >= max_entries:
+            lines = lines[:-1]
+
+        # Format today's date
         today = datetime.today()
-    
-        # Format as D-M-YYYY
-        formatted_date = today.strftime("%d %B %Y")
-    
-        with open(file, "a", encoding="utf-8") as f:
-            f.write(f"{name}, {formatted_date}\n")
-            print("File entry added")
+        try:
+            formatted_date = today.strftime("%-d-%-m-%Y")  # Linux/macOS
+        except ValueError:
+            formatted_date = today.strftime("%#d-%#m-%Y")  # Windows
 
-        self.ui.fileName1.setText(name)
-        self.ui.lastAccess1.setText(formatted_date)
-        # self.ui.fileName2.
+        # Add new entry at the top
+        lines.insert(0, f"{name}, {formatted_date}\n")
 
+        # Write everything back
+        with open(path, "w", encoding="utf-8") as f:
+            f.writelines(lines)
+
+    def read_entries(self):
+        """
+        Appends an entry in the format: name, D-M-YYYY to display the recently opened projects
+        If the file already has max_entries, deletes the last entry first.
+        """
+        current_dir = Path(__file__).resolve().parent.parent
+        parent_dir = current_dir.parent
+        path = parent_dir / "Projects" / "opened_projects.txt" 
+
+        lines = []
+
+        with open(path, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line:  # skip empty lines
+                    name, date = line.split(", ", 1)
+                    lines.append((name, date))
+
+        labels = [(self.ui.fileName1, self.ui.lastAccess1), (self.ui.fileName2, self.ui.lastAccess2),
+                  (self.ui.fileName3, self.ui.lastAccess3)]
+        
+        for i in range(len(lines)):
+            file, lastAccess = labels[i]
+            name, date = lines[i]
+            file.setText(name)
+            lastAccess.setText(date)
 
     
     def get_page(self, main_window : QObject, stacked_widget: QObject, state: str) -> QObject:
@@ -335,3 +388,193 @@ class HomePage(QWidget):
         msg.setText(message)
         msg.exec()
         print(f"Error: {message}")
+
+
+
+
+        
+'''
+from PySide6.QtWidgets import QWidget, QMessageBox, QFileDialog, QSizePolicy, QVBoxLayout
+from PySide6.QtCore import QObject, Qt
+from frontend_pages.startup.ui_startup_window import Ui_HomePage
+from classes.objects import *
+from datetime import datetime
+from pathlib import Path
+import json, os
+
+class HomePage(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.ui = Ui_HomePage()
+        self.ui.setupUi(self)
+        self.ui.pushButton.clicked.connect(self.handle_new_project)
+        self.ui.pushButton_2.clicked.connect(self.handle_open_project)
+        
+
+        self.setup_responsive_layouts()
+        self.apply_styles()
+        self.update_button_sizes()
+
+        current_dir = Path(__file__).resolve().parent.parent
+        parent_dir = current_dir.parent
+        path = parent_dir / "Projects" / "opened_projects.txt"
+        if os.path.isfile(path):
+            self.read_entries()
+
+    def setup_responsive_layouts(self):
+        """Adjust spacing and size policies for a responsive rounded layout."""
+
+        self.setMinimumSize(960, 640)
+
+        self.ui.gridLayout_2.setContentsMargins(32, 32, 32, 32)
+        self.ui.gridLayout_2.setHorizontalSpacing(24)
+        self.ui.gridLayout_2.setVerticalSpacing(24)
+
+        self.ui.mainLayout.setContentsMargins(0, 0, 0, 0)
+        self.ui.mainLayout.setSpacing(32)
+
+        self.ui.leftLayout.setContentsMargins(0, 0, 0, 0)
+        self.ui.leftLayout.setHorizontalSpacing(0)
+        self.ui.leftLayout.setVerticalSpacing(0)
+
+        self.ui.gridLayout_4.setContentsMargins(32, 32, 32, 32)
+        self.ui.gridLayout_4.setHorizontalSpacing(12)
+        self.ui.gridLayout_4.setVerticalSpacing(12)
+
+        self.ui.rightLayout.setContentsMargins(0, 0, 0, 0)
+        self.ui.rightLayout.setSpacing(0)
+
+        self.ui.gridLayout_3.setContentsMargins(32, 32, 32, 32)
+        self.ui.gridLayout_3.setHorizontalSpacing(24)
+        self.ui.gridLayout_3.setVerticalSpacing(24)
+        self.ui.gridLayout_3.setRowStretch(3, 3)
+        self.ui.gridLayout_3.setRowStretch(4, 4)
+
+        self.ui.selectionLayout.setSpacing(18)
+        self.ui.texts.setSpacing(24)
+
+        self.ui.buttonsLayout.setContentsMargins(0, 0, 0, 0)
+        self.ui.buttonsLayout.setSpacing(24)
+        self.ui.buttonsLayout.setStretch(0, 1)
+        self.ui.buttonsLayout.setStretch(1, 1)
+
+        self.ui.verticalLayout_3.setContentsMargins(24, 24, 24, 24)
+        self.ui.verticalLayout_3.setSpacing(16)
+
+        header_layouts = [
+            self.ui.horizontalLayout,
+            self.ui.horizontalLayout_3,
+            self.ui.horizontalLayout_4,
+            self.ui.horizontalLayout_5,
+        ]
+        for layout in header_layouts:
+            layout.setContentsMargins(16, 12, 16, 12)
+            layout.setSpacing(18)
+
+        for frame in (self.ui.project1Frame, self.ui.project2Frame, self.ui.project3Frame):
+            frame.setMinimumHeight(72)
+
+        self.ui.headers.setMinimumHeight(64)
+
+        button_policy = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        for frame, button in (
+            (self.ui.newProjectFrame, self.ui.pushButton),
+            (self.ui.openProjectFrame, self.ui.pushButton_2),
+        ):
+            if frame.layout() is None:
+                frame_layout = QVBoxLayout(frame)
+            else:
+                frame_layout = frame.layout()
+                while frame_layout.count():
+                    item = frame_layout.takeAt(0)
+                    if widget := item.widget():
+                        widget.setParent(None)
+            frame_layout.setContentsMargins(0, 0, 0, 0)
+            frame_layout.addWidget(button)
+            frame_layout.setAlignment(Qt.AlignmentFlag.AlignVCenter)
+
+            button.setSizePolicy(button_policy)
+            button.setMinimumHeight(64)
+            button.setCursor(Qt.CursorShape.PointingHandCursor)
+
+    def apply_styles(self):
+        """Apply a rounded, modern visual style to the startup window."""
+
+        base_styles = """
+            QWidget#HomePage {
+                background-color: #0b1120;
+            }
+            QFrame#leftFrame {
+                background-color: #1d3461;
+                border-radius: 32px;
+            }
+            QLabel#lblOrthoVis {
+                color: #f8fafc;
+                letter-spacing: 1.5px;
+            }
+            QFrame#rightFrame {
+                background-color: rgba(15, 23, 42, 0.75);
+                border-radius: 32px;
+                border: 1px solid rgba(148, 163, 184, 0.25);
+            }
+            QLabel#lblWelcome,
+            QLabel#newPfoject,
+            QLabel#openProject,
+            QLabel#recentsLabel {
+                color: #f8fafc;
+            }
+            QLabel#lblIntro,
+            QLabel#newProjectText,
+            QLabel#createProjectText {
+                color: rgba(226, 232, 240, 0.85);
+            }
+            QFrame#recentsFrame {
+                background-color: rgba(15, 23, 42, 0.55);
+                border-radius: 24px;
+                border: 1px solid rgba(148, 163, 184, 0.15);
+            }
+            QFrame#headers {
+                background-color: rgba(148, 163, 184, 0.2);
+                border-radius: 18px;
+            }
+            QLabel#fileNameLabel,
+            QLabel#lastAccessLabel {
+                color: rgba(226, 232, 240, 0.8);
+            }
+            QFrame#project1Frame,
+            QFrame#project2Frame,
+            QFrame#project3Frame {
+                background-color: rgba(15, 23, 42, 0.6);
+                border-radius: 18px;
+                border: 1px solid rgba(148, 163, 184, 0.12);
+            }
+            QLabel#fileName1,
+            QLabel#fileName2,
+            QLabel#fileName3 {
+                color: #f8fafc;
+            }
+            QLabel#lastAccess1,
+            QLabel#lastAccess2,
+            QLabel#lastAccess3 {
+                color: rgba(226, 232, 240, 0.7);
+            }
+            QPushButton {
+                background-color: #facc15;
+                color: #0f172a;
+                border-radius: 24px;
+                padding: 18px 28px;
+                font-weight: 600;
+                border: none;
+            }
+            QPushButton:hover {
+                background-color: #fde047;
+            }
+            QPushButton:pressed {
+                background-color: #eab308;
+            }
+        """
+
+
+        self.setStyleSheet(base_styles)
+
+'''

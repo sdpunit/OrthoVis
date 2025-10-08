@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from abc import ABC, abstractmethod
 from pathlib import Path
+from typing import Any
 import os
 
 def copy_directory(source_folder: str, destination_folder: str):  
@@ -173,15 +174,12 @@ class Context:
     The Context delegates part of its behavior to the current State object.
     """
 
-    def request_process(self) -> bool:
-        return self._singleton_data._state.handle_process()
-
-    def request_process_with_roi(self, custom_roi: list) -> bool:
+    def request_process(self, arg: Any = None) -> bool:
         """Request processing with custom ROI"""
-        return self._singleton_data._state.handle_process_with_roi(custom_roi)
+        return self._singleton_data._state.handle_process(arg)
 
-    def request_save(self, patient: SingletonPatient) -> str:
-        return self._singleton_data._state.handle_save(patient)
+    def request_save(self, arg: Any) -> str:
+        return self._singleton_data._state.handle_save(arg)
     
     def request_string(self) -> str:
         return self._singleton_data._state.handle_to_string()
@@ -206,15 +204,11 @@ class DataState(ABC):
         self._context = context
 
     @abstractmethod
-    def handle_process(self) -> bool:
+    def handle_process(self, arg: Any = None) -> bool:
         pass
 
-    def handle_process_with_roi(self, custom_roi: list) -> bool:
-        """Handle processing with custom ROI - default implementation calls handle_process"""
-        return self.handle_process()
-
     @abstractmethod
-    def handle_save(self, patient: SingletonPatient) -> str:
+    def handle_save(self, arg: Any) -> str:
         pass
 
     @abstractmethod
@@ -232,18 +226,13 @@ Context.
 
 class RawState(DataState):
 
-    def handle_process(self) -> bool:
-        """Handle segmentation in RawState - this should not be called directly anymore"""
-        print("RawState: handle_process called without ROI - use handle_process_with_roi instead")
-        return False
-
-    def handle_process_with_roi(self, custom_roi: list) -> bool:
+    def handle_process(self, arg: Any = None) -> bool:
         """Handle segmentation in RawState with custom ROI"""
         try:
             from seg.totalseg import run_complete_segmentation
             
             # Validate custom ROI
-            if not custom_roi or len(custom_roi) == 0:
+            if not arg or len(arg) == 0:
                 print("RawState: Custom ROI is empty - segmentation cannot proceed")
                 return False
             
@@ -257,9 +246,9 @@ class RawState(DataState):
             
             print(f"RawState: Running segmentation on {ct_dir}")
             print(f"RawState: Output directory {seg_dir}")
-            print(f"RawState: Custom ROI: {custom_roi}")
+            print(f"RawState: Custom ROI: {arg}")
             
-            success = run_complete_segmentation(ct_dir, seg_dir, custom_roi)
+            success = run_complete_segmentation(ct_dir, seg_dir, arg)
             
             if success:
                 print("RawState: Segmentation completed successfully")
@@ -277,9 +266,14 @@ class RawState(DataState):
             return False
 
 
-    def handle_save(self, patient: SingletonPatient) -> str:
+    def handle_save(self, arg: Any) -> str:
+
         print("RawState wants to save the context to local space.")
-        patient_instance = patient._patient
+
+        if not isinstance(arg, SingletonPatient):
+            return ""
+        
+        patient_instance = arg._patient
         # Retrieve the fields of the patient
         name = patient_instance._name
         desc = patient_instance._description
@@ -293,7 +287,7 @@ class RawState(DataState):
         # caligrid_last = os.path.basename(os.path.normpath(caligrid))
 
         # Turns State object into its string representation
-        state = patient._state.handle_to_string()
+        state = arg._state.handle_to_string()
 
         # Create the Projects folder with the name
         # Append the last folder names extracted from the step above 
@@ -363,17 +357,38 @@ class RawState(DataState):
 
 class SegmentState(DataState):
 
-    def handle_process(self) -> bool:
-        print("SegmentState wants to change the state of the context.")
-        return False
-
-    def handle_process_with_roi(self, custom_roi: list) -> bool:
+    def handle_process(self, arg: Any = None) -> bool:
         print("SegmentState: Already segmented - no additional processing needed")
+        self.context.transition_to(CalibrationState())
         return True
  
-    def handle_save(self, patient: SingletonPatient) -> str:
+    def handle_save(self, arg: Any) -> str:
+        """Save all edited masks - triggered by button"""
+        if not arg.editing_enabled or not arg.editable_masks:
+            print(type(arg))
+            print("No editable masks available")
+            arg.show_info("No editable masks available")
+            return False
+        
+        try:
+            saved_count = 0
+            for mask in arg.editable_masks:
+                if hasattr(mask, 'modified') and mask.modified:
+                    mask.save_mask()
+                    saved_count += 1
+            
+            # Always show the message, even if no masks were modified
+            message = "Saved edits to masks"
+            print(message)
+            arg.show_info(message)
+            
+            return True
+                
+        except Exception as e:
+            print(f"Error saving masks: {e}")
+            arg.show_error(f"Error saving masks: {e}")
+            return False
         print("SegmentState wants to change the state of the context.")
-        self.context.transition_to(SegmentState())
 
     def handle_to_string(self) -> str:
         return "SegmentState"
@@ -381,16 +396,12 @@ class SegmentState(DataState):
 
 class CalibrationState(DataState):
 
-    def handle_process(self) -> bool:
-        print("CalibrationState wants to change the state of the context.")
-        self.context.transition_to(SegmentState())
+    def handle_process(self, arg: Any = None) -> bool:
+        self.context.transition_to(RegistrationState())
+        return True
 
-    def handle_process_with_roi(self, custom_roi: list) -> bool:
-        return self.handle_process()
-
-    def handle_save(self, patient: SingletonPatient) -> str:
+    def handle_save(self, arg: Any) -> str:
         print("CalibrationState wants to change the state of the context.")
-        self.context.transition_to(SegmentState())
 
     def handle_to_string(self) -> str:
         return "CalibrationState"
@@ -398,16 +409,12 @@ class CalibrationState(DataState):
 
 class RegistrationState(DataState):
 
-    def handle_process(self) -> bool:
-        print("RegistrationState wants to change the state of the context.")
-        self.context.transition_to(SegmentState())
+    def handle_process(self, arg: Any = None) -> bool:
+        self.context.transition_to(ReferenceSysState())
+        return True
 
-    def handle_process_with_roi(self, custom_roi: list) -> bool:
-        return self.handle_process()
-
-    def handle_save(self, patient: SingletonPatient) -> str:
+    def handle_save(self, arg: Any) -> str:
         print("RegistrationState wants to change the state of the context.")
-        self.context.transition_to(SegmentState())
     
     def handle_to_string(self) -> str:
         return "RegistrationState"
@@ -415,16 +422,12 @@ class RegistrationState(DataState):
 
 class ReferenceSysState(DataState):
 
-    def handle_process(self) -> bool:
-        print("ReferenceSysState wants to change the state of the context.")
-        self.context.transition_to(SegmentState())
+    def handle_process(self, arg: Any = None) -> bool:
+        self.context.transition_to(MotionState())
+        return True
 
-    def handle_process_with_roi(self, custom_roi: list) -> bool:
-        return self.handle_process()
-
-    def handle_save(self, patient: SingletonPatient) -> str:
+    def handle_save(self, arg: Any) -> str:
         print("ReferenceSysState wants to change the state of the context.")
-        self.context.transition_to(SegmentState())
 
     def handle_to_string(self) -> str:
         return "ReferenceSysState"
@@ -432,16 +435,12 @@ class ReferenceSysState(DataState):
 
 class MotionState(DataState):
 
-    def handle_process(self) -> bool:
-        print("MotionState wants to change the state of the context.")
-        self.context.transition_to(SegmentState())
+    def handle_process(self, arg: Any = None) -> bool:
+        self.context.transition_to(VisualState())
+        return True
 
-    def handle_process_with_roi(self, custom_roi: list) -> bool:
-        return self.handle_process()
-
-    def handle_save(self, patient: SingletonPatient) -> str:
+    def handle_save(self, arg: Any) -> str:
         print("MotionState wants to change the state of the context.")
-        self.context.transition_to(SegmentState())
 
     def handle_to_string(self) -> str:
         return "MotionState"
@@ -450,14 +449,10 @@ class MotionState(DataState):
 
 class VisualState(DataState):
 
-    def handle_process(self) -> bool:
-        print("VisualState wants to change the state of the context.")
-        self.context.transition_to(SegmentState())
+    def handle_process(self, arg: Any = None) -> bool:
+        return True
 
-    def handle_process_with_roi(self, custom_roi: list) -> bool:
-        return self.handle_process()
-
-    def handle_save(self, patient: SingletonPatient) -> str:
+    def handle_save(self, arg: Any) -> str:
         print("VisualState wants to change the state of the context.")
         self.context.transition_to(SegmentState())
 
