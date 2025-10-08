@@ -198,6 +198,165 @@ def interactive_manual_snap(
     # 所见即所得（未吸附=蓝点最终位置；已吸附=红点位置）
     return last_uv_disp.copy(), dict(locks), sim.copy(), idx_model, idx_obs_snap
 
+def interactive_manual_snap(
+    img,
+    uv0,
+    obs,
+    center=(256, 256),
+    attach_px=5.0,
+    detach_px=8.0,
+    step_move=1.0,
+    step_rot_deg=1.0,
+    step_scale=1.01,
+    prev_layers=None,              # [(uv_prev, "yellow"), ...]
+    exclude_prev_from_obs=True,    # 将与 prev_layers 重合的观测点排除
+):
+    """
+    手动整体调整 + 吸附/脱离（保存=所见即所得）
+    - 红圈：观测点（可吸附）
+    - 黄圈：上一层（只显示，不参与吸附）
+    - 蓝圈：当前未吸附的模型点
+    - 绿圈：当前已吸附的模型点
+    键位：←→↑↓ 平移（Shift×5），A/D 旋转，-/= 缩放，Enter 确认，Esc/Q 取消
+    """
+    import math
+    import numpy as np
+    import matplotlib.pyplot as plt
+
+    uv0 = np.asarray(uv0, float)
+    obs = np.asarray(obs, float)
+    sim = dict(scale=1.0, theta_deg=0.0, tx=0.0, ty=0.0)
+    locks = {}
+    last_uv_disp = uv0.copy()
+
+    # 准备用于吸附的观测点副本
+    obs_snap = obs.copy()
+    if prev_layers and exclude_prev_from_obs:
+        prev_all = np.vstack([np.asarray(u, float) for (u, _) in prev_layers if len(u)])
+        if prev_all.size > 0:
+            keep_mask = np.ones(len(obs_snap), dtype=bool)
+            for p in prev_all:
+                d = np.linalg.norm(obs_snap - p, axis=1)
+                j = np.argmin(d)
+                if d[j] < 1.5:
+                    keep_mask[j] = False
+            obs_snap = obs_snap[keep_mask]
+
+    fig, ax = plt.subplots()
+    ax.imshow(img, cmap="gray")
+
+    # ---- 改成空心点样式 ----
+    # scat_obs = ax.scatter(obs[:, 0], obs[:, 1],
+    #                       facecolors='none', edgecolors='r', s=40,
+    #                       label="obs (red)", zorder=3)
+
+    if prev_layers:
+        for uv_prev, color in prev_layers:
+            uv_prev = np.asarray(uv_prev, float)
+            ax.scatter(uv_prev[:, 0], uv_prev[:, 1],
+                       facecolors='none', edgecolors=color, s=60,
+                       alpha=0.95, label="prev layer", zorder=6)
+
+    scat_free = ax.scatter([], [], facecolors='none', edgecolors='b', s=60,
+                           label="model free (blue)", zorder=4)
+    scat_snap = ax.scatter([], [], facecolors='none', edgecolors='g', s=60,
+                           label="model snapped (green)", zorder=7)
+
+    txt = ax.text(6, 12, "", color="red", va="top", ha="left")
+    ax.legend(loc="upper right")
+
+    def current_uv():
+        th = math.radians(sim["theta_deg"])
+        R = np.array([[math.cos(th), -math.sin(th)],
+                      [math.sin(th),  math.cos(th)]], float)
+        return ((uv0 - center) @ R.T) * sim["scale"] + center + np.array([sim["tx"], sim["ty"]], float)
+
+    def update_locks(uv):
+        """进入 attach_px 吸附；离开 detach_px 脱离；可就近切换。"""
+        new_locks = {}
+        for i, p in enumerate(uv):
+            d = np.linalg.norm(obs_snap - p, axis=1)
+            if len(d) == 0:
+                continue
+            if i in locks:
+                j = locks[i]
+                if 0 <= j < len(obs_snap) and d[j] <= detach_px:
+                    new_locks[i] = j
+                else:
+                    j2 = np.argmin(d)
+                    if d[j2] < attach_px:
+                        new_locks[i] = j2
+            else:
+                j = np.argmin(d)
+                if d[j] < attach_px:
+                    new_locks[i] = j
+        locks.clear()
+        locks.update(new_locks)
+
+    def build_uv_disp(uv):
+        snapped_idx = sorted(locks.keys())
+        if snapped_idx:
+            uv_snap = obs_snap[[locks[i] for i in snapped_idx]]
+        else:
+            uv_snap = np.empty((0, 2), float)
+
+        if len(uv) > 0:
+            mask = np.ones(len(uv), dtype=bool)
+            if snapped_idx:
+                mask[snapped_idx] = False
+            uv_free = uv[mask]
+        else:
+            uv_free = np.empty((0, 2), float)
+        return uv_free, uv_snap
+
+    def redraw():
+        nonlocal last_uv_disp
+        uv = current_uv()
+        update_locks(uv)
+        uv_free, uv_snap = build_uv_disp(uv)
+        scat_free.set_offsets(uv_free)
+        scat_snap.set_offsets(uv_snap)
+        txt.set_text(f"tx={sim['tx']:.1f}, ty={sim['ty']:.1f}, "
+                     f"θ={sim['theta_deg']:.1f}°, s={sim['scale']:.3f}, "
+                     f"locks={len(locks)}")
+        fig.canvas.draw_idle()
+
+        if len(uv) == 0:
+            last_uv_disp = uv.copy()
+        else:
+            uv_disp = uv.copy()
+            for i, j in locks.items():
+                uv_disp[i] = obs_snap[j]
+            last_uv_disp = uv_disp
+        return last_uv_disp
+
+    def on_key(e):
+        if not e.key:
+            return
+        k = e.key.lower()
+        accel = 5.0 if ("shift" in k) else 1.0
+        moved = False
+        if "left" in k:   sim["tx"] -= step_move * accel; moved = True
+        elif "right" in k: sim["tx"] += step_move * accel; moved = True
+        elif "up" in k:    sim["ty"] -= step_move * accel; moved = True
+        elif "down" in k:  sim["ty"] += step_move * accel; moved = True
+        elif k == "a":     sim["theta_deg"] -= step_rot_deg * accel; moved = True
+        elif k == "d":     sim["theta_deg"] += step_rot_deg * accel; moved = True
+        elif k in ("-", "minus"): sim["scale"] /= (step_scale ** accel); moved = True
+        elif k in ("=", "+"):     sim["scale"] *= (step_scale ** accel); moved = True
+        elif k in ("enter", "return", "escape", "esc", "q"):
+            redraw()
+            plt.close(fig); return
+        if moved:
+            redraw()
+
+    fig.canvas.mpl_connect("key_press_event", on_key)
+    redraw()
+    plt.show()
+
+    idx_model = list(locks.keys())
+    idx_obs_snap = [locks[i] for i in idx_model]
+    return last_uv_disp.copy(), dict(locks), sim.copy(), idx_model, idx_obs_snap
 
 # ---------- 构建网格 ----------
 def build_grid_single(f_pix_mm, bead_mm=20.0, Z=0.0, offset_frac=(0,0)):
@@ -304,7 +463,7 @@ def main():
     uv_model1 = apply_perspective(XYZ1)
     uv_adj1, locks1, sim1, idx_m1, idx_o1 = interactive_manual_snap(
         img512, uv_model1, obs_all, center=(S / 2, S / 2),
-        prev_layers=[(uv_adj0, "yellow")],  # 仅显示
+        prev_layers=[(uv_adj0, "red")],  # 仅显示
         exclude_prev_from_obs=True  # 不参与吸附
     )
     print("✅ 第二层完成，保存中...")
