@@ -17,10 +17,10 @@ Ensure the following Python packages are installed:
 - `SciPy`: open-source library for scientific and technical computing
 - `SimpleITK`: open-source library designed for multi-dimensional image analysis
 - `Scikit-Image`: library designed for image processing and computer vision tasks
-- `TotalSegmentator`: a tool for automated medical image segmentation (you will need to get your own license key for this dependency)
+- `TotalSegmentator`: a tool for automated medical image segmentation (you will need to get your own license key for this dependency [here](https://backend.totalsegmentator.com/license-academic/))
 - `VTK`: Visualization Toolkit for 3D computer graphics, image processing, and visualization
 
-The versions of these dependencies can be found in the `requirements.txt` file.
+These dependencies can be found in the `requirements.txt` file and versions are not specififed to let pip install the latest compatible versions.
 
 ---
 
@@ -29,18 +29,26 @@ The versions of these dependencies can be found in the `requirements.txt` file.
 The **OrthoVis 2.0** project follows a modular and organized directory structure. Each directory is responsible for a specific functionality within the application.
 
 ### 📁 `assets/`
-Contains SVG diagrams illustrating key workflows such as projection, segmentation, and registration. These are used in documentation and UI tutorials.
+Contains SVG diagrams illustrating key workflows in documentation such as projection, segmentation, and registration, and images used in the UI.
 
 ### 📁 `classes/`
 Core logic and reusable components:
 - `objects.py`: Implements `Singleton`, `State` design pattern and other useful data structures.
 - `lib.py`: Common utility functions.
+- `utils.py`: Helper functions for dialog boxes, file handling, etc.
 
 ### 📁 `frontend_pages/`
-Main application pages built with PySide6:
+
+Main application frontend pages built with PySide6:
+
 - `startup/`: Home screen (e.g. `startup_window.py`)
-- `new_project/`: UI and logic for importing CT & Fluoroscopy data
+- `project_setup/`: UI and logic for project description and importing CT & Fluoroscopy data
 - `segmentation/`: Image segmentation interface  
+- `calibration/`: Fluoroscopy calibration interface
+- `registration/`: 2D-3D registration interface
+- `define_axis/`: Define axes interface
+- `visualisation/`: 3D visualization - final output interface
+  
 Each folder contains `.ui` (Qt Designer), `ui_*.py` (generated), and functional `.py` files.
 
 ### 📁 `widgets/`
