@@ -28,6 +28,8 @@ These dependencies can be found in the `requirements.txt` file and versions are 
 
 The **OrthoVis 2.0** project follows a modular and organized directory structure. Each directory is responsible for a specific functionality within the application.
 
+![Project Structure](assets/project_structure.png)
+
 ### 📁 `assets/`
 
 Contains SVG diagrams illustrating key workflows in documentation such as projection, segmentation, and registration, and images used in the UI.
