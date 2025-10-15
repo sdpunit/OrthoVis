@@ -8,11 +8,17 @@ Welcome to **OrthoVis 2.0**, a joint motion assessment toolkit for accurate 3D a
 
 Ensure the following Python packages are installed:
 
-- `PySide6`
-- `SimpleITK`
-- `os` *(built-in)*
-- `pickle` *(built-in)*
-- `TotalSegmentator`
+- `ImageIO`: a Python library to read and write image data
+- `Matplotlib`: a plotting library for creating static, animated, and interactive visualizations
+- `NumPy`: a fundamental package for scientific computing with Python
+- `OpenCV-Python`: Open Source Computer Vision Library
+- `Pydicom`: a pure Python package for working with DICOM files
+- `PySide6`: Python bindings for the Qt application framework
+- `SciPy`: open-source library for scientific and technical computing
+- `SimpleITK`: open-source library designed for multi-dimensional image analysis
+- `Scikit-Image`: library designed for image processing and computer vision tasks
+- `TotalSegmentator`: a tool for automated medical image segmentation
+- `VTK`: Visualization Toolkit for 3D computer graphics, image processing, and visualization
 
 ---
 
