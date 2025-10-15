@@ -101,7 +101,7 @@ font: 700 56pt &quot;Segoe UI&quot;;</string>
                <string/>
               </property>
               <property name="pixmap">
-               <pixmap>C:/Users/hanna/Downloads/orthovis_logo.png</pixmap>
+               <pixmap>assets/orthovis_logo.png</pixmap>
               </property>
              </widget>
             </item>

@@ -122,3 +122,21 @@ Lists all required Python packages for easy installation via pip.
 
 
 - Please look at our [Project landing page](https://orthovis2.wixsite.com/orthovis-2) to learn more about the project and our team members. 
+
+
+## User Guide 
+
+Below we will present a visual walkthrough of OrthoVis, from setup of project 
+
+### Module 1: Project Setup
+
+
+### Module 2a: Segmentation (Browse mode, pre-segmentation)
+
+
+### Module 2b: Segmentation (Edit/Browse mode, post-segmentation) 
+
+
+### Module n: Calibration
+
+
