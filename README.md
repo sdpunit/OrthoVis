@@ -67,7 +67,8 @@ Each folder contains `.ui` (Qt Designer), `ui_*.py` (generated), and functional 
 
 CT segmentation and 3D data processing scripts:
 - `totalseg.py`: fully automated CT segmentation using TotalSegmentator 
-- `renderer.py`: CT rendering
+- `embedding.py`: integration of VTK visualisation widget with frontend
+- `renderer.py`: (archived) standalone testing of VTK visualisation widget
 
 ### 📁 `Projects/`
 
