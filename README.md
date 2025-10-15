@@ -29,9 +29,11 @@ These dependencies can be found in the `requirements.txt` file and versions are 
 The **OrthoVis 2.0** project follows a modular and organized directory structure. Each directory is responsible for a specific functionality within the application.
 
 ### 📁 `assets/`
+
 Contains SVG diagrams illustrating key workflows in documentation such as projection, segmentation, and registration, and images used in the UI.
 
 ### 📁 `classes/`
+
 Core logic and reusable components:
 - `objects.py`: Implements `Singleton`, `State` design pattern and other useful data structures.
 - `lib.py`: Common utility functions.
@@ -52,21 +54,44 @@ Main application frontend pages built with PySide6:
 Each folder contains `.ui` (Qt Designer), `ui_*.py` (generated), and functional `.py` files.
 
 ### 📁 `widgets/`
-Reusable subcomponents, like:
-- `sidebar/`: Sidebar navigation widget with its own `.ui` and `.py`.
-- `titlebar/`: Title bar widget for consistent UI across pages.
+
+Reusable subcomponents for consistent UI across pages:
+- `sidebar/`: Sidebar navigation widget     
+- `titlebar/`: Title bar widget
+ 
+Each folder contains `.ui` (Qt Designer), `ui_*.py` (generated), and functional `.py` files.
 
 ### 📁 `seg/`
+
 CT segmentation and 3D data processing scripts:
 - `totalseg.py`: fully automated CT segmentation using TotalSegmentator 
 - `renderer.py`: CT rendering
 
+### 📁 `Projects/`
+
+Stores data of existing projects in subfolders.
+
+### 📁 `Test/`
+
+Contains unit tests for the application.
+
 ### 📄 `main_window.py` / `main.py`
+
 Entry points of the application.
 - `main_window.py`: Controls page logic and stack view with `QStackedWidget`.
+- `main.py`: Initializes and runs the application.
+
+### 📄 `README.Docker`
+
+Instructions for building and deploying the application using Docker.
 
 ### 📄 `README.md`
-Top-level file describing the project and how to use it.
+
+Top-level file describing the project and how to install and use it.
+
+### 📄 `requirements.txt`
+
+Lists all required Python packages for easy installation via pip.
 
 ---
 
