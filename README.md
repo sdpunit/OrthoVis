@@ -97,17 +97,19 @@ Lists all required Python packages for easy installation via pip.
 
 ## 🛠 Installation Steps
 
-1.Ensure you are using Python 3.10 or compatible version.
-2.Create and activate a virtual environment (recommended):
+1. Ensure you are using compatible version of Python.
+
+2. Create and activate a virtual environment (recommended):
    ```bash
    python -m venv ortho_env
-   source ortho_env/bin/activate  # On Windows use `ortho_env\Scripts\activate`
+   source ortho_env/bin/activate
+   # On Windows use `ortho_env\Scripts\activate`
    ```
-3.Install required dependencies:
+3. Install required dependencies:
    ```bash
-   pip install PySide6 SimpleITK TotalSegmentator 
+   pip install -r requirements.txt # Add --user if not using a virtual environment to avoid permission issues
    ```
-4.Run the main application script, e.g.:
+4. Run the main application using the `Run` configuration in your IDE or execute:
    ```bash
    python main_window.py
    ```
