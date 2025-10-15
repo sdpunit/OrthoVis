@@ -17,8 +17,10 @@ Ensure the following Python packages are installed:
 - `SciPy`: open-source library for scientific and technical computing
 - `SimpleITK`: open-source library designed for multi-dimensional image analysis
 - `Scikit-Image`: library designed for image processing and computer vision tasks
-- `TotalSegmentator`: a tool for automated medical image segmentation
+- `TotalSegmentator`: a tool for automated medical image segmentation (you will need to get your own license key for this dependency)
 - `VTK`: Visualization Toolkit for 3D computer graphics, image processing, and visualization
+
+The versions of these dependencies can be found in the `requirements.txt` file.
 
 ---
 
