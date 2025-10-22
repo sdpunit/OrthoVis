@@ -148,7 +148,7 @@ The Project Setup module allows users to create or adjust project details (name 
 
 #### Workflow
 
-![Project Setup Workflow](assets/project_setup.gif)
+![Project Setup Workflow](assets/new%20project%20homepage.gif)
 
 **For new projects:**
 
@@ -255,6 +255,8 @@ Enter / Right click: End point addition and continue to merge window and you can
 ---
 
 #### Workflow
+
+![Calibration Workflow](assets/calibration.gif)
 
 1. Run the Draft.py script with the required DICOM path.
 2. The Matplotlib interactive window will open.
