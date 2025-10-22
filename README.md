@@ -166,7 +166,66 @@ The Project Setup module allows users to create or adjust project details (name 
 
 ### Module 2a: Segmentation (Browse mode, pre-segmentation)
 
-### Module 2b: Segmentation (Edit/Browse mode, post-segmentation)
+#### Purpose
+The raw CT data, imported previously in the setup module, is visually rendered in an interactive widget to allow the user review its quality before launching into segmentation. Multi-view inspection of the CT volume from the axial, coronal and sagittal planes empowers the user with flexibility to examine the subject with their desired level of detail. Once satisfied, the user selects the bones (regions) of interest to perform segmentation on. 
+
+--- 
+#### How It Works
+- In-depth inspection of the CT data in each quadrant plane includes 3 controlled functionalities: zoom in/out, pan, scrolling through volume slices in each plane. The keyboard/mouse controls are detailed in the Controls section below.
+- Bones/regions of interest for segmentation should be selected from the dropdown menu. As of Nov 2025, the curated options are filtered from the pre-trained categories in the [TotalSegmentator repository](https://github.com/wasserth/TotalSegmentator), focusing on the hip and limbs. Further modifications may be introduced, per client needs. 
+
+---
+#### Controls 
+| Action | Function |
+| Scroll through slices | Mouse scroll | 
+| Zoom in/out | Ctrl + Scroll |
+| Pan | Ctrl + Shift + Left drag |
+
+---
+#### Workflow 
+1. Verify that the quality of imported CT is satisfactory, by inspecting the CT volume slices across the plane views and making use of the controls, if desired. 
+2. Select bones of interest to segment from CT.
+3. Click the "Segment CT" button to call TotalSegmentator model. 
+---
+
+### Module 2b: Segmentation (Edit/Browse mode, post-segmentation) 
+
+#### Purpose
+Due to resolution discrepancies in TotalSegmentator's training data and our raw CT data, some slices in the resulting masks are of subpar accuracy and precision, which may adversely affect quality in downstream registration tasks. To improve mask quality, users may use the brush feature to manually remove or add pixels to slices before proceeding to the next calibration module. 
+
+--- 
+#### How It Works
+- During segmentation, the TotalSegmentator is called and runs in the background. The user is notified of the status with the pop-up dialogue box, which remains on screen in-progress, and only vanishes when segmentation is complete.
+- The output masks are automatically overlaid on top of the original CT with distinct colour-coding scheme and name labels. Additional editing features are introduced in the widget's top-right quadrant.
+- All edits made in the interactive widget is temporary until saved with the S keyboard shortcut or the `Save edits` button on GUI. 
+
+--- 
+#### Controls
+All controls implemented in the pre-segmentation browsing mode are valid in the edit mode. Explicitly, they are:
+| Action | Function |
+| Scroll through slices | Mouse scroll | 
+| Zoom in/out | Ctrl + Scroll |
+| Pan | Ctrl + Shift + Left drag |
+
+Additionally, the user may use the following controls to edit segmentation masks: 
+
+| Action | Function |
+| Switch between Browse/Edit mode | Left click on the text `Mode: Browse` OR `Mode: Edit` | 
+| Toggle mask on | Left click on desired bone mask name (automatically toggles off other masks) |
+| Add pixels to current mask | Left click + drag |
+| Erase pixels to current mask | Ctrl + left click + drag|
+| Increase brush size | + button |
+| Decrease brush size | - button |
+| Save all edits | S button |
+
+---
+#### Workflow 
+1. Once segmentation is complete, the output masks are colour-coded and automatically overlaid atop the original CT for user inspection. 
+2. Use controls in Browse mode to inspect the segmentation masks' slice by slice in each plane, for discrepancies between desired and actual accuracy/precision. 
+3. Use controls in Edit mode to manually edit pixels in each slice of concern. 
+4. Save edits whenever desired, whether in progress or after all elected changes are made. As a final safeguard, the save feature is automatically activated before proceeding to the next calibration module. 
+
+--- 
 
 ### Module 3: Calibration
 
