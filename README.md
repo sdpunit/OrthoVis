@@ -134,6 +134,8 @@ Below we will present a visual walkthrough of OrthoVis, from setup of project to
 
 The Project Setup module allows users to create or adjust project details (name and description) and import medical imaging data (CT scans and fluoroscopy sequences).
 
+---
+
 #### How It Works
 
 - Users can create a new project or open an existing one.
@@ -141,6 +143,8 @@ The Project Setup module allows users to create or adjust project details (name 
 - CT and fluoroscopy data can be imported from DICOM files and can be removed if necessary.
 - The project details is saved in a structured format for later use in subsequent modules.
 - Imported files are saved in a dedicated project folder.
+
+---
 
 #### Workflow
 
@@ -162,28 +166,39 @@ The Project Setup module allows users to create or adjust project details (name 
 
 ### Module 2a: Segmentation (Browse mode, pre-segmentation)
 
-### Module 2b: Segmentation (Edit/Browse mode, post-segmentation) 
+### Module 2b: Segmentation (Edit/Browse mode, post-segmentation)
 
 ### Module 3: Calibration
 
 #### Purpose
-The Calibration module is designed to provide accurate geometric correction for fluoroscopy and X-ray images using an AutoAlign grid-based method. It aims to eliminate image distortion caused by projection 
+
+The Calibration module is designed to provide accurate geometric correction for fluoroscopy and X-ray images using an AutoAlign grid-based method. It aims to eliminate image distortion caused by projection
+
+---
 
 #### How It Works
-There’s a section in this paper that might be really helpful to understand the technicality - https://onlinelibrary.wiley.com/doi/full/10.1002/jor.21003. But to explain this in simpler words – Flouro images are warped, the way the beams land on an object creates distortion (which means a cube isn’t a proper cube anymore). So we need to fix this distortion, and the way we do that is by taking a fluoroscopy shot of a calibration cube (or square grid) with beads placed on it in the front (red beads) and back (blue beads). You detect where those beads land in the distorted image and fit a mapping (an overlay grid) that pulls them back to their true evenly spaced positions. This mapping/corrected distance is then used to apply to every frame of your flouro to undistort it and use is correctly for the purposes of projection.  
+
+There’s a section in this paper that might be really helpful to understand the technicality - https://onlinelibrary.wiley.com/doi/full/10.1002/jor.21003. But to explain this in simpler words – Flouro images are warped, the way the beams land on an object creates distortion (which means a cube isn’t a proper cube anymore). So we need to fix this distortion, and the way we do that is by taking a fluoroscopy shot of a calibration cube (or square grid) with beads placed on it in the front (red beads) and back (blue beads). You detect where those beads land in the distorted image and fit a mapping (an overlay grid) that pulls them back to their true evenly spaced positions. This mapping/corrected distance is then used to apply to every frame of your flouro to undistort it and use is correctly for the purposes of projection.
+
+---
 
 #### Overview
+
 We have completed the development of the network-based calibration model, which accurately performs bead detection, manual verification, and layer-by-layer alignment.
 However, the 3D reconstruction and GUI integration have not yet been implemented.
 All current progress and working functions are contained within the Draft.py interface under the class file, which serves as the current prototype of the calibration module.
 The following content only describes the work we have completed.
 
+---
+
 #### How to Run
+
 To run the Calibration module independently, use the following command in your terminal:
 
 ```bash
 python3 Draft.py --dcm <path_to_dicom> [--outdir out]
 ```
+
 | Argument         | Description                              | Default        |
 | ---------------- | ---------------------------------------- | -------------- |
 | `--dcm`          | Path to input DICOM file                 | **(Required)** |
@@ -197,6 +212,7 @@ for example:
 ```bash
 python3 Draft.py --dcm Data/DICOM/P0000001/ST000002/SE000003/IN000001
 ```
+
 During execution, a Matplotlib window appears for interactive adjustment.
 
 🖱 Mouse Controls (Point Addition Stage)
@@ -227,6 +243,7 @@ Enter / Right click: End point addition and continue to merge window and you can
 | 🟢 Green  | Snapped model points                        |
 
 ▼ Parameters
+
 | Parameter      | Function                    | Default |
 | -------------- | --------------------------- | ------- |
 | `attach_px`    | Snapping threshold (pixels) | `5.0`   |
@@ -235,7 +252,10 @@ Enter / Right click: End point addition and continue to merge window and you can
 | `step_rot_deg` | Rotation step (degrees)     | `1.0`   |
 | `step_scale`   | Scaling step                | `1.01`  |
 
-#### workflow
+---
+
+#### Workflow
+
 1. Run the Draft.py script with the required DICOM path.
 2. The Matplotlib interactive window will open.
 3. The first stage is point addition:
@@ -247,12 +267,13 @@ Enter / Right click: End point addition and continue to merge window and you can
 9. Repeat steps 4-8 for each layer.
 10. After completing all layers, the results will be saved in the specified output directory.
 
+---
+
 #### Future Improvements
 
 1. Integrate the interactive window into the PySide6 calibration GUI.
 2. Accurate 3D reconstruction of the bead-grid phantom from 2D DICOM images through precise geometric calibration.
-3. Testing and Debug
-
+3. Testing and Debugging of the complete calibration module within the OrthoVis application.
 
 ### Module 4: Define Axes
 
@@ -260,13 +281,14 @@ The Define Axes module has not been completed as of NOV 2025. Users can navigate
 
 ### Module 5: Registration
 
-
 #### Purpose
+
 The Registration module aligns 3D CT-derived bone masks with 2D fluoroscopy images. It lets you load medical imaging data and manually adjust alignment in real time using an interactive VTK display.
 
 ---
 
 #### How It Works
+
 - The background shows the fluoroscopy frame (DICOM).
 - The foreground shows a flattened bone mask (edge map) generated from the CT.
 - Adjustments can be made to match the bone outline with the fluoroscopy anatomy.
