@@ -177,6 +177,7 @@ The raw CT data, imported previously in the setup module, is visually rendered i
 ---
 #### Controls 
 | Action | Function |
+| ------ | -------- |
 | Scroll through slices | Mouse scroll | 
 | Zoom in/out | Ctrl + Scroll |
 | Pan | Ctrl + Shift + Left drag |
@@ -210,6 +211,7 @@ All controls implemented in the pre-segmentation browsing mode are valid in the 
 Additionally, the user may use the following controls to edit segmentation masks: 
 
 | Action | Function |
+| ------ | -------- |
 | Switch between Browse/Edit mode | Left click on the text `Mode: Browse` OR `Mode: Edit` | 
 | Toggle mask on | Left click on desired bone mask name (automatically toggles off other masks) |
 | Add pixels to current mask | Left click + drag |
