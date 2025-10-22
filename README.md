@@ -164,6 +164,94 @@ The Project Setup module allows users to create or adjust project details (name 
 
 ### Module 3: Calibration
 
+#### Purpose
+The Calibration module is designed to provide accurate geometric correction for fluoroscopy and X-ray images using an AutoAlign grid-based method. It aims to eliminate image distortion caused by projection 
+
+#### How It Works
+There’s a section in this paper that might be really helpful to understand the technicality - https://onlinelibrary.wiley.com/doi/full/10.1002/jor.21003. But to explain this in simpler words – Flouro images are warped, the way the beams land on an object creates distortion (which means a cube isn’t a proper cube anymore). So we need to fix this distortion, and the way we do that is by taking a fluoroscopy shot of a calibration cube (or square grid) with beads placed on it in the front (red beads) and back (blue beads). You detect where those beads land in the distorted image and fit a mapping (an overlay grid) that pulls them back to their true evenly spaced positions. This mapping/corrected distance is then used to apply to every frame of your flouro to undistort it and use is correctly for the purposes of projection.  
+
+#### Overview
+We have completed the development of the network-based calibration model, which accurately performs bead detection, manual verification, and layer-by-layer alignment.
+However, the 3D reconstruction and GUI integration have not yet been implemented.
+All current progress and working functions are contained within the Draft.py interface under the class file, which serves as the current prototype of the calibration module.
+The following content only describes the work we have completed.
+
+#### How to Run
+To run the Calibration module independently, use the following command in your terminal:
+
+```bash
+python3 Draft.py --dcm <path_to_dicom> [--outdir out]
+```
+| Argument         | Description                              | Default        |
+| ---------------- | ---------------------------------------- | -------------- |
+| `--dcm`          | Path to input DICOM file                 | **(Required)** |
+| `--outdir`       | Output directory                         | `out`          |
+| `--bead-mm`      | Distance between beads in one layer (mm) | `20.0`         |
+| `--face-mm`      | Distance between layers (mm)             | `200.0`        |
+| `--plane-offset` | Offset between layers (in grid units)    | `"0.5,0.5"`    |
+
+for example:
+
+```bash
+python3 Draft.py --dcm Data/DICOM/P0000001/ST000002/SE000003/IN000001
+```
+During execution, a Matplotlib window appears for interactive adjustment.
+
+🖱 Mouse Controls (Point Addition Stage)
+
+Left click: Add a new point.
+
+If near a candidate (< snap_dist), it will snap automatically.
+
+Enter / Right click: End point addition and continue to merge window and you can operate by keyboard.
+
+⌨️ Keyboard Controls (Alignment Stage)
+
+| Key       | Action                                        |
+| --------- | --------------------------------------------- |
+| `← ↑ ↓ →` | Translate model (use **Shift** for ×5 speed). |
+| `A / D`   | Rotate counterclockwise / clockwise.          |
+| `- / =`   | Scale down / up.                              |
+| `Enter`   | Confirm current layer and continue.           |
+| `Esc / Q` | Exit current layer.                           |
+
+🔵 Color Legend
+
+| Color     | Meaning                                     |
+| --------- | ------------------------------------------- |
+| 🔴 Red    | Observed points (detected + manually added) |
+| 🟡 Yellow | Previous layer (display only)               |
+| 🔵 Blue   | Current unsnapped model points              |
+| 🟢 Green  | Snapped model points                        |
+
+▼ Parameters
+| Parameter      | Function                    | Default |
+| -------------- | --------------------------- | ------- |
+| `attach_px`    | Snapping threshold (pixels) | `5.0`   |
+| `detach_px`    | Detach threshold            | `8.0`   |
+| `step_move`    | Translation step (pixels)   | `1.0`   |
+| `step_rot_deg` | Rotation step (degrees)     | `1.0`   |
+| `step_scale`   | Scaling step                | `1.01`  |
+
+#### workflow
+1. Run the Draft.py script with the required DICOM path.
+2. The Matplotlib interactive window will open.
+3. The first stage is point addition:
+4. Left-click to add points on detected bead candidates.
+5. Right-click or press Enter to finish point addition.
+6. The second stage is alignment:
+7. Use keyboard controls to adjust the model to fit the observed points.
+8. Press Enter to confirm the current layer and proceed to the next.
+9. Repeat steps 4-8 for each layer.
+10. After completing all layers, the results will be saved in the specified output directory.
+
+#### Future Improvements
+
+1. Integrate the interactive window into the PySide6 calibration GUI.
+2. Accurate 3D reconstruction of the bead-grid phantom from 2D DICOM images through precise geometric calibration.
+3. Testing and Debug
+
+
 ### Module 4: Define Axes
 
 The Define Axes module has not been completed as of NOV 2025. Users can navigate into and out of the module page using the navigation side-bar.
