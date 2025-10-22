@@ -144,6 +144,8 @@ The Project Setup module allows users to create or adjust project details (name 
 
 #### Workflow
 
+![Project Setup Workflow](assets/project_setup.gif)
+
 **For new projects:**
 
 1. Click "New Project" from the Homepage
