@@ -126,13 +126,39 @@ Lists all required Python packages for easy installation via pip.
 
 ## User Guide 
 
-Below we will present a visual walkthrough of OrthoVis, from setup of project 
+Below we will present a visual walkthrough of OrthoVis, from setup of project to the registration module.
 
 ### Module 1: Project Setup
 
+#### Purpose
+
+The Project Setup module allows users to create or adjust project details (name and description) and import medical imaging data (CT scans and fluoroscopy sequences).
+
+#### How It Works
+
+- Users can create a new project or open an existing one.
+- Project details can be edited as needed.
+- CT and fluoroscopy data can be imported from DICOM files and can be removed if necessary.
+- The project details is saved in a structured format for later use in subsequent modules.
+- Imported files are saved in a dedicated project folder.
+
+#### Workflow
+
+**For new projects:**
+
+1. Click "New Project" from the Homepage
+2. Enter project name and description
+3. Click "Import CT Data" to select and load a folder of DICOM files for the CT scan
+4. Click "Import Fluoroscopy Data" to select and load a folder of DICOM files for the fluoroscopy sequence
+5. Click "Save" to proceed to the Segmentation module
+
+**For existing projects:**
+
+1. Click "Open Project" from the Homepage
+2. Edit any project details as needed
+3. Click "Save" to proceed to the Segmentation module
 
 ### Module 2a: Segmentation (Browse mode, pre-segmentation)
-
 
 ### Module 2b: Segmentation (Edit/Browse mode, post-segmentation) 
 
