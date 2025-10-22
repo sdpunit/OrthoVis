@@ -175,7 +175,8 @@ The **Registration** module aligns 3D CT-derived bone masks with 2D fluoroscopy 
 
 #### Notes
 - Out-of-plane rotations may take several seconds while the 3D projection recomputes.  
-- The overlay is always drawn on top of the fluoroscopy (depth testing disabled).  
-- If objects disappear after large translations, click **Reset Camera** to restore view.
+- The overlay is always drawn on top of the fluoroscopy.  
+- The module is incompleted, you may incounter bugs.
+- The module is not linked to a registration AI model yet, in it's current state, the user is unable to progress further.
 
 
