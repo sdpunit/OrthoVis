@@ -184,6 +184,9 @@ The raw CT data, imported previously in the setup module, is visually rendered i
 
 ---
 #### Workflow 
+
+![Segmentation Choose ROI](assets/chooseROI.gif)
+
 1. Verify that the quality of imported CT is satisfactory, by inspecting the CT volume slices across the plane views and making use of the controls, if desired. 
 2. Select bones of interest to segment from CT.
 3. Click the "Segment CT" button to call TotalSegmentator model. 
@@ -222,6 +225,9 @@ Additionally, the user may use the following controls to edit segmentation masks
 
 ---
 #### Workflow 
+
+![Segmentation Mask Edit](assets/mask.gif)
+
 1. Once segmentation is complete, the output masks are colour-coded and automatically overlaid atop the original CT for user inspection. 
 2. Use controls in Browse mode to inspect the segmentation masks' slice by slice in each plane, for discrepancies between desired and actual accuracy/precision. 
 3. Use controls in Edit mode to manually edit pixels in each slice of concern. 
