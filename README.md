@@ -136,21 +136,23 @@ Below we will present a visual walkthrough of OrthoVis, from setup of project
 
 ### Module 2b: Segmentation (Edit/Browse mode, post-segmentation) 
 
+### Module 3: Calibration
 
-### Module n: Calibration
+### Module 4: Define Axes
 
+The Define Axes module has not been completed as of NOV 2025. Users can navigate into and out of the module page using the navigation side-bar.
 
-### Module n: Registration
+### Module 5: Registration
 
 
 #### Purpose
-The **Registration** module aligns 3D CT-derived bone masks with 2D fluoroscopy images. It lets you load medical imaging data and manually adjust alignment in real time using an interactive VTK display.
+The Registration module aligns 3D CT-derived bone masks with 2D fluoroscopy images. It lets you load medical imaging data and manually adjust alignment in real time using an interactive VTK display.
 
 ---
 
 #### How It Works
-- The background shows the **fluoroscopy frame** (DICOM).
-- The foreground shows a **flattened bone mask** (edge map) generated from the CT.
+- The background shows the fluoroscopy frame (DICOM).
+- The foreground shows a flattened bone mask (edge map) generated from the CT.
 - Adjustments can be made to match the bone outline with the fluoroscopy anatomy.
 
 ---
@@ -167,7 +169,7 @@ The **Registration** module aligns 3D CT-derived bone masks with 2D fluoroscopy 
 
 #### Workflow
 1. Open the Registration page — the fluoroscopy loads automatically.  
-2. Click **Load Bone Mask** to generate and display the bone edge overlay.  
+2. Click Load Bone Mask to generate and display the bone edge overlay.  
 3. Use mouse or numeric fields to fine-tune alignment.  
 4. For out-of-plane rotations (X/Y), the system reprojects the CT volume and recomputes the flattened image.
 
