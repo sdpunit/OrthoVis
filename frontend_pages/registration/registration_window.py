@@ -124,7 +124,7 @@ class VTKView(QWidget):
         self.last_mouse_pos = None
         self.vtk.installEventFilter(self)  # intercept mouse events
 
-    # ---------- show binary edge map as transparent RGBA image ----------
+    # Show binary edge map as transparent RGBA image
     def add_edge_map(self, edge_img: np.ndarray, color=(0, 0, 0)):
         # normalize to 0/255 uint8
         if edge_img.dtype != np.uint8:
@@ -168,7 +168,7 @@ class VTKView(QWidget):
         self.render_window.Render()
         return actor
 
-        # ---------- interaction plumbing ----------
+        # Interaction handling
     def eventFilter(self, obj, event):
         if obj == self.vtk:
             if event.type() == QEvent.MouseButtonPress:
@@ -250,7 +250,7 @@ class VTKView(QWidget):
             self.set_actor_translation(x, y, z - self._wheel_step)
             caller.SetAbortFlag(1)
 
-    # ---------- DICOM ----------
+    # Getting the saved DICOM
     def _resolve_dicom_path(self, path: str) -> str:
         if os.path.isdir(path):
             for name in sorted(os.listdir(path)):
@@ -346,7 +346,7 @@ class VTKView(QWidget):
         if self._bg_actor:
             self._bg_actor.Modified()
 
-    # ---------- actor transforms ----------
+    # Actor transforms
     def reset_camera(self):
         cam = self.bg_renderer.GetActiveCamera()
         self.renderer.SetActiveCamera(cam)

@@ -34,7 +34,7 @@ def generate_edge_map_np(
     Returns:
         edge_bin: np.ndarray[bool] of shape (H, W)
     """
-    # ---- 1) DICOM CT ----
+    # DICOM CT
     series_ids = sitk.ImageSeriesReader.GetGDCMSeriesIDs(dicom_dir)
     if not series_ids:
         raise RuntimeError(f"No DICOM series found in {dicom_dir}")
@@ -43,10 +43,10 @@ def generate_edge_map_np(
     reader.SetFileNames(files)
     ct_img = reader.Execute()  # HU with slope/intercept applied
 
-    # ---- 2) Mask ----
+    # Mask
     mask_img = sitk.ReadImage(mask_path)
 
-    # ---- 3) Resample CT into mask space ----
+    # Resample CT into mask space
     resample_to_mask = sitk.ResampleImageFilter()
     resample_to_mask.SetReferenceImage(mask_img)
     resample_to_mask.SetInterpolator(sitk.sitkLinear)
@@ -55,7 +55,7 @@ def generate_edge_map_np(
 
     mask_bin = sitk.Cast(mask_img > 0.5, sitk.sitkUInt8)
 
-    # ---- 4) Optional 3D rotations (about mask centre) ----
+    # 3D rotations (about mask centre)
     if abs(rx_deg) > 1e-6 or abs(ry_deg) > 1e-6 or abs(rz_deg) > 1e-6:
         euler = sitk.Euler3DTransform()
         size  = mask_img.GetSize()
@@ -81,7 +81,7 @@ def generate_edge_map_np(
         r_mk.SetTransform(euler)
         mask_bin = sitk.Cast(r_mk.Execute(mask_bin), sitk.sitkUInt8)
 
-    # ---- 5) Gate CT by mask + window to bone ----
+    # Gate CT by mask + window to bone
     lo, hi = clamp_hu
     ct_masked = sitk.Mask(ct_on_mask, mask_bin)
     ct_win = sitk.Clamp(ct_masked, sitk.sitkFloat32, lowerBound=float(lo), upperBound=float(hi))
@@ -89,7 +89,7 @@ def generate_edge_map_np(
 
     ct_np = sitk.GetArrayFromImage(ct_win).astype(np.float32)  # [Z, Y, X]
 
-    # ---- 6) Pick volume for projection ----
+    # Pick volume for projection
     if use_gradient_projection:
         ct_raw_np = sitk.GetArrayFromImage(sitk.Mask(ct_on_mask, mask_bin)).astype(np.float32)
         gx = np.gradient(ct_raw_np, axis=2)
@@ -99,7 +99,8 @@ def generate_edge_map_np(
     else:
         vol_for_proj = ct_np
 
-    # ---- 7) Orthographic projection (sum) ----
+    # Orthographic projection (sum)
+    # This can be altered in the future to include projective transforms found by the calibration module.
     v = view.lower()
     if v == "sagittal":
         proj = vol_for_proj.sum(axis=2).transpose(1, 0)   # (Y, Z)
@@ -113,7 +114,7 @@ def generate_edge_map_np(
     proj -= proj.min()
     if proj.max() > 0: proj /= proj.max()
 
-    # ---- 8) Canny edges (rich detail defaults) ----
+    # Canny edges (rich detail defaults) (Create silhouette type sketch)
     P = filters.gaussian(proj, sigma=pre_smooth_sigma, preserve_range=True)
     if clahe:
         P = exposure.equalize_adapthist(P, clip_limit=0.01)
