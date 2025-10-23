@@ -185,7 +185,7 @@ There’s a section in this paper that might be really helpful to understand the
 #### Overview
 
 We have completed the development of the network-based calibration model, which accurately performs bead detection, manual verification, and layer-by-layer alignment.
-However, the 3D reconstruction and GUI integration have not yet been implemented.
+***However, the 3D reconstruction has not been integrated into the Calibration GUI page in OrthoVis yet.***
 All current progress and working functions are contained within the Draft.py interface under the class file, which serves as the current prototype of the calibration module.
 The following content only describes the work we have completed.
 
@@ -296,6 +296,7 @@ The Registration module aligns 3D CT-derived bone masks with 2D fluoroscopy imag
 ---
 
 #### Controls
+
 | Action | Function |
 |--------|-----------|
 | **Left-click + Drag** | Move overlay (X/Y translation) |
@@ -306,6 +307,7 @@ The Registration module aligns 3D CT-derived bone masks with 2D fluoroscopy imag
 ---
 
 #### Workflow
+
 1. Open the Registration page — the fluoroscopy loads automatically.  
 2. Click Load Bone Mask to generate and display the bone edge overlay.  
 3. Use mouse or numeric fields to fine-tune alignment.  
@@ -314,6 +316,7 @@ The Registration module aligns 3D CT-derived bone masks with 2D fluoroscopy imag
 ---
 
 #### Notes
+
 - Out-of-plane rotations may take several seconds while the 3D projection recomputes.  
 - The overlay is always drawn on top of the fluoroscopy.  
 - The module is incompleted, you may incounter bugs.
