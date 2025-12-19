@@ -24,16 +24,29 @@ from seg.totalseg import load_ct
 # Legend horizontal position inside the upper-right quadrant (0 = left edge, 1 = right edge)
 LEGEND_X_FRACTION_IN_URQ = 0.4
 
+
 # Caching directory
-CACHE_DIR = os.path.expanduser('~/.cache/renderer')
+CACHE_DIR = os.path.expanduser('~/.cache/ct')
 os.makedirs(CACHE_DIR, exist_ok=True)
 
 def cache_ct(path: str):
-    cache_file = os.path.join(CACHE_DIR, os.path.basename(path.rstrip(os.sep)) + '.mha')
+    """
+    Cache CT using the project name (parent folder of CT directory).
+    Path structure: Projects/<project_name>/CT/ -> cache as <project_name>.mha
+    """
+    # Get the project name from the parent folder
+    # e.g., "Projects/MyProject/CT" -> "MyProject"
+    normalized_path = os.path.normpath(path)
+    project_name = os.path.basename(os.path.dirname(normalized_path))
+    cache_file = os.path.join(CACHE_DIR, f'{project_name}.mha')
+    
     if os.path.exists(cache_file):
+        print(f"Loading CT from cache: {cache_file}")
         return sitk.ReadImage(cache_file)
+    
     img = load_ct(path)
     sitk.WriteImage(img, cache_file)
+    print(f"Cached to: {cache_file}")
     return img
 
 def sitk_to_vtk(img):
