@@ -16,7 +16,8 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QApplication, QFrame, QGraphicsView, QHBoxLayout,
-    QPushButton, QSizePolicy, QVBoxLayout, QWidget)
+    QLabel, QPushButton, QSizePolicy, QSpacerItem,
+    QVBoxLayout, QWidget)
 
 from widgets.sidebar.sidebar import Sidebar
 from widgets.titlebar.titlebar import Titlebar
@@ -82,9 +83,22 @@ class Ui_Form(object):
         self.details.setObjectName(u"details")
         self.details.setStyleSheet(u"")
         self.verticalLayout_2 = QVBoxLayout(self.details)
-        self.verticalLayout_2.setSpacing(15)
+        self.verticalLayout_2.setSpacing(10)
         self.verticalLayout_2.setObjectName(u"verticalLayout_2")
         self.verticalLayout_2.setContentsMargins(0, 0, 0, 0)
+        
+        # Button style
+        button_style = u"""QPushButton {
+background-color: rgb(255, 215, 0);
+font: 600 11pt "Segoe UI";
+border-radius: 10px;}
+
+QPushButton:hover {
+background-color: rgb(255, 230, 50);
+font-size: 12pt;
+}
+"""
+        
         self.pushButton = QPushButton(self.details)
         self.pushButton.setObjectName(u"pushButton")
         sizePolicy3 = QSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed)
@@ -95,16 +109,7 @@ class Ui_Form(object):
         self.pushButton.setMinimumSize(QSize(160, 40))
         self.pushButton.setMaximumSize(QSize(16777215, 90))
         self.pushButton.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
-        self.pushButton.setStyleSheet(u"QPushButton {\n"
-"background-color: rgb(255, 215, 0);\n"
-"font: 600 11pt \"Segoe UI\";\n"
-"border-radius: 10px;}\n"
-"\n"
-"QPushButton:hover {\n"
-"background-color: rgb(255, 230, 50);\n"
-"font-size: 12pt;\n"
-"}\n"
-"")
+        self.pushButton.setStyleSheet(button_style)
 
         self.verticalLayout_2.addWidget(self.pushButton)
 
@@ -115,16 +120,7 @@ class Ui_Form(object):
         self.pushButton_2.setMinimumSize(QSize(160, 40))
         self.pushButton_2.setMaximumSize(QSize(16777215, 90))
         self.pushButton_2.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
-        self.pushButton_2.setStyleSheet(u"QPushButton {\n"
-"background-color: rgb(255, 215, 0);\n"
-"font: 600 11pt \"Segoe UI\";\n"
-"border-radius: 10px;}\n"
-"\n"
-"QPushButton:hover {\n"
-"background-color: rgb(255, 230, 50);\n"
-"font-size: 12pt;\n"
-"}\n"
-"")
+        self.pushButton_2.setStyleSheet(button_style)
 
         self.verticalLayout_2.addWidget(self.pushButton_2)
 
@@ -135,16 +131,7 @@ class Ui_Form(object):
         self.pushButton_3.setMinimumSize(QSize(160, 40))
         self.pushButton_3.setMaximumSize(QSize(16777215, 90))
         self.pushButton_3.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
-        self.pushButton_3.setStyleSheet(u"QPushButton {\n"
-"background-color: rgb(255, 215, 0);\n"
-"font: 600 11pt \"Segoe UI\";\n"
-"border-radius: 10px;}\n"
-"\n"
-"QPushButton:hover {\n"
-"background-color: rgb(255, 230, 50);\n"
-"font-size: 12pt;\n"
-"}\n"
-"")
+        self.pushButton_3.setStyleSheet(button_style)
 
         self.verticalLayout_2.addWidget(self.pushButton_3)
 
@@ -155,18 +142,9 @@ class Ui_Form(object):
         self.pushButton_4.setMinimumSize(QSize(160, 40))
         self.pushButton_4.setMaximumSize(QSize(16777215, 90))
         self.pushButton_4.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
-        self.pushButton_4.setStyleSheet(u"QPushButton {\n"
-"background-color: rgb(255, 215, 0);\n"
-"font: 600 11pt \"Segoe UI\";\n"
-"border-radius: 10px;}\n"
-"\n"
-"QPushButton:hover {\n"
-"background-color: rgb(255, 230, 50);\n"
-"font-size: 12pt;\n"
-"}\n"
-"")
+        self.pushButton_4.setStyleSheet(button_style)
 
-        self.verticalLayout_2.addWidget(self.pushButton_4, 0, Qt.AlignmentFlag.AlignVCenter)
+        self.verticalLayout_2.addWidget(self.pushButton_4)
 
         self.pushButton_5 = QPushButton(self.details)
         self.pushButton_5.setObjectName(u"pushButton_5")
@@ -175,26 +153,38 @@ class Ui_Form(object):
         self.pushButton_5.setMinimumSize(QSize(160, 40))
         self.pushButton_5.setMaximumSize(QSize(16777215, 90))
         self.pushButton_5.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
-        self.pushButton_5.setStyleSheet(u"QPushButton {\n"
-"background-color: rgb(255, 215, 0);\n"
-"font: 600 11pt \"Segoe UI\";\n"
-"border-radius: 10px;}\n"
-"\n"
-"QPushButton:hover {\n"
-"background-color: rgb(255, 230, 50);\n"
-"font-size: 12pt;\n"
-"}\n"
-"")
+        self.pushButton_5.setStyleSheet(button_style)
 
-        self.verticalLayout_2.addWidget(self.pushButton_5, 0, Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignVCenter)
+        self.verticalLayout_2.addWidget(self.pushButton_5)
 
+        # Spacer between buttons and help text
+        self.verticalSpacer = QSpacerItem(20, 20, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed)
+        self.verticalLayout_2.addItem(self.verticalSpacer)
+
+        # Controls label
+        self.controls_label = QLabel(self.details)
+        self.controls_label.setObjectName(u"controls_label")
+        self.controls_label.setStyleSheet(u"""
+            QLabel {
+                font: 10pt "Segoe UI";
+                color: #333333;
+                padding: 5px;
+            }
+        """)
+        self.controls_label.setWordWrap(True)
+        self.controls_label.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
+
+        self.verticalLayout_2.addWidget(self.controls_label)
+
+        # Spacer at bottom to push everything up
+        self.verticalSpacer_2 = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
+        self.verticalLayout_2.addItem(self.verticalSpacer_2)
 
         self.horizontalLayout_2.addWidget(self.details, 0, Qt.AlignmentFlag.AlignTop)
 
         self.horizontalLayout_2.setStretch(0, 3)
 
         self.verticalLayout.addWidget(self.mainpanel)
-
 
         self.horizontalLayout.addWidget(self.rightpanel)
 
@@ -213,5 +203,17 @@ class Ui_Form(object):
         self.pushButton_3.setText(QCoreApplication.translate("Form", u"Overlay Square Grid", None))
         self.pushButton_4.setText(QCoreApplication.translate("Form", u"Snap to Beads", None))
         self.pushButton_5.setText(QCoreApplication.translate("Form", u"Correct Distortion", None))
+        
+        # Controls and workflow help text
+        self.controls_label.setText(QCoreApplication.translate("Form", u"""<b>Controls</b><br>
+• Scroll: Scale grid<br>
+• Left-drag center: Move<br>
+• Left-drag edge: Rotate<br>
+• Right-drag: Tilt (shifts blue)<br>
+• Ctrl+S: Save<br><br>
+<b>Workflow</b><br>
+1. Load image, overlay grid<br>
+2. Scale to match RED beads<br>
+3. Right-drag to align BLUE<br>
+4. Snap → Correct → Save""", None))
     # retranslateUi
-

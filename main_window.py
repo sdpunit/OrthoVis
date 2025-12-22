@@ -43,7 +43,8 @@ class MainWindow(QMainWindow):
         
         # Set initial context for segmentation page
         self.segmentation.set_context(self.context)
-
+        self.segmentation.proceed_to_calibration_signal.connect(lambda: self.setCurrentIndex(3))
+        
         # Calibrate the fluroscopy
         self.calibration = Calibration()
 

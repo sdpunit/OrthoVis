@@ -28,6 +28,8 @@ class SegmentationWorker(QThread):
 
 
 class Segmentation(QWidget, ProgressDialogMixin):
+    proceed_to_calibration_signal = Signal()
+    
     def __init__(self, ct_dir: str = None, mask_dir: str = None):
         super().__init__()
         instance = SingletonPatient.get_instance()
@@ -45,7 +47,7 @@ class Segmentation(QWidget, ProgressDialogMixin):
         self.context = None
         self.completion_callback = None  # Initialize callback
         self.progress_dialog = None  # Single dialog for all progress messages
-        
+
         # Editing-related attributes
         self.editing_enabled = False
         self.editable_masks = None
@@ -82,10 +84,6 @@ class Segmentation(QWidget, ProgressDialogMixin):
             print("Connected segmentation button: segment_btn")
 
         # Connect editing mode buttons
-        if hasattr(self.ui, 'save_edits_btn'):
-            self.ui.save_edits_btn.clicked.connect(self.save_edited_masks)
-            print("Connected save edits button")
-
         if hasattr(self.ui, 'proceed_calibration_btn'):
             self.ui.proceed_calibration_btn.clicked.connect(self.proceed_to_calibration)
             print("Connected proceed to calibration button")
@@ -777,9 +775,8 @@ class Segmentation(QWidget, ProgressDialogMixin):
         # First save any edited masks
         self.save_edited_masks()
         
-        # TODO: Implement transition to calibration page
-        print("Proceeding to calibration...")
-        self.show_info("Proceeding to calibration...")
+        # Transition to calibration page
+        self.proceed_to_calibration_signal.emit()
 
     def refresh_visualization(self):
         """Refresh the VTK visualization - called when switching to this page"""
