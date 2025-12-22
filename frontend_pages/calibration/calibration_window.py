@@ -1,692 +1,867 @@
 """
-Fluoroscopy Calibration Module
+Fluoroscopy Calibration Module - Two-Layer Bead Detection
 
 Purpose:
-    Corrects pincushion distortion in fluoroscopy images caused by X-ray beam 
-    projection onto the curved input surface of the image intensifier.
+    Corrects pincushion distortion in fluoroscopy images using a two-layer
+    calibration phantom with tantalum beads at known separation distance.
+
+Physics Background:
+    X-rays from a point source pass through a calibration phantom with two
+    layers of beads. Due to conical projection geometry:
+    - Both layers have IDENTICAL (x,y) positions in 3D space
+    - Front layer (z=0, at detector): No magnification
+    - Back layer (z=d, toward source): Magnified radially from center
+    - CENTER bead of both layers projects to SAME point
+    - EDGE beads of back layer spread OUTWARD relative to front layer
+    
+    Magnification ratio = d1 / (d1 - d) where d1 = source-detector distance
+
+Calibration Phantom:
+    - Front layer (RED): 7x7 = 49 beads at z=0
+    - Back layer (BLUE): 7x7 = 49 beads at z=d (toward X-ray source)
+    - Layer separation d: Physical distance (e.g., 200mm)
+    - Bead spacing: 20mm between adjacent beads
 
 Workflow:
-    1. Load fluoroscopy image of calibration grid (perspex cube with tantalum beads)
-    2. Overlay ideal grid where beads should be without distortion
-    3. Detect actual bead positions in distorted image
-    4. Snap ideal grid points to detected beads (establish correspondence)
-    5. Fit cubic polynomial warp from distorted → undistorted coordinates
-    6. Preview corrected image and save correction maps for later use
+    1. Load calibration image
+    2. Overlay grid - specify layer separation d
+    3. Adjust SCALE (Shift+scroll) to match FRONT layer (RED) to beads
+    4. Adjust PERSPECTIVE (scroll) to match BACK layer (BLUE) spread
+    5. Fine-tune rotation/translation
+    6. Snap to beads and correct distortion
 
-Usage:
-    - Load Calibration Grid: Import fluoroscopy image of calibration frame
-    - Overlay Square Grid: Place ideal grid over image (adjust rows/cols as needed)
-    - Snap to Beads: Auto-detect beads and match to grid points
-    - Correct Distortion: Fit warp model and preview corrected image
-    - Save (Ctrl+S): Export correction maps as .npz file
+Controls:
+    - Shift+Scroll: Scale (both layers uniformly)
+    - Scroll: Perspective strength (back layer spread relative to front)
+    - Left-drag center: Translate
+    - Left-drag edges: Rotate in-plane (Rz)
+    - Right-drag: Tilt out-of-plane (Rx, Ry)
+    - Ctrl+S: Save correction
+
+Based on: test_calibration.m MATLAB reference
 """
 
 from __future__ import annotations
 import os
-import json
+import pickle
 import numpy as np
-import cv2
+from scipy.ndimage import map_coordinates
+from skimage.transform import resize
 from typing import Optional, Tuple
 
-from PySide6.QtCore import Qt, QRectF, QSize
+from PySide6.QtCore import Qt, QRectF
 from PySide6.QtGui import QImage, QPixmap, QPen, QBrush, QColor, QAction
 from PySide6.QtWidgets import (
     QWidget, QFileDialog, QGraphicsScene, QGraphicsPixmapItem, 
-    QGraphicsEllipseItem, QMessageBox, QGraphicsView
+    QGraphicsEllipseItem, QMessageBox, QGraphicsView, QInputDialog
 )
 
 from frontend_pages.calibration.ui_calibration_window import Ui_Form
+from classes.objects import SingletonPatient
 
 
 # ============================================================================
-# Image Processing Utilities
+# Constants
+# ============================================================================
+
+GRID_SIZE = 7
+NUM_BEADS_PER_LAYER = GRID_SIZE * GRID_SIZE  # 49
+NUM_BEADS_TOTAL = NUM_BEADS_PER_LAYER * 2     # 98
+
+BEAD_SPACING_MM = 20.0
+DEFAULT_LAYER_SEPARATION_MM = 200.0
+
+STANDARD_SIZE = 512
+SEARCH_WINDOW = 7
+
+# Default source-detector distance (controls perspective strength)
+# Larger = weaker perspective, smaller = stronger perspective
+DEFAULT_D1 = 2000.0
+
+# Scroll sensitivity
+PERSPECTIVE_SCROLL_STEP = 20.0  # Fine adjustment for d1
+SCALE_SCROLL_FACTOR = 1.02       # 2% per scroll step
+
+
+# ============================================================================
+# Image Loading
 # ============================================================================
 
 def find_dicom_directory(base_dir: str) -> Optional[str]:
-    """
-    Find directory containing DICOM files.
-    First checks base directory, then searches subdirectories.
-    """
-    if contains_dicom_files(base_dir):
+    """Find directory containing DICOM files."""
+    if _contains_dicom(base_dir):
         return base_dir
-    
     try:
         for item in os.listdir(base_dir):
-            item_path = os.path.join(base_dir, item)
-            if os.path.isdir(item_path) and contains_dicom_files(item_path):
-                return item_path
-    except Exception as e:
-        print(f"Error searching for DICOM files: {e}")
-    
-    return None
-
-
-def contains_dicom_files(directory: str) -> bool:
-    """Check if directory contains DICOM files (files without extension or .dcm)"""
-    try:
-        files = os.listdir(directory)
-        # DICOM files typically have no extension or .dcm extension
-        dicom_files = [f for f in files if '.' not in f or f.endswith('.dcm')]
-        return len(dicom_files) > 0
-    except:
-        return False
-
-
-def get_first_dicom_file(directory: str) -> Optional[str]:
-    """Get the first DICOM file from a directory"""
-    try:
-        files = os.listdir(directory)
-        dicom_files = [f for f in files if '.' not in f or f.endswith('.dcm')]
-        if dicom_files:
-            return os.path.join(directory, dicom_files[0])
+            path = os.path.join(base_dir, item)
+            if os.path.isdir(path) and _contains_dicom(path):
+                return path
     except:
         pass
     return None
 
 
-def load_image(path: str) -> np.ndarray:
-    """
-    Load image from various formats (PNG, JPG, TIFF, DICOM).
-    If path is a directory, searches for DICOM files inside.
-    
-    Returns:
-        Grayscale image as uint8 numpy array
-    """
-    # If path is a directory, find DICOM directory and get first file
+def _contains_dicom(directory: str) -> bool:
+    try:
+        return any('.' not in f or f.endswith('.dcm') for f in os.listdir(directory))
+    except:
+        return False
+
+
+def load_calibration_image(path: str) -> np.ndarray:
+    """Load and preprocess calibration image to STANDARD_SIZE x STANDARD_SIZE."""
     if os.path.isdir(path):
         dicom_dir = find_dicom_directory(path)
-        if dicom_dir is None:
-            raise ValueError(f"No DICOM files found in folder: {path}")
-        
-        dicom_file = get_first_dicom_file(dicom_dir)
-        if dicom_file is None:
-            raise ValueError(f"No DICOM files found in directory: {dicom_dir}")
-        
-        path = dicom_file
-        print(f"Loading DICOM file: {path}")
+        if not dicom_dir:
+            raise ValueError(f"No DICOM files in: {path}")
+        files = sorted([f for f in os.listdir(dicom_dir) if '.' not in f or f.endswith('.dcm')])
+        if not files:
+            raise ValueError(f"No DICOM files in: {dicom_dir}")
+        path = os.path.join(dicom_dir, files[0])
     
     ext = os.path.splitext(path)[1].lower()
     
-    # Standard image formats
     if ext in [".png", ".jpg", ".jpeg", ".tif", ".tiff", ".bmp"]:
-        img = cv2.imread(path, cv2.IMREAD_ANYDEPTH | cv2.IMREAD_ANYCOLOR)
-        if img is None:
-            raise ValueError(f"Failed to load image: {path}")
-        
-        # Convert to grayscale if needed
-        if img.ndim == 3:
-            img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        
-        # Normalize to uint8
-        if img.dtype != np.uint8:
-            img = cv2.normalize(img, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
-        
-        return img
-    
-    # Try DICOM format (for .dcm files or no extension)
-    try:
+        import matplotlib.image as mpimg
+        img = mpimg.imread(path).astype(np.float64)
+    else:
         import pydicom
-        print(f"Reading DICOM file: {path}")
         ds = pydicom.dcmread(path)
-        
-        # Get pixel array and ensure it's a proper numpy array
-        arr = ds.pixel_array
-        print(f"DICOM pixel array shape: {arr.shape}, dtype: {arr.dtype}")
-        
-        # Convert to float32 for processing
-        arr = np.array(arr, dtype=np.float32)
-        
-        # Handle different DICOM photometric interpretations
-        if hasattr(ds, 'PhotometricInterpretation'):
-            print(f"Photometric interpretation: {ds.PhotometricInterpretation}")
-            if ds.PhotometricInterpretation == 'MONOCHROME1':
-                # Invert for MONOCHROME1 (lower values = brighter)
-                arr = arr.max() - arr
-        
-        # Normalize to 0-255 range
-        arr_min = arr.min()
-        arr_max = arr.max()
-        print(f"Array range: {arr_min} to {arr_max}")
-        
-        if arr_max > arr_min:
-            arr = ((arr - arr_min) / (arr_max - arr_min) * 255.0).astype(np.uint8)
-        else:
-            arr = np.zeros_like(arr, dtype=np.uint8)
-        
-        print(f"Final array shape: {arr.shape}, dtype: {arr.dtype}")
-        return arr
-        
-    except ImportError:
-        raise ValueError("DICOM support requires pydicom package")
-    except Exception as e:
-        print(f"DICOM loading error details: {e}")
-        import traceback
-        traceback.print_exc()
-        raise ValueError(f"Failed to load DICOM: {e}")
+        img = ds.pixel_array.astype(np.float64)
+        if hasattr(ds, 'PhotometricInterpretation') and ds.PhotometricInterpretation == 'MONOCHROME1':
+            img = img.max() - img
+    
+    if img.ndim == 3:
+        img = np.mean(img, axis=2)
+    
+    img = (img - img.min()) * (255.0 / (img.max() - img.min() + 1e-10))
+    
+    if img.shape[0] != STANDARD_SIZE:
+        img = resize(img, (STANDARD_SIZE, STANDARD_SIZE), order=5, anti_aliasing=True)
+    
+    return img
 
 
 def numpy_to_qpixmap(arr: np.ndarray) -> QPixmap:
-    """Convert grayscale numpy array to QPixmap for display."""
-    if arr.dtype != np.uint8:
-        arr = cv2.normalize(arr, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
-    
-    h, w = arr.shape[:2]
-    qimg = QImage(arr.data, w, h, w, QImage.Format_Grayscale8)
-    return QPixmap.fromImage(qimg.copy())
+    """Convert numpy array to QPixmap."""
+    arr = ((arr - arr.min()) / (arr.max() - arr.min() + 1e-10) * 255).astype(np.uint8)
+    h, w = arr.shape
+    return QPixmap.fromImage(QImage(arr.data, w, h, w, QImage.Format_Grayscale8).copy())
 
 
-def detect_beads(img: np.ndarray) -> np.ndarray:
+# ============================================================================
+# 3D Grid and Perspective Projection
+# ============================================================================
+
+def create_3d_bead_grid(bead_spacing: float, layer_separation: float) -> np.ndarray:
     """
-    Detect circular bead centers using blob detection.
+    Create 3D coordinates for 98 beads (2 layers x 49 beads).
     
-    Returns:
-        Nx2 array of (x, y) coordinates
-    """
-    params = cv2.SimpleBlobDetector_Params()
+    CRITICAL: Both layers have IDENTICAL (x, y) positions in 3D space.
+    They differ ONLY in z coordinate:
+    - Front layer (indices 0-48): z = 0 (at detector plane)
+    - Back layer (indices 49-97): z = layer_separation (toward X-ray source)
     
-    # Filter by circularity (beads should be round)
-    params.filterByCircularity = True
-    params.minCircularity = 0.65
+    The (x, y) coordinates are RELATIVE TO THE OPTICAL AXIS (center = 0, 0).
     
-    # Filter by area (adjust based on your image resolution)
-    params.filterByArea = True
-    params.minArea = 10
-    params.maxArea = 5000
-    
-    # Filter by inertia ratio (roundness)
-    params.filterByInertia = True
-    params.minInertiaRatio = 0.2
-    
-    # Threshold settings
-    params.minThreshold = 10
-    params.maxThreshold = 220
-    params.thresholdStep = 10
-    
-    detector = cv2.SimpleBlobDetector_create(params)
-    keypoints = detector.detect(img)
-    
-    if not keypoints:
-        return np.zeros((0, 2), dtype=np.float32)
-    
-    return np.array([kp.pt for kp in keypoints], dtype=np.float32)
-
-
-def match_points_greedy(source: np.ndarray, target: np.ndarray) -> np.ndarray:
-    """
-    Match each target point to nearest unique source point (greedy assignment).
+    When projected with perspective:
+    - Center bead (i=3, j=3): x=0, y=0 → SAME position for both layers
+    - Edge beads: back layer spreads OUTWARD due to magnification
     
     Args:
-        source: Nx2 array of available points (e.g., detected beads)
-        target: Mx2 array of points to match (e.g., ideal grid)
-    
+        bead_spacing: Distance between adjacent beads (in working units)
+        layer_separation: Distance between layers (in working units)
+        
     Returns:
-        Array of indices where source[match[i]] is matched to target[i]
-        Returns -1 for unmatched targets
+        Array (98, 4) of [x, y, z, 1] homogeneous coordinates
+        where x, y are relative to optical axis (center = 0)
     """
-    if len(source) == 0 or len(target) == 0:
-        return np.array([], dtype=int)
+    coords = np.zeros((NUM_BEADS_TOTAL, 4))
     
-    available = list(range(len(source)))
-    matches = []
+    idx = 0
+    for k in range(2):  # k=0: front layer, k=1: back layer
+        for i in range(GRID_SIZE):
+            for j in range(GRID_SIZE):
+                # (x, y) relative to optical axis
+                # i, j range 0-6, so (i-3) ranges from -3 to +3
+                x = (i - 3) * bead_spacing
+                y = (j - 3) * bead_spacing
+                z = k * layer_separation  # 0 for front, layer_separation for back
+                
+                coords[idx] = [x, y, z, 1]
+                idx += 1
     
-    for tgt in target:
-        if not available:
-            matches.append(-1)
+    return coords
+
+
+def apply_perspective_projection(coords_3d: np.ndarray, d1: float, 
+                                  image_center: float) -> np.ndarray:
+    """
+    Project 3D coordinates to 2D using conical X-ray projection.
+    
+    X-ray geometry:
+    - Point source at distance d1 from detector (along +z axis)
+    - Detector plane at z = 0
+    - Objects at z > 0 are between source and detector
+    
+    Magnification formula:
+        mag = d1 / (d1 - z)
+        
+    - At z = 0 (front layer): mag = 1.0 (no magnification)
+    - At z = d (back layer): mag = d1/(d1-d) > 1.0 (magnified outward)
+    
+    The magnification is applied to (x, y) coordinates that are
+    RELATIVE TO THE OPTICAL AXIS. This ensures:
+    - Center point (0, 0) maps to (0, 0) for ALL z values
+    - Points away from center spread outward proportionally to mag
+    
+    Args:
+        coords_3d: Nx4 array of [x, y, z, 1] where x, y are relative to optical axis
+        d1: Source-to-detector distance (controls perspective strength)
+        image_center: Pixel coordinate of image center
+        
+    Returns:
+        Nx2 array of [x, y] pixel coordinates in image
+    """
+    coords_2d = np.zeros((coords_3d.shape[0], 2))
+    
+    for i in range(coords_3d.shape[0]):
+        x = coords_3d[i, 0]  # Relative to optical axis
+        y = coords_3d[i, 1]  # Relative to optical axis
+        z = coords_3d[i, 2]
+        
+        # Perspective magnification
+        mag = d1 / (d1 - z)
+        
+        # Apply magnification and translate to image coordinates
+        coords_2d[i, 0] = x * mag + image_center
+        coords_2d[i, 1] = y * mag + image_center
+    
+    return coords_2d
+
+
+def make_rotation_matrix(rx_deg: float, ry_deg: float, rz_deg: float) -> np.ndarray:
+    """Create 3x3 rotation matrix from Euler angles (degrees)."""
+    rx, ry, rz = np.radians([rx_deg, ry_deg, rz_deg])
+    
+    Rx = np.array([[1, 0, 0], [0, np.cos(rx), -np.sin(rx)], [0, np.sin(rx), np.cos(rx)]])
+    Ry = np.array([[np.cos(ry), 0, np.sin(ry)], [0, 1, 0], [-np.sin(ry), 0, np.cos(ry)]])
+    Rz = np.array([[np.cos(rz), -np.sin(rz), 0], [np.sin(rz), np.cos(rz), 0], [0, 0, 1]])
+    
+    return Rz @ Ry @ Rx
+
+
+def transform_and_project(coords_3d: np.ndarray, 
+                          tx: float, ty: float,
+                          rx: float, ry: float, rz: float,
+                          scale: float, d1: float,
+                          image_center: float) -> np.ndarray:
+    """
+    Apply pose transformation and perspective projection.
+    
+    Process:
+    1. Apply 3D rotation around origin (optical axis)
+    2. Apply perspective projection
+    3. Apply 2D scale (around image center)
+    4. Apply 2D translation
+    
+    Args:
+        coords_3d: Nx4 homogeneous [x, y, z, 1], x/y relative to optical axis
+        tx, ty: Translation in image plane (pixels)
+        rx, ry, rz: Rotation angles (degrees)
+        scale: 2D scale factor applied after projection
+        d1: Source-detector distance for perspective
+        image_center: Image center coordinate
+        
+    Returns:
+        Nx2 array of final 2D pixel positions
+    """
+    # Step 1: Apply 3D rotation around optical axis
+    R = make_rotation_matrix(rx, ry, rz)
+    xyz = coords_3d[:, :3].copy()
+    xyz_rotated = (R @ xyz.T).T
+    
+    # Step 2: Create homogeneous coords for projection
+    coords_rotated = np.column_stack([xyz_rotated, np.ones(len(xyz_rotated))])
+    
+    # Step 3: Apply perspective projection
+    coords_2d = apply_perspective_projection(coords_rotated, d1, image_center)
+    
+    # Step 4: Apply 2D scale around image center
+    coords_2d = (coords_2d - image_center) * scale + image_center
+    
+    # Step 5: Apply 2D translation
+    coords_2d[:, 0] += tx
+    coords_2d[:, 1] += ty
+    
+    return coords_2d
+
+
+# ============================================================================
+# Bead Detection
+# ============================================================================
+
+def snap_to_beads(img: np.ndarray, gpx: np.ndarray, gpy: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Detect beads and snap grid positions to bead centers.
+    
+    Algorithm:
+    1. For each grid point, search window around expected position
+    2. Find local minima (beads appear dark)
+    3. Select nearest minimum to expected position
+    4. Refine with weighted centroid
+    5. Mark outliers as missing
+    """
+    n = len(gpx)
+    bpx, bpy = np.zeros(n), np.zeros(n)
+    minp = np.zeros(n)
+    missing = np.zeros(n, dtype=bool)
+    
+    F = np.array(img)
+    S = F.shape[0]
+    
+    for i in range(n):
+        bx, by = int(round(gpx[i])), int(round(gpy[i]))
+        
+        # Check bounds
+        if bx < SEARCH_WINDOW+1 or bx >= S-SEARCH_WINDOW-1 or by < SEARCH_WINDOW+1 or by >= S-SEARCH_WINDOW-1:
+            bpx[i], bpy[i], missing[i] = gpx[i], gpy[i], True
             continue
         
-        # Find nearest available source point
-        candidates = source[available]
-        distances = np.sum((candidates - tgt)**2, axis=1)
-        nearest_idx = int(np.argmin(distances))
+        # Extract search window
+        P = F[by-SEARCH_WINDOW:by+SEARCH_WINDOW+1, bx-SEARCH_WINDOW:bx+SEARCH_WINDOW+1]
+        P_min, P_max = np.min(P), np.max(P)
+        minp[i] = P_min
+        threshold = P_min + 0.5 * (P_max - P_min)
         
-        matches.append(available[nearest_idx])
-        del available[nearest_idx]
+        # Find local minima
+        min_list = []
+        for u in range(1, 2*SEARCH_WINDOW):
+            for v in range(1, 2*SEARCH_WINDOW):
+                if P[u, v] == np.min(P[u-1:u+2, v-1:v+2]) and P[u, v] < threshold:
+                    min_list.append([u, v])
+        
+        if min_list:
+            min_list = np.array(min_list)
+            # Find nearest to center
+            dist = np.sqrt((min_list[:, 1] - SEARCH_WINDOW)**2 + (min_list[:, 0] - SEARCH_WINDOW)**2)
+            idx = np.argmin(dist)
+            yo, xo = min_list[idx]
+            
+            bead_y, bead_x = by - SEARCH_WINDOW + yo, bx - SEARCH_WINDOW + xo
+            
+            # Sub-pixel refinement with weighted centroid
+            if 1 <= bead_y < S-1 and 1 <= bead_x < S-1:
+                vals = F[bead_y-1:bead_y+2, bead_x-1:bead_x+2].astype(np.float64)
+                weights = -(vals.max() - vals)
+                weights /= weights.sum() + 1e-10
+                
+                xc = np.sum(np.sum(weights, axis=0) * np.arange(3))
+                yc = np.sum(np.sum(weights, axis=1) * np.arange(3))
+                
+                bpx[i] = bead_x - 1 + xc
+                bpy[i] = bead_y - 1 + yc
+            else:
+                bpx[i], bpy[i] = bead_x, bead_y
+        else:
+            bpx[i], bpy[i], missing[i] = gpx[i], gpy[i], True
     
-    return np.array(matches, dtype=int)
+    # Outlier detection using back layer statistics
+    back_minp = minp[NUM_BEADS_PER_LAYER:][~missing[NUM_BEADS_PER_LAYER:]]
+    if len(back_minp) > 5:
+        med, std = np.median(back_minp), np.std(back_minp) + 1e-10
+        for i in range(n):
+            if not missing[i] and (minp[i] - med) / std > 1.5:
+                bpx[i], bpy[i], missing[i] = gpx[i], gpy[i], True
+    
+    return bpx, bpy, missing
 
 
 # ============================================================================
-# Cubic Warp Model
+# Distortion Correction
 # ============================================================================
 
-def cubic_design_matrix(x: np.ndarray, y: np.ndarray) -> np.ndarray:
+def fit_polynomial_correction(gpx: np.ndarray, gpy: np.ndarray,
+                               bpx: np.ndarray, bpy: np.ndarray,
+                               missing: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
     """
-    Create design matrix for 2D cubic polynomial (10 terms).
-    Terms: [1, x, y, x², xy, y², x³, x²y, xy², y³]
+    Fit 4-term polynomial distortion correction (stage 1).
+    
+    X: [x, x³, x·y², x³·y²]
+    Y: [y, y³, y·x², y³·x²]
     """
-    return np.column_stack([
-        np.ones_like(x),
-        x, y,
-        x*x, x*y, y*y,
-        x*x*x, x*x*y, x*y*y, y*y*y
-    ])
+    S = STANDARD_SIZE
+    ind = np.where(~missing)[0]
+    
+    if len(ind) < 10:
+        raise ValueError(f"Only {len(ind)} valid beads, need at least 10")
+    
+    err_x = gpx[ind] - bpx[ind]
+    err_y = gpy[ind] - bpy[ind]
+    
+    x = gpx[ind] - S/2
+    y = gpy[ind] - S/2
+    
+    X = np.column_stack([x, x**3, x*(y**2), (x**3)*(y**2)])
+    Y = np.column_stack([y, y**3, y*(x**2), (y**3)*(x**2)])
+    
+    ax, *_ = np.linalg.lstsq(X, err_x, rcond=None)
+    ay, *_ = np.linalg.lstsq(Y, err_y, rcond=None)
+    
+    return ax, ay
 
 
-def fit_cubic_warp(distorted: np.ndarray, undistorted: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
-    """
-    Fit cubic polynomial warp from distorted to undistorted coordinates.
+def create_correction_maps(ax: np.ndarray, ay: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    """Create dense pixel-wise correction maps."""
+    S = STANDARD_SIZE
+    xx, yy = np.meshgrid(np.arange(S) - S/2, np.arange(S) - S/2)
+    x, y = xx.ravel(), yy.ravel()
     
-    Args:
-        distorted: Nx2 array of distorted (x, y) positions
-        undistorted: Nx2 array of corresponding undistorted (x, y) positions
+    X = np.column_stack([x, x**3, x*(y**2), (x**3)*(y**2)])
+    Y = np.column_stack([y, y**3, y*(x**2), (y**3)*(x**2)])
     
-    Returns:
-        (coeff_x, coeff_y): Coefficients for x and y transformations (10 each)
-    """
-    X = cubic_design_matrix(distorted[:, 0], distorted[:, 1])
-    
-    # Solve for x and y transformations separately
-    coeff_x, *_ = np.linalg.lstsq(X, undistorted[:, 0], rcond=None)
-    coeff_y, *_ = np.linalg.lstsq(X, undistorted[:, 1], rcond=None)
-    
-    return coeff_x.astype(np.float32), coeff_y.astype(np.float32)
+    return (X @ ax).reshape(S, S), (Y @ ay).reshape(S, S)
 
 
-def create_remap_arrays(coeff_x: np.ndarray, coeff_y: np.ndarray, 
-                        width: int, height: int) -> Tuple[np.ndarray, np.ndarray]:
-    """
-    Create dense remap arrays for cv2.remap() using cubic warp coefficients.
-    
-    Returns:
-        (mapx, mapy): Arrays for remapping distorted → undistorted
-    """
-    yy, xx = np.meshgrid(
-        np.arange(height, dtype=np.float32),
-        np.arange(width, dtype=np.float32),
-        indexing='ij'
-    )
-    
-    # Evaluate polynomial at each pixel
-    x, y = xx, yy
-    
-    def eval_poly(c):
-        return (c[0] + c[1]*x + c[2]*y + c[3]*x*x + c[4]*x*y + c[5]*y*y +
-                c[6]*x*x*x + c[7]*x*x*y + c[8]*x*y*y + c[9]*y*y*y)
-    
-    mapx = eval_poly(coeff_x).astype(np.float32)
-    mapy = eval_poly(coeff_y).astype(np.float32)
-    
-    return mapx, mapy
-
-
-def apply_distortion_correction(img: np.ndarray, mapx: np.ndarray, 
-                                mapy: np.ndarray) -> np.ndarray:
-    """Apply distortion correction using precomputed remap arrays."""
-    return cv2.remap(img, mapx, mapy, 
-                     interpolation=cv2.INTER_LINEAR, 
-                     borderMode=cv2.BORDER_CONSTANT)
+def apply_correction(img: np.ndarray, adj_x: np.ndarray, adj_y: np.ndarray) -> np.ndarray:
+    """Apply distortion correction."""
+    S = img.shape[0]
+    xx, yy = np.meshgrid(np.arange(S) - S/2, np.arange(S) - S/2)
+    coords = np.array([yy - adj_y + S/2, xx - adj_x + S/2])
+    return map_coordinates(img.astype(np.float64), coords, order=3, mode='constant', cval=0)
 
 
 # ============================================================================
-# Main Calibration Widget
+# Main Widget
 # ============================================================================
 
 class Calibration(QWidget):
     """
-    Fluoroscopy calibration interface for correcting image distortion.
-    
-    Attributes:
-        img_original: Original loaded image
-        img_display: Current display image (may be corrected)
-        grid_ideal: Ideal grid positions before snapping (Nx2 array)
-        grid_snapped: Grid positions after snapping to beads (Nx2 array)
-        beads_detected: Detected bead positions (Mx2 array)
-        warp_coeff_x, warp_coeff_y: Cubic warp coefficients
-        remap_x, remap_y: Dense remap arrays for distortion correction
+    Two-layer fluoroscopy calibration interface.
     """
-    
-    # Grid configuration (adjust based on your calibration frame)
-    GRID_ROWS = 7
-    GRID_COLS = 9
-    GRID_MARGIN = 0.10  # 10% margin from image edges
     
     def __init__(self):
         super().__init__()
         
-        # Setup UI
+        # UI setup
         self.ui = Ui_Form()
         self.ui.setupUi(self)
         self.ui.titlebar.ui.title.setText("Calibration")
+        self.ui.sidebar.ui.calibration.setStyleSheet(
+            "QPushButton { color: white; background-color: #6f8ab7; border: none; padding: 10px 25px; }"
+        )
         
-        # Highlight calibration in sidebar
-        self.ui.sidebar.ui.calibration.setStyleSheet("""
-            QPushButton {
-                color: white; 
-                background-color: #6f8ab7; 
-                border: none; 
-                padding: 10px 25px;
-            }
-        """)
-        
-        # Setup graphics view for image display
         self.scene = QGraphicsScene(self)
         self.ui.VTK_display.setScene(self.scene)
-        self.ui.VTK_display.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
+        self.ui.VTK_display.setDragMode(QGraphicsView.DragMode.NoDrag)
+        self.ui.VTK_display.setMouseTracking(True)
         
-        # Internal state
+        # Calibration parameters
+        self.layer_separation_mm = DEFAULT_LAYER_SEPARATION_MM
+        self.d1 = DEFAULT_D1  # Source-detector distance (perspective)
+        
+        # State
         self.img_original: Optional[np.ndarray] = None
         self.img_display: Optional[np.ndarray] = None
         self.base_pixmap_item: Optional[QGraphicsPixmapItem] = None
-        self.overlay_items: list[QGraphicsEllipseItem] = []
+        self.overlay_items: list = []
         
-        self.grid_ideal: Optional[np.ndarray] = None
-        self.grid_snapped: Optional[np.ndarray] = None
-        self.beads_detected: Optional[np.ndarray] = None
+        self.coords_3d: Optional[np.ndarray] = None
+        self.gpx: Optional[np.ndarray] = None
+        self.gpy: Optional[np.ndarray] = None
+        self.bpx: Optional[np.ndarray] = None
+        self.bpy: Optional[np.ndarray] = None
+        self.bpx0: Optional[np.ndarray] = None
+        self.bpy0: Optional[np.ndarray] = None
+        self.missing: Optional[np.ndarray] = None
         
-        self.warp_coeff_x: Optional[np.ndarray] = None
-        self.warp_coeff_y: Optional[np.ndarray] = None
-        self.remap_x: Optional[np.ndarray] = None
-        self.remap_y: Optional[np.ndarray] = None
+        self.grid_loaded = False
+        self.invert = False
         
-        # Connect button signals
+        # Pose parameters
+        self.tx, self.ty = 0.0, 0.0
+        self.rx, self.ry, self.rz = 0.0, 0.0, 0.0
+        self.scale = 1.5  # Initial scale
+        
+        # Correction
+        self.ax, self.ay = None, None
+        self.adj_x, self.adj_y = None, None
+        
+        # Mouse state
+        self.mouse_pressed = False
+        self.mouse_button = None
+        self.mouse_start = (0, 0)
+        self.mouse_prev = (0, 0)
+        self.interaction_mode = None
+        self.grid_center = (STANDARD_SIZE/2, STANDARD_SIZE/2)
+        
+        # Connect signals
         self.ui.pushButton.clicked.connect(self.load_calibration_grid)
         self.ui.pushButton_2.clicked.connect(self.invert_colors)
-        self.ui.pushButton_3.clicked.connect(self.overlay_grid)
+        self.ui.pushButton_3.clicked.connect(self.overlay_square_grid)
         self.ui.pushButton_4.clicked.connect(self.snap_to_beads)
         self.ui.pushButton_5.clicked.connect(self.correct_distortion)
         
-        # Add keyboard shortcut for save
-        save_action = QAction("Save Correction", self)
+        save_action = QAction("Save", self)
         save_action.setShortcut("Ctrl+S")
         save_action.triggered.connect(self.save_correction)
         self.addAction(save_action)
+        
+        self.ui.VTK_display.viewport().installEventFilter(self)
     
-    # ========================================================================
-    # Button Handlers
-    # ========================================================================
+    # =========================================================================
+    # Mouse Events
+    # =========================================================================
     
-    def load_calibration_grid(self):
-        """Load fluoroscopy image of calibration frame (folder with DICOM)."""
-        path = QFileDialog.getExistingDirectory(
-            self,
-            "Select Folder with Fluoroscopy DICOM Files",
-            "",
-            QFileDialog.Option.ShowDirsOnly
+    def eventFilter(self, obj, event):
+        from PySide6.QtCore import QEvent
+        if obj == self.ui.VTK_display.viewport():
+            if event.type() == QEvent.MouseButtonPress:
+                return self._on_press(event)
+            elif event.type() == QEvent.MouseMove:
+                return self._on_move(event)
+            elif event.type() == QEvent.MouseButtonRelease:
+                return self._on_release(event)
+            elif event.type() == QEvent.Wheel:
+                return self._on_wheel(event)
+        return super().eventFilter(obj, event)
+    
+    def _on_press(self, event) -> bool:
+        if self.gpx is None:
+            return False
+        
+        self.mouse_pressed = True
+        self.mouse_button = event.button()
+        pos = self.ui.VTK_display.mapToScene(event.pos())
+        self.mouse_start = self.mouse_prev = (pos.x(), pos.y())
+        
+        mx, my = self.grid_center
+        if self.mouse_button == Qt.RightButton:
+            self.interaction_mode = 'out_rotation'
+        elif abs(pos.x() - mx) < 50 and abs(pos.y() - my) < 50:
+            self.interaction_mode = 'translation'
+        else:
+            self.interaction_mode = 'in_rotation'
+        
+        return True
+    
+    def _on_move(self, event) -> bool:
+        if not self.mouse_pressed or self.gpx is None:
+            return False
+        
+        pos = self.ui.VTK_display.mapToScene(event.pos())
+        x, y = pos.x(), pos.y()
+        px, py = self.mouse_prev
+        
+        if self.interaction_mode == 'translation':
+            self.tx += x - px
+            self.ty += y - py
+            
+        elif self.interaction_mode == 'in_rotation':
+            cx, cy = self.grid_center
+            angle_curr = np.arctan2(y - cy, x - cx)
+            angle_prev = np.arctan2(py - cy, px - cx)
+            self.rz += np.degrees(angle_curr - angle_prev)
+            
+        elif self.interaction_mode == 'out_rotation':
+            # Intuitive: drag up = tilt top toward viewer
+            self.rx += (y - py) / 5.0
+            self.ry += (px - x) / 5.0
+        
+        self.mouse_prev = (x, y)
+        self._update_grid()
+        self._draw_overlay()
+        return True
+    
+    def _on_release(self, event) -> bool:
+        self.mouse_pressed = False
+        return True
+    
+    def _on_wheel(self, event) -> bool:
+        """
+        Scroll controls:
+        - Shift+scroll: SCALE (both layers uniformly) - match front layer size
+        - Regular scroll: PERSPECTIVE (d1) - match back layer spread
+        """
+        if self.gpx is None:
+            return False
+        
+        delta = event.angleDelta().y()
+        mods = event.modifiers()
+        
+        if mods & Qt.ShiftModifier:
+            # SCALE: adjust overall size (both layers equally)
+            if delta > 0:
+                self.scale *= SCALE_SCROLL_FACTOR
+            else:
+                self.scale /= SCALE_SCROLL_FACTOR
+            self.scale = np.clip(self.scale, 0.1, 20.0)
+        else:
+            # PERSPECTIVE: adjust d1 (back layer spread)
+            # Scroll up = increase d1 = weaker perspective = back layer shrinks toward front
+            # Scroll down = decrease d1 = stronger perspective = back layer spreads more
+            if delta > 0:
+                self.d1 += PERSPECTIVE_SCROLL_STEP
+            else:
+                self.d1 -= PERSPECTIVE_SCROLL_STEP
+            
+            # Clamp: d1 must be > layer_separation
+            min_d1 = self.layer_separation_mm * 1.2
+            self.d1 = max(self.d1, min_d1)
+        
+        self._update_grid()
+        self._draw_overlay()
+        return True
+    
+    # =========================================================================
+    # Grid Update
+    # =========================================================================
+    
+    def _update_grid(self):
+        """Update 2D grid positions from 3D coords and current pose."""
+        if self.coords_3d is None:
+            return
+        
+        center = STANDARD_SIZE / 2
+        projected = transform_and_project(
+            self.coords_3d,
+            self.tx, self.ty,
+            self.rx, self.ry, self.rz,
+            self.scale, self.d1,
+            center
         )
         
-        if not path:
-            return
+        self.gpx = projected[:, 0]
+        self.gpy = projected[:, 1]
+        
+        # Update grid center (front layer mean)
+        self.grid_center = (np.mean(self.gpx[:NUM_BEADS_PER_LAYER]), 
+                           np.mean(self.gpy[:NUM_BEADS_PER_LAYER]))
+    
+    # =========================================================================
+    # Button Handlers
+    # =========================================================================
+    
+    def load_calibration_grid(self):
+        """Load calibration image."""
+        singleton = SingletonPatient.get_instance()
+        path = singleton.patient.caligrid
+        
+        if not path or not os.path.exists(path):
+            path = QFileDialog.getExistingDirectory(self, "Select Calibration Grid Folder")
+            if not path:
+                return
         
         try:
-            print(f"Selected path: {path}")
-            print(f"Path is directory: {os.path.isdir(path)}")
-            
-            img = load_image(path)
-            print(f"Successfully loaded image: {img.shape}, dtype: {img.dtype}")
+            self.img_original = load_calibration_image(path)
+            self.img_display = self.img_original.copy()
+            self.invert = False
         except Exception as e:
-            print(f"Error loading image: {e}")
-            import traceback
-            traceback.print_exc()
-            QMessageBox.critical(self, "Load Error", str(e))
+            QMessageBox.critical(self, "Error", str(e))
             return
         
-        # Reset state
-        self.img_original = img.copy()
-        self.img_display = img.copy()
-        self.grid_ideal = None
-        self.grid_snapped = None
-        self.beads_detected = None
-        self.warp_coeff_x = None
-        self.warp_coeff_y = None
-        self.remap_x = None
-        self.remap_y = None
-        
+        self._reset_state()
         self._display_image(self.img_display)
-        self._clear_overlay()
+        self.grid_loaded = True
     
     def invert_colors(self):
-        """Invert image colors for better visibility of beads."""
-        if self.img_display is None:
-            QMessageBox.information(self, "No Image", "Load a calibration frame first.")
-            return
-        
-        self.img_display = cv2.bitwise_not(self.img_display)
-        self._display_image(self.img_display)
-        self._redraw_overlay()
-    
-    def overlay_grid(self):
-        """Overlay ideal square grid over image."""
+        """Toggle image inversion."""
         if self.img_original is None:
-            QMessageBox.information(self, "No Image", "Load a calibration frame first.")
             return
         
-        h, w = self.img_original.shape[:2]
-        
-        # Calculate grid bounds (with margins)
-        margin_x = int(self.GRID_MARGIN * w)
-        margin_y = int(self.GRID_MARGIN * h)
-        x0, y0 = margin_x, margin_y
-        x1, y1 = w - margin_x, h - margin_y
-        
-        # Create regular grid
-        xs = np.linspace(x0, x1, self.GRID_COLS, dtype=np.float32)
-        ys = np.linspace(y0, y1, self.GRID_ROWS, dtype=np.float32)
-        gx, gy = np.meshgrid(xs, ys)
-        
-        self.grid_ideal = np.column_stack([gx.ravel(), gy.ravel()])
-        self.grid_snapped = self.grid_ideal.copy()
-        
+        self.invert = not self.invert
+        self.img_display = (255 - self.img_original) if self.invert else self.img_original.copy()
+        self._display_image(self.img_display)
         self._draw_overlay()
     
-    def snap_to_beads(self):
-        """Detect beads and snap grid points to nearest beads."""
-        if self.img_original is None:
-            QMessageBox.information(self, "No Image", "Load a calibration frame first.")
+    def overlay_square_grid(self):
+        """Create and overlay two-layer grid."""
+        if not self.grid_loaded:
+            QMessageBox.information(self, "No Image", "Load calibration grid first.")
             return
         
-        if self.grid_ideal is None:
-            QMessageBox.information(self, "No Grid", "Overlay a grid first.")
+        sep, ok = QInputDialog.getDouble(
+            self, "Layer Separation",
+            "Enter physical separation between bead layers (mm):",
+            self.layer_separation_mm, 10, 500, 1
+        )
+        if not ok:
             return
+        self.layer_separation_mm = sep
         
-        # Detect beads
-        self.beads_detected = detect_beads(self.img_display)
+        # Create 3D grid
+        # Use bead spacing as working unit
+        self.coords_3d = create_3d_bead_grid(BEAD_SPACING_MM, self.layer_separation_mm)
         
-        if len(self.beads_detected) == 0:
-            QMessageBox.warning(
-                self, 
-                "No Beads Detected",
-                "No beads found. Try inverting the image or adjusting lighting."
-            )
-            return
+        # Reset pose
+        self.tx, self.ty = 0.0, 0.0
+        self.rx, self.ry, self.rz = 0.0, 0.0, 0.0
+        self.scale = 1.5
+        self.d1 = DEFAULT_D1
         
-        # Match grid points to beads
-        matches = match_points_greedy(self.beads_detected, self.grid_ideal)
-        
-        # Count successful matches
-        valid_matches = matches >= 0
-        match_rate = valid_matches.sum() / len(matches)
-        
-        if match_rate < 0.6:
-            QMessageBox.warning(
-                self,
-                "Poor Match",
-                f"Only {match_rate*100:.0f}% of grid points matched to beads.\n"
-                "Consider adjusting grid size or image quality."
-            )
-        
-        # Update snapped positions
-        self.grid_snapped = self.grid_ideal.copy()
-        self.grid_snapped[valid_matches] = self.beads_detected[matches[valid_matches]]
-        
+        self._update_grid()
         self._draw_overlay()
         
         QMessageBox.information(
-            self,
-            "Snap Complete",
-            f"Matched {valid_matches.sum()} of {len(matches)} grid points to beads."
+            self, "Grid Overlaid",
+            f"Two-layer grid (separation = {sep:.0f}mm):\n"
+            f"  • Front (RED): 49 beads, z=0\n"
+            f"  • Back (BLUE): 49 beads, z={sep:.0f}mm\n\n"
+            "Controls:\n"
+            "  • Shift+Scroll: Scale (match RED layer size)\n"
+            "  • Scroll: Perspective (match BLUE layer spread)\n"
+            "  • Left-drag center: Translate\n"
+            "  • Left-drag edge: Rotate in-plane\n"
+            "  • Right-drag: Tilt out-of-plane\n\n"
+            "Steps:\n"
+            "1. Shift+scroll to match RED layer size to beads\n"
+            "2. Scroll to match BLUE layer spread\n"
+            "3. Fine-tune rotation/translation\n"
+            "4. Click 'Snap to Beads'"
+        )
+    
+    def snap_to_beads(self):
+        """Detect beads and snap grid."""
+        if self.gpx is None:
+            QMessageBox.information(self, "No Grid", "Overlay grid first.")
+            return
+        
+        self.bpx, self.bpy, self.missing = snap_to_beads(self.img_display, self.gpx, self.gpy)
+        self.bpx0, self.bpy0 = self.bpx.copy(), self.bpy.copy()
+        
+        # Show snapped positions
+        self.gpx, self.gpy = self.bpx.copy(), self.bpy.copy()
+        self._draw_overlay()
+        
+        front_ok = np.sum(~self.missing[:NUM_BEADS_PER_LAYER])
+        back_ok = np.sum(~self.missing[NUM_BEADS_PER_LAYER:])
+        
+        QMessageBox.information(
+            self, "Snap Complete",
+            f"Detected beads:\n"
+            f"  • Front (RED): {front_ok}/{NUM_BEADS_PER_LAYER}\n"
+            f"  • Back (BLUE): {back_ok}/{NUM_BEADS_PER_LAYER}\n\n"
+            "Click 'Correct Distortion' to apply correction."
         )
     
     def correct_distortion(self):
-        """Fit cubic warp and preview corrected image."""
-        if self.img_original is None:
-            QMessageBox.information(self, "No Image", "Load a calibration frame first.")
+        """Compute and apply distortion correction."""
+        if self.bpx0 is None:
+            QMessageBox.information(self, "Not Snapped", "Snap grid to beads first.")
             return
         
-        if self.grid_ideal is None or self.grid_snapped is None:
-            QMessageBox.information(
-                self, 
-                "No Grid",
-                "Overlay and snap the grid first."
+        try:
+            self.ax, self.ay = fit_polynomial_correction(
+                self.gpx, self.gpy, self.bpx0, self.bpy0, self.missing
             )
-            return
-        
-        # Fit warp: distorted (snapped) → undistorted (ideal)
-        self.warp_coeff_x, self.warp_coeff_y = fit_cubic_warp(
-            self.grid_snapped, 
-            self.grid_ideal
-        )
-        
-        # Create remap arrays
-        h, w = self.img_original.shape[:2]
-        self.remap_x, self.remap_y = create_remap_arrays(
-            self.warp_coeff_x, 
-            self.warp_coeff_y,
-            w, h
-        )
-        
-        # Apply correction
-        corrected = apply_distortion_correction(
-            self.img_display,
-            self.remap_x,
-            self.remap_y
-        )
-        
-        self.img_display = corrected
-        self._display_image(corrected)
-        
-        # Reset overlay to ideal positions
-        self.grid_snapped = self.grid_ideal.copy()
-        self._draw_overlay()
-        
-        # Calculate and display fit quality
-        rms_error = self._calculate_rms_error()
-        QMessageBox.information(
-            self,
-            "Correction Applied",
-            f"Distortion correction applied.\n"
-            f"RMS error: {rms_error:.2f} pixels\n\n"
-            f"Press Ctrl+S to save correction maps."
-        )
+            self.adj_x, self.adj_y = create_correction_maps(self.ax, self.ay)
+            
+            self.img_display = apply_correction(self.img_display, self.adj_x, self.adj_y)
+            self._display_image(self.img_display)
+            
+            # Reset grid to ideal
+            self._update_grid()
+            self._draw_overlay()
+            
+            QMessageBox.information(
+                self, "Correction Applied",
+                "Distortion correction applied.\n"
+                "Press Ctrl+S to save parameters."
+            )
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            QMessageBox.critical(self, "Error", str(e))
     
     def save_correction(self):
-        """Save distortion correction maps and coefficients."""
-        if self.remap_x is None or self.remap_y is None:
-            QMessageBox.information(
-                self,
-                "Nothing to Save",
-                "Run distortion correction first."
-            )
+        """Save correction parameters."""
+        if self.adj_x is None:
+            QMessageBox.information(self, "Nothing to Save", "Run correction first.")
             return
         
-        path, _ = QFileDialog.getSaveFileName(
-            self,
-            "Save Distortion Correction",
-            "distortion_correction.npz",
-            "NumPy Archive (*.npz)"
-        )
+        singleton = SingletonPatient.get_instance()
+        path = ""
+        if singleton.patient.name:
+            from pathlib import Path
+            proj = Path(__file__).resolve().parent.parent.parent / "Projects" / singleton.patient.name
+            if proj.exists():
+                path = str(proj / "fluoro_correction_parameters.pkl")
         
         if not path:
-            return
+            path, _ = QFileDialog.getSaveFileName(self, "Save", "fluoro_correction.pkl", "Pickle (*.pkl)")
+            if not path:
+                return
         
-        # Save maps and metadata
-        np.savez(
-            path,
-            mapx=self.remap_x,
-            mapy=self.remap_y,
-            coeff_x=self.warp_coeff_x,
-            coeff_y=self.warp_coeff_y,
-            grid_ideal=self.grid_ideal,
-            grid_snapped=self.grid_snapped,
-            metadata=json.dumps({
-                "model": "cubic_polynomial",
-                "version": 1,
-                "grid_rows": self.GRID_ROWS,
-                "grid_cols": self.GRID_COLS
-            })
-        )
+        with open(path, 'wb') as f:
+            pickle.dump([self.adj_x, self.adj_y], f)
         
-        QMessageBox.information(
-            self,
-            "Saved",
-            f"Distortion correction saved:\n{os.path.basename(path)}"
-        )
+        QMessageBox.information(self, "Saved", f"Saved to:\n{os.path.basename(path)}")
     
-    # ========================================================================
+    # =========================================================================
     # Visualization
-    # ========================================================================
+    # =========================================================================
+    
+    def _reset_state(self):
+        self.coords_3d = None
+        self.gpx = self.gpy = None
+        self.bpx = self.bpy = None
+        self.bpx0 = self.bpy0 = None
+        self.missing = None
+        self.tx = self.ty = 0.0
+        self.rx = self.ry = self.rz = 0.0
+        self.scale = 1.5
+        self.d1 = DEFAULT_D1
+        self.ax = self.ay = None
+        self.adj_x = self.adj_y = None
+        self.overlay_items.clear()
     
     def _display_image(self, img: np.ndarray):
-        """Display image in graphics view."""
         self.scene.clear()
         self.overlay_items.clear()
-        
-        pixmap = numpy_to_qpixmap(img)
-        self.base_pixmap_item = QGraphicsPixmapItem(pixmap)
+        self.base_pixmap_item = QGraphicsPixmapItem(numpy_to_qpixmap(img))
         self.scene.addItem(self.base_pixmap_item)
-        
         self._fit_view()
     
-    def _clear_overlay(self):
-        """Remove all overlay items from scene."""
+    def _draw_overlay(self):
         for item in self.overlay_items:
             self.scene.removeItem(item)
         self.overlay_items.clear()
-        self.scene.update()
-    
-    def _draw_overlay(self):
-        """Draw grid overlay on image."""
-        self._clear_overlay()
         
-        if self.grid_snapped is None:
+        if self.gpx is None:
             return
         
-        # Draw markers at grid positions
-        color = QColor(220, 50, 50)  # Red
-        pen = QPen(color, 2)
-        brush = QBrush(Qt.BrushStyle.NoBrush)
-        radius = 6
-        
-        for x, y in self.grid_snapped:
-            item = QGraphicsEllipseItem(QRectF(x - radius, y - radius, 2*radius, 2*radius))
-            item.setPen(pen)
-            item.setBrush(brush)
+        r = 4
+        for i in range(NUM_BEADS_TOTAL):
+            # RED for front (0-48), BLUE for back (49-97)
+            color = QColor(255, 60, 60) if i < NUM_BEADS_PER_LAYER else QColor(60, 60, 255)
+            if self.missing is not None and self.missing[i]:
+                color.setAlpha(80)
+            
+            item = QGraphicsEllipseItem(QRectF(self.gpx[i]-r, self.gpy[i]-r, 2*r, 2*r))
+            item.setPen(QPen(color, 2))
+            item.setBrush(QBrush(Qt.BrushStyle.NoBrush))
             self.scene.addItem(item)
             self.overlay_items.append(item)
         
         self.scene.update()
     
-    def _redraw_overlay(self):
-        """Redraw overlay (after image changes)."""
-        if self.base_pixmap_item is not None:
-            self._draw_overlay()
-    
     def _fit_view(self):
-        """Fit scene to view."""
-        self.ui.VTK_display.fitInView(
-            self.scene.itemsBoundingRect(),
-            Qt.AspectRatioMode.KeepAspectRatio
-        )
-    
-    def _calculate_rms_error(self) -> float:
-        """Calculate RMS error of warp fit."""
-        if self.grid_snapped is None or self.grid_ideal is None:
-            return float('nan')
-        
-        # Transform snapped points through warp
-        X = cubic_design_matrix(self.grid_snapped[:, 0], self.grid_snapped[:, 1])
-        pred_x = X @ self.warp_coeff_x
-        pred_y = X @ self.warp_coeff_y
-        predicted = np.column_stack([pred_x, pred_y])
-        
-        # Calculate error
-        errors = np.linalg.norm(predicted - self.grid_ideal, axis=1)
-        return float(np.sqrt(np.mean(errors**2)))
-    
-    # ========================================================================
-    # Event Handlers
-    # ========================================================================
+        self.ui.VTK_display.fitInView(self.scene.itemsBoundingRect(), Qt.AspectRatioMode.KeepAspectRatio)
     
     def resizeEvent(self, event):
-        """Handle window resize."""
         super().resizeEvent(event)
         self._fit_view()
+    
+    def showEvent(self, event):
+        super().showEvent(event)
+        if self.img_original is None:
+            singleton = SingletonPatient.get_instance()
+            path = singleton.patient.caligrid
+            if path and os.path.exists(path):
+                try:
+                    self.img_original = load_calibration_image(path)
+                    self.img_display = self.img_original.copy()
+                    self.grid_loaded = True
+                    self._display_image(self.img_display)
+                except:
+                    pass
