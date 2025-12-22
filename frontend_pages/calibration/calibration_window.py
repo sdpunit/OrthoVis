@@ -1,42 +1,20 @@
 """
 Fluoroscopy Calibration Module - Two-Layer Bead Detection
 
-Purpose:
-    Corrects pincushion distortion in fluoroscopy images using a two-layer
-    calibration phantom with tantalum beads at known separation distance.
+Corrects pincushion distortion using a two-layer calibration phantom.
 
-Physics Background:
-    X-rays from a point source pass through a calibration phantom with two
-    layers of beads. Due to conical projection geometry:
-    - Both layers have IDENTICAL (x,y) positions in 3D space
-    - Front layer (z=0, at detector): No magnification
-    - Back layer (z=d, toward source): Magnified radially from center
-    - CENTER bead of both layers projects to SAME point
-    - EDGE beads of back layer spread OUTWARD relative to front layer
-    
-    Magnification ratio = d1 / (d1 - d) where d1 = source-detector distance
+X-ray projection geometry:
+- Both layers have IDENTICAL (x,y) in 3D, differ only in z
+- Front layer (RED): z=0, no magnification
+- Back layer (BLUE): z=d, magnified radially from center
+- Center bead: both layers project to SAME point
+- Edge beads: back layer spreads outward
 
-Calibration Phantom:
-    - Front layer (RED): 7x7 = 49 beads at z=0
-    - Back layer (BLUE): 7x7 = 49 beads at z=d (toward X-ray source)
-    - Layer separation d: Physical distance (e.g., 200mm)
-    - Bead spacing: 20mm between adjacent beads
-
-Workflow:
-    1. Load calibration image
-    2. Overlay grid - specify layer separation d
-    3. Adjust SCALE (Shift+scroll) to match FRONT layer (RED) to beads
-    4. Adjust PERSPECTIVE (scroll) to match BACK layer (BLUE) spread
-    5. Fine-tune rotation/translation
-    6. Snap to beads and correct distortion
-
-Controls:
-    - Shift+Scroll: Scale (both layers uniformly)
-    - Scroll: Perspective strength (back layer spread relative to front)
-    - Left-drag center: Translate
-    - Left-drag edges: Rotate in-plane (Rz)
-    - Right-drag: Tilt out-of-plane (Rx, Ry)
-    - Ctrl+S: Save correction
+Controls (matching MATLAB reference):
+- Scroll: Scale both layers uniformly (slow)
+- Left-drag center: Translate
+- Left-drag edges: In-plane rotation (Rz)
+- Right-drag: Tilt phantom (Rx, Ry) - shifts blue layer relative to red
 
 Based on: test_calibration.m MATLAB reference
 """
@@ -74,13 +52,12 @@ DEFAULT_LAYER_SEPARATION_MM = 200.0
 STANDARD_SIZE = 512
 SEARCH_WINDOW = 7
 
-# Default source-detector distance (controls perspective strength)
-# Larger = weaker perspective, smaller = stronger perspective
+# Perspective projection: source-detector distance
 DEFAULT_D1 = 2000.0
 
-# Scroll sensitivity
-PERSPECTIVE_SCROLL_STEP = 20.0  # Fine adjustment for d1
-SCALE_SCROLL_FACTOR = 1.02       # 2% per scroll step
+# Control sensitivity
+SCALE_SCROLL_FACTOR = 1.005   # Very slow: 0.5% per scroll step
+ROTATION_SENSITIVITY = 0.05   # Degrees per pixel of drag (very slow for right-drag)
 
 
 # ============================================================================
@@ -157,37 +134,18 @@ def create_3d_bead_grid(bead_spacing: float, layer_separation: float) -> np.ndar
     """
     Create 3D coordinates for 98 beads (2 layers x 49 beads).
     
-    CRITICAL: Both layers have IDENTICAL (x, y) positions in 3D space.
-    They differ ONLY in z coordinate:
-    - Front layer (indices 0-48): z = 0 (at detector plane)
-    - Back layer (indices 49-97): z = layer_separation (toward X-ray source)
-    
-    The (x, y) coordinates are RELATIVE TO THE OPTICAL AXIS (center = 0, 0).
-    
-    When projected with perspective:
-    - Center bead (i=3, j=3): x=0, y=0 → SAME position for both layers
-    - Edge beads: back layer spreads OUTWARD due to magnification
-    
-    Args:
-        bead_spacing: Distance between adjacent beads (in working units)
-        layer_separation: Distance between layers (in working units)
-        
-    Returns:
-        Array (98, 4) of [x, y, z, 1] homogeneous coordinates
-        where x, y are relative to optical axis (center = 0)
+    Both layers have IDENTICAL (x, y) positions relative to optical axis.
+    Center bead (i=3, j=3) is at (0, 0) - projects to same point for both layers.
     """
     coords = np.zeros((NUM_BEADS_TOTAL, 4))
     
     idx = 0
-    for k in range(2):  # k=0: front layer, k=1: back layer
+    for k in range(2):  # k=0: front, k=1: back
         for i in range(GRID_SIZE):
             for j in range(GRID_SIZE):
-                # (x, y) relative to optical axis
-                # i, j range 0-6, so (i-3) ranges from -3 to +3
-                x = (i - 3) * bead_spacing
+                x = (i - 3) * bead_spacing  # Relative to optical axis
                 y = (j - 3) * bead_spacing
-                z = k * layer_separation  # 0 for front, layer_separation for back
-                
+                z = k * layer_separation
                 coords[idx] = [x, y, z, 1]
                 idx += 1
     
@@ -197,43 +155,17 @@ def create_3d_bead_grid(bead_spacing: float, layer_separation: float) -> np.ndar
 def apply_perspective_projection(coords_3d: np.ndarray, d1: float, 
                                   image_center: float) -> np.ndarray:
     """
-    Project 3D coordinates to 2D using conical X-ray projection.
+    Project 3D to 2D using conical X-ray projection.
     
-    X-ray geometry:
-    - Point source at distance d1 from detector (along +z axis)
-    - Detector plane at z = 0
-    - Objects at z > 0 are between source and detector
-    
-    Magnification formula:
-        mag = d1 / (d1 - z)
-        
-    - At z = 0 (front layer): mag = 1.0 (no magnification)
-    - At z = d (back layer): mag = d1/(d1-d) > 1.0 (magnified outward)
-    
-    The magnification is applied to (x, y) coordinates that are
-    RELATIVE TO THE OPTICAL AXIS. This ensures:
-    - Center point (0, 0) maps to (0, 0) for ALL z values
-    - Points away from center spread outward proportionally to mag
-    
-    Args:
-        coords_3d: Nx4 array of [x, y, z, 1] where x, y are relative to optical axis
-        d1: Source-to-detector distance (controls perspective strength)
-        image_center: Pixel coordinate of image center
-        
-    Returns:
-        Nx2 array of [x, y] pixel coordinates in image
+    mag = d1 / (d1 - z)
+    - z=0 (front): mag = 1.0
+    - z=d (back): mag > 1.0, spreads outward from center
     """
     coords_2d = np.zeros((coords_3d.shape[0], 2))
     
     for i in range(coords_3d.shape[0]):
-        x = coords_3d[i, 0]  # Relative to optical axis
-        y = coords_3d[i, 1]  # Relative to optical axis
-        z = coords_3d[i, 2]
-        
-        # Perspective magnification
+        x, y, z = coords_3d[i, :3]
         mag = d1 / (d1 - z)
-        
-        # Apply magnification and translate to image coordinates
         coords_2d[i, 0] = x * mag + image_center
         coords_2d[i, 1] = y * mag + image_center
     
@@ -259,38 +191,24 @@ def transform_and_project(coords_3d: np.ndarray,
     """
     Apply pose transformation and perspective projection.
     
-    Process:
-    1. Apply 3D rotation around origin (optical axis)
+    1. Apply 3D rotation around optical axis (tilts shift back layer relative to front)
     2. Apply perspective projection
-    3. Apply 2D scale (around image center)
+    3. Apply 2D scale
     4. Apply 2D translation
-    
-    Args:
-        coords_3d: Nx4 homogeneous [x, y, z, 1], x/y relative to optical axis
-        tx, ty: Translation in image plane (pixels)
-        rx, ry, rz: Rotation angles (degrees)
-        scale: 2D scale factor applied after projection
-        d1: Source-detector distance for perspective
-        image_center: Image center coordinate
-        
-    Returns:
-        Nx2 array of final 2D pixel positions
     """
-    # Step 1: Apply 3D rotation around optical axis
+    # 3D rotation
     R = make_rotation_matrix(rx, ry, rz)
     xyz = coords_3d[:, :3].copy()
     xyz_rotated = (R @ xyz.T).T
     
-    # Step 2: Create homogeneous coords for projection
+    # Perspective projection
     coords_rotated = np.column_stack([xyz_rotated, np.ones(len(xyz_rotated))])
-    
-    # Step 3: Apply perspective projection
     coords_2d = apply_perspective_projection(coords_rotated, d1, image_center)
     
-    # Step 4: Apply 2D scale around image center
+    # 2D scale around center
     coords_2d = (coords_2d - image_center) * scale + image_center
     
-    # Step 5: Apply 2D translation
+    # 2D translation
     coords_2d[:, 0] += tx
     coords_2d[:, 1] += ty
     
@@ -302,16 +220,7 @@ def transform_and_project(coords_3d: np.ndarray,
 # ============================================================================
 
 def snap_to_beads(img: np.ndarray, gpx: np.ndarray, gpy: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """
-    Detect beads and snap grid positions to bead centers.
-    
-    Algorithm:
-    1. For each grid point, search window around expected position
-    2. Find local minima (beads appear dark)
-    3. Select nearest minimum to expected position
-    4. Refine with weighted centroid
-    5. Mark outliers as missing
-    """
+    """Detect beads and snap grid positions to bead centers."""
     n = len(gpx)
     bpx, bpy = np.zeros(n), np.zeros(n)
     minp = np.zeros(n)
@@ -323,18 +232,15 @@ def snap_to_beads(img: np.ndarray, gpx: np.ndarray, gpy: np.ndarray) -> Tuple[np
     for i in range(n):
         bx, by = int(round(gpx[i])), int(round(gpy[i]))
         
-        # Check bounds
         if bx < SEARCH_WINDOW+1 or bx >= S-SEARCH_WINDOW-1 or by < SEARCH_WINDOW+1 or by >= S-SEARCH_WINDOW-1:
             bpx[i], bpy[i], missing[i] = gpx[i], gpy[i], True
             continue
         
-        # Extract search window
         P = F[by-SEARCH_WINDOW:by+SEARCH_WINDOW+1, bx-SEARCH_WINDOW:bx+SEARCH_WINDOW+1]
         P_min, P_max = np.min(P), np.max(P)
         minp[i] = P_min
         threshold = P_min + 0.5 * (P_max - P_min)
         
-        # Find local minima
         min_list = []
         for u in range(1, 2*SEARCH_WINDOW):
             for v in range(1, 2*SEARCH_WINDOW):
@@ -343,14 +249,12 @@ def snap_to_beads(img: np.ndarray, gpx: np.ndarray, gpy: np.ndarray) -> Tuple[np
         
         if min_list:
             min_list = np.array(min_list)
-            # Find nearest to center
             dist = np.sqrt((min_list[:, 1] - SEARCH_WINDOW)**2 + (min_list[:, 0] - SEARCH_WINDOW)**2)
             idx = np.argmin(dist)
             yo, xo = min_list[idx]
             
             bead_y, bead_x = by - SEARCH_WINDOW + yo, bx - SEARCH_WINDOW + xo
             
-            # Sub-pixel refinement with weighted centroid
             if 1 <= bead_y < S-1 and 1 <= bead_x < S-1:
                 vals = F[bead_y-1:bead_y+2, bead_x-1:bead_x+2].astype(np.float64)
                 weights = -(vals.max() - vals)
@@ -366,7 +270,7 @@ def snap_to_beads(img: np.ndarray, gpx: np.ndarray, gpy: np.ndarray) -> Tuple[np
         else:
             bpx[i], bpy[i], missing[i] = gpx[i], gpy[i], True
     
-    # Outlier detection using back layer statistics
+    # Outlier detection
     back_minp = minp[NUM_BEADS_PER_LAYER:][~missing[NUM_BEADS_PER_LAYER:]]
     if len(back_minp) > 5:
         med, std = np.median(back_minp), np.std(back_minp) + 1e-10
@@ -384,12 +288,7 @@ def snap_to_beads(img: np.ndarray, gpx: np.ndarray, gpy: np.ndarray) -> Tuple[np
 def fit_polynomial_correction(gpx: np.ndarray, gpy: np.ndarray,
                                bpx: np.ndarray, bpy: np.ndarray,
                                missing: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
-    """
-    Fit 4-term polynomial distortion correction (stage 1).
-    
-    X: [x, x³, x·y², x³·y²]
-    Y: [y, y³, y·x², y³·x²]
-    """
+    """Fit 4-term polynomial distortion correction."""
     S = STANDARD_SIZE
     ind = np.where(~missing)[0]
     
@@ -436,9 +335,7 @@ def apply_correction(img: np.ndarray, adj_x: np.ndarray, adj_y: np.ndarray) -> n
 # ============================================================================
 
 class Calibration(QWidget):
-    """
-    Two-layer fluoroscopy calibration interface.
-    """
+    """Two-layer fluoroscopy calibration interface."""
     
     def __init__(self):
         super().__init__()
@@ -456,9 +353,9 @@ class Calibration(QWidget):
         self.ui.VTK_display.setDragMode(QGraphicsView.DragMode.NoDrag)
         self.ui.VTK_display.setMouseTracking(True)
         
-        # Calibration parameters
+        # Parameters
         self.layer_separation_mm = DEFAULT_LAYER_SEPARATION_MM
-        self.d1 = DEFAULT_D1  # Source-detector distance (perspective)
+        self.d1 = DEFAULT_D1
         
         # State
         self.img_original: Optional[np.ndarray] = None
@@ -481,7 +378,7 @@ class Calibration(QWidget):
         # Pose parameters
         self.tx, self.ty = 0.0, 0.0
         self.rx, self.ry, self.rz = 0.0, 0.0, 0.0
-        self.scale = 1.5  # Initial scale
+        self.scale = 1.5
         
         # Correction
         self.ax, self.ay = None, None
@@ -537,6 +434,7 @@ class Calibration(QWidget):
         
         mx, my = self.grid_center
         if self.mouse_button == Qt.RightButton:
+            # Right-drag: tilt phantom (shifts blue layer relative to red)
             self.interaction_mode = 'out_rotation'
         elif abs(pos.x() - mx) < 50 and abs(pos.y() - my) < 50:
             self.interaction_mode = 'translation'
@@ -564,9 +462,11 @@ class Calibration(QWidget):
             self.rz += np.degrees(angle_curr - angle_prev)
             
         elif self.interaction_mode == 'out_rotation':
-            # Intuitive: drag up = tilt top toward viewer
-            self.rx += (y - py) / 5.0
-            self.ry += (px - x) / 5.0
+            # Right-drag: VERY SLOW tilt to shift blue layer
+            # Drag right → blue shifts right (positive Ry)
+            # Drag up → blue shifts up (negative Rx, since Y is inverted in image coords)
+            self.ry += (x - px) * ROTATION_SENSITIVITY
+            self.rx -= (y - py) * ROTATION_SENSITIVITY
         
         self.mouse_prev = (x, y)
         self._update_grid()
@@ -578,36 +478,18 @@ class Calibration(QWidget):
         return True
     
     def _on_wheel(self, event) -> bool:
-        """
-        Scroll controls:
-        - Shift+scroll: SCALE (both layers uniformly) - match front layer size
-        - Regular scroll: PERSPECTIVE (d1) - match back layer spread
-        """
+        """Scroll: Scale both layers uniformly (slow)."""
         if self.gpx is None:
             return False
         
         delta = event.angleDelta().y()
-        mods = event.modifiers()
         
-        if mods & Qt.ShiftModifier:
-            # SCALE: adjust overall size (both layers equally)
-            if delta > 0:
-                self.scale *= SCALE_SCROLL_FACTOR
-            else:
-                self.scale /= SCALE_SCROLL_FACTOR
-            self.scale = np.clip(self.scale, 0.1, 20.0)
+        if delta > 0:
+            self.scale *= SCALE_SCROLL_FACTOR
         else:
-            # PERSPECTIVE: adjust d1 (back layer spread)
-            # Scroll up = increase d1 = weaker perspective = back layer shrinks toward front
-            # Scroll down = decrease d1 = stronger perspective = back layer spreads more
-            if delta > 0:
-                self.d1 += PERSPECTIVE_SCROLL_STEP
-            else:
-                self.d1 -= PERSPECTIVE_SCROLL_STEP
-            
-            # Clamp: d1 must be > layer_separation
-            min_d1 = self.layer_separation_mm * 1.2
-            self.d1 = max(self.d1, min_d1)
+            self.scale /= SCALE_SCROLL_FACTOR
+        
+        self.scale = np.clip(self.scale, 0.1, 20.0)
         
         self._update_grid()
         self._draw_overlay()
@@ -634,7 +516,6 @@ class Calibration(QWidget):
         self.gpx = projected[:, 0]
         self.gpy = projected[:, 1]
         
-        # Update grid center (front layer mean)
         self.grid_center = (np.mean(self.gpx[:NUM_BEADS_PER_LAYER]), 
                            np.mean(self.gpy[:NUM_BEADS_PER_LAYER]))
     
@@ -663,6 +544,9 @@ class Calibration(QWidget):
         self._reset_state()
         self._display_image(self.img_display)
         self.grid_loaded = True
+        
+        QMessageBox.information(self, "Loaded", 
+            f"Calibration image loaded ({STANDARD_SIZE}x{STANDARD_SIZE}).")
     
     def invert_colors(self):
         """Toggle image inversion."""
@@ -682,15 +566,13 @@ class Calibration(QWidget):
         
         sep, ok = QInputDialog.getDouble(
             self, "Layer Separation",
-            "Enter physical separation between bead layers (mm):",
+            "Physical separation between layers (mm):",
             self.layer_separation_mm, 10, 500, 1
         )
         if not ok:
             return
         self.layer_separation_mm = sep
         
-        # Create 3D grid
-        # Use bead spacing as working unit
         self.coords_3d = create_3d_bead_grid(BEAD_SPACING_MM, self.layer_separation_mm)
         
         # Reset pose
@@ -701,24 +583,6 @@ class Calibration(QWidget):
         
         self._update_grid()
         self._draw_overlay()
-        
-        QMessageBox.information(
-            self, "Grid Overlaid",
-            f"Two-layer grid (separation = {sep:.0f}mm):\n"
-            f"  • Front (RED): 49 beads, z=0\n"
-            f"  • Back (BLUE): 49 beads, z={sep:.0f}mm\n\n"
-            "Controls:\n"
-            "  • Shift+Scroll: Scale (match RED layer size)\n"
-            "  • Scroll: Perspective (match BLUE layer spread)\n"
-            "  • Left-drag center: Translate\n"
-            "  • Left-drag edge: Rotate in-plane\n"
-            "  • Right-drag: Tilt out-of-plane\n\n"
-            "Steps:\n"
-            "1. Shift+scroll to match RED layer size to beads\n"
-            "2. Scroll to match BLUE layer spread\n"
-            "3. Fine-tune rotation/translation\n"
-            "4. Click 'Snap to Beads'"
-        )
     
     def snap_to_beads(self):
         """Detect beads and snap grid."""
@@ -729,25 +593,19 @@ class Calibration(QWidget):
         self.bpx, self.bpy, self.missing = snap_to_beads(self.img_display, self.gpx, self.gpy)
         self.bpx0, self.bpy0 = self.bpx.copy(), self.bpy.copy()
         
-        # Show snapped positions
         self.gpx, self.gpy = self.bpx.copy(), self.bpy.copy()
         self._draw_overlay()
         
         front_ok = np.sum(~self.missing[:NUM_BEADS_PER_LAYER])
         back_ok = np.sum(~self.missing[NUM_BEADS_PER_LAYER:])
         
-        QMessageBox.information(
-            self, "Snap Complete",
-            f"Detected beads:\n"
-            f"  • Front (RED): {front_ok}/{NUM_BEADS_PER_LAYER}\n"
-            f"  • Back (BLUE): {back_ok}/{NUM_BEADS_PER_LAYER}\n\n"
-            "Click 'Correct Distortion' to apply correction."
-        )
+        QMessageBox.information(self, "Snap Complete",
+            f"Front (RED): {front_ok}/49\nBack (BLUE): {back_ok}/49")
     
     def correct_distortion(self):
         """Compute and apply distortion correction."""
         if self.bpx0 is None:
-            QMessageBox.information(self, "Not Snapped", "Snap grid to beads first.")
+            QMessageBox.information(self, "Not Snapped", "Snap to beads first.")
             return
         
         try:
@@ -759,15 +617,11 @@ class Calibration(QWidget):
             self.img_display = apply_correction(self.img_display, self.adj_x, self.adj_y)
             self._display_image(self.img_display)
             
-            # Reset grid to ideal
             self._update_grid()
             self._draw_overlay()
             
-            QMessageBox.information(
-                self, "Correction Applied",
-                "Distortion correction applied.\n"
-                "Press Ctrl+S to save parameters."
-            )
+            QMessageBox.information(self, "Done", 
+                "Distortion corrected.\nPress Ctrl+S to save.")
         except Exception as e:
             import traceback
             traceback.print_exc()
@@ -832,13 +686,12 @@ class Calibration(QWidget):
         
         r = 4
         for i in range(NUM_BEADS_TOTAL):
-            # RED for front (0-48), BLUE for back (49-97)
             color = QColor(255, 60, 60) if i < NUM_BEADS_PER_LAYER else QColor(60, 60, 255)
             if self.missing is not None and self.missing[i]:
                 color.setAlpha(80)
             
             item = QGraphicsEllipseItem(QRectF(self.gpx[i]-r, self.gpy[i]-r, 2*r, 2*r))
-            item.setPen(QPen(color, 2))
+            item.setPen(QPen(color, 1))
             item.setBrush(QBrush(Qt.BrushStyle.NoBrush))
             self.scene.addItem(item)
             self.overlay_items.append(item)

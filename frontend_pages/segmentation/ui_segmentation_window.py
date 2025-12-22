@@ -191,22 +191,6 @@ class Ui_Form(object):
         self.editing_buttons_layout.setSpacing(10)
         self.editing_buttons_layout.setContentsMargins(0, 0, 0, 0)
 
-        # Save Edits Button
-        self.save_edits_btn = QPushButton(self.editing_buttons_widget)
-        self.save_edits_btn.setObjectName(u"save_edits_btn")
-        self.save_edits_btn.setMinimumSize(QSize(0, 40))
-        self.save_edits_btn.setStyleSheet(u"QPushButton {\n"
-"background-color: rgb(255, 215, 0);\n"
-"font: 600 12pt \"Segoe UI\";\n"
-"border-radius: 10px;}\n"
-"\n"
-"QPushButton:hover {\n"
-"background-color: rgb(255, 230, 50);\n"
-"font-size: 14pt;\n"
-"}\n"
-"")
-        self.editing_buttons_layout.addWidget(self.save_edits_btn)
-
         # Proceed to Calibration Button
         self.proceed_calibration_btn = QPushButton(self.editing_buttons_widget)
         self.proceed_calibration_btn.setObjectName(u"proceed_calibration_btn")
@@ -335,5 +319,4 @@ class Ui_Form(object):
 
         </body></html>""", None))
         self.segment_btn.setText(QCoreApplication.translate("Form", u"Segment CT", None))
-        self.save_edits_btn.setText(QCoreApplication.translate("Form", u"Save Edits", None))
         self.proceed_calibration_btn.setText(QCoreApplication.translate("Form", u"Proceed to Calibration", None))
