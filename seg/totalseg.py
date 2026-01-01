@@ -24,7 +24,7 @@ def _initialize_path():
         os.environ['PATH'] = scripts_path + os.pathsep + current_path
 
 # Initialize path immediately when module is imported 
-_initialize_path
+_initialize_path()
 
 total = ["sacrum", "humerus_left", "humerus_right", "scapula_left", "scapula_right",
          "clavicula_left", "clavicula_right", "femur_left", "femur_right",
