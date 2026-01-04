@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+<<<<<<< HEAD
 import json, pickle
+=======
+import json
+>>>>>>> 3aa9fe31cfbdf833b5a0ad7e28c37b1d9e09ccbf
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any
@@ -232,7 +236,11 @@ class RawState(DataState):
             from seg.totalseg import run_complete_segmentation
             
             # Validate custom ROI
+<<<<<<< HEAD
             if not arg or len(arg) == 0 or not isinstance(arg, list):
+=======
+            if not arg or len(arg) == 0:
+>>>>>>> 3aa9fe31cfbdf833b5a0ad7e28c37b1d9e09ccbf
                 print("RawState: Custom ROI is empty - segmentation cannot proceed")
                 return False
             
@@ -358,6 +366,7 @@ class RawState(DataState):
 class SegmentState(DataState):
 
     def handle_process(self, arg: Any = None) -> bool:
+<<<<<<< HEAD
 
         patient_instance = self.context._singleton_data._patient
         path = ""
@@ -375,6 +384,9 @@ class SegmentState(DataState):
         with open(path, 'wb') as f:
             pickle.dump([arg[1], arg[2]], f)
         
+=======
+        print("SegmentState: Already segmented - no additional processing needed")
+>>>>>>> 3aa9fe31cfbdf833b5a0ad7e28c37b1d9e09ccbf
         self.context.transition_to(CalibrationState())
         return True
  
@@ -404,6 +416,10 @@ class SegmentState(DataState):
             print(f"Error saving masks: {e}")
             arg.show_error(f"Error saving masks: {e}")
             return False
+<<<<<<< HEAD
+=======
+        print("SegmentState wants to change the state of the context.")
+>>>>>>> 3aa9fe31cfbdf833b5a0ad7e28c37b1d9e09ccbf
 
     def handle_to_string(self) -> str:
         return "SegmentState"
