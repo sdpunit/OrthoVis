@@ -218,11 +218,10 @@ class HomePage(QWidget):
             index = 2
         
 
-        
-        # elif state == "CalibrationState":
-        #     page = main_window.segmentation
-        #     page_name = "segmentation"
-        #     index = 2
+        elif state == "CalibrationState":
+            page = main_window.calibration
+            page_name = "Calibration"
+            index = 5
         
 
         if hasattr(main_window, page_name) and isinstance(state, SegmentState):

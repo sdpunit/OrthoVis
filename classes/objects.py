@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import json
+import json, pickle
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any
@@ -232,7 +232,7 @@ class RawState(DataState):
             from seg.totalseg import run_complete_segmentation
             
             # Validate custom ROI
-            if not arg or len(arg) == 0:
+            if not arg or len(arg) == 0 or not isinstance(arg, list):
                 print("RawState: Custom ROI is empty - segmentation cannot proceed")
                 return False
             
@@ -358,7 +358,23 @@ class RawState(DataState):
 class SegmentState(DataState):
 
     def handle_process(self, arg: Any = None) -> bool:
-        print("SegmentState: Already segmented - no additional processing needed")
+
+        patient_instance = self.context._singleton_data._patient
+        path = ""
+        if patient_instance.name:
+            from pathlib import Path
+            proj = Path(__file__).resolve().parent.parent.parent / "Projects" / patient_instance.name
+            if proj.exists():
+                path = str(proj / "fluoro_correction_parameters.pkl")
+        
+        if not path:
+            path = arg[0]
+            if not arg[0]:
+                return False
+        
+        with open(path, 'wb') as f:
+            pickle.dump([arg[1], arg[2]], f)
+        
         self.context.transition_to(CalibrationState())
         return True
  
@@ -388,7 +404,6 @@ class SegmentState(DataState):
             print(f"Error saving masks: {e}")
             arg.show_error(f"Error saving masks: {e}")
             return False
-        print("SegmentState wants to change the state of the context.")
 
     def handle_to_string(self) -> str:
         return "SegmentState"

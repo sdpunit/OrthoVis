@@ -35,7 +35,7 @@ from PySide6.QtWidgets import (
 )
 
 from frontend_pages.calibration.ui_calibration_window import Ui_Form
-from classes.objects import SingletonPatient
+from classes.objects import SingletonPatient, Context
 
 
 # ============================================================================
@@ -632,24 +632,19 @@ class Calibration(QWidget):
         if self.adj_x is None:
             QMessageBox.information(self, "Nothing to Save", "Run correction first.")
             return
-        
+
+        path, _ = QFileDialog.getSaveFileName(self, "Save", "fluoro_correction.pkl", "Pickle (*.pkl)")
+
+        # Create context and set to SegmentState
         singleton = SingletonPatient.get_instance()
-        path = ""
-        if singleton.patient.name:
-            from pathlib import Path
-            proj = Path(__file__).resolve().parent.parent.parent / "Projects" / singleton.patient.name
-            if proj.exists():
-                path = str(proj / "fluoro_correction_parameters.pkl")
-        
-        if not path:
-            path, _ = QFileDialog.getSaveFileName(self, "Save", "fluoro_correction.pkl", "Pickle (*.pkl)")
-            if not path:
-                return
-        
-        with open(path, 'wb') as f:
-            pickle.dump([self.adj_x, self.adj_y], f)
-        
-        QMessageBox.information(self, "Saved", f"Saved to:\n{os.path.basename(path)}")
+        context = Context(singleton._state, singleton)
+        completed = context.request_process((path, self.adj_x, self.adj_y))
+
+        if completed:
+            QMessageBox.information(self, "Saved", f"Saved to:\n{os.path.basename(path)}")
+
+        else:
+            QMessageBox.information(self, "Unable to process request", "Please try again")
     
     # =========================================================================
     # Visualization
