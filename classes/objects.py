@@ -232,7 +232,7 @@ class RawState(DataState):
             from seg.totalseg import run_complete_segmentation
             
             # Validate custom ROI
-            if not arg or len(arg) == 0 or not isinstance(arg, list):
+            if not arg or len(arg[0]) == 0:
                 print("RawState: Custom ROI is empty - segmentation cannot proceed")
                 return False
             
@@ -246,9 +246,9 @@ class RawState(DataState):
             
             print(f"RawState: Running segmentation on {ct_dir}")
             print(f"RawState: Output directory {seg_dir}")
-            print(f"RawState: Custom ROI: {arg}")
+            print(f"RawState: Custom ROI: {arg[0]}")
             
-            success = run_complete_segmentation(ct_dir, seg_dir, arg)
+            success = run_complete_segmentation(ct_dir, seg_dir, arg[0], arg[1], arg[2])
             
             if success:
                 print("RawState: Segmentation completed successfully")

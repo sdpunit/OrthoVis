@@ -73,7 +73,7 @@ def setup_totalsegmentator():
     raise RuntimeError("TotalSegmentator not found. Install with: pip install TotalSegmentator ")
     
 
-def run_totalseg(ct_dir: str, seg_dir: str, custom_roi: list): 
+def run_totalseg(ct_dir: str, seg_dir: str, custom_roi: list, status_cb = None, progress_cb = None): 
     """
     Run TotalSegmentator on CT directory, outputting masks to separate seg_dir.
     Original CT files are never modified.
@@ -82,6 +82,8 @@ def run_totalseg(ct_dir: str, seg_dir: str, custom_roi: list):
         ct_dir: Path to CT directory (DICOM files) - READ ONLY
         seg_dir: Output directory for segmentation masks - WRITE ONLY
         custom_roi: List of bones to segment (REQUIRED - cannot be None or empty)
+        status_cb: The callback to show the status
+        progress_cb: The callback to show the progress
     """
     # Validate custom ROI input
     if not custom_roi or len(custom_roi) == 0:
@@ -99,6 +101,9 @@ def run_totalseg(ct_dir: str, seg_dir: str, custom_roi: list):
     print(f"Reading CT from: {ct_dir} (READ ONLY)")
     print(f"Writing masks to: {seg_dir} (WRITE ONLY)")
     print(f"Custom ROI bones: {bones_to_segment}")
+
+    if progress_cb:
+        progress_cb(5)
     
     # Setup TotalSegmentator command
     ts_command = setup_totalsegmentator()
@@ -106,6 +111,9 @@ def run_totalseg(ct_dir: str, seg_dir: str, custom_roi: list):
     # Determine which tasks need to be run based on custom ROI
     needs_total = any(bone in total for bone in bones_to_segment)
     needs_appendicular = any(bone in appendicular for bone in bones_to_segment)
+
+    if progress_cb:
+        progress_cb(15)
     
     print(f"Tasks needed - Total: {needs_total}, Appendicular: {needs_appendicular}")
     
@@ -114,11 +122,17 @@ def run_totalseg(ct_dir: str, seg_dir: str, custom_roi: list):
         command_total = ts_command + ['-i', ct_dir, '-o', seg_dir, '--ta', 'total']
         print("Running TotalSegmentator (total)...")
         print(f"Command: {' '.join(command_total)}")
+
+        if progress_cb:
+            progress_cb(30)
         
         # Run without capturing output to show terminal messages
         process = subprocess.Popen(command_total, stdout=None, stderr=None)
         process.wait()
         
+        if progress_cb:
+            progress_cb(40)
+
         if process.returncode != 0:
             print(f"Warning: TotalSegmentator (total) returned code {process.returncode}")
     
@@ -130,6 +144,9 @@ def run_totalseg(ct_dir: str, seg_dir: str, custom_roi: list):
         # Run without capturing output to show terminal messages
         process = subprocess.Popen(command_appendicular, stdout=None, stderr=None)
         process.wait()
+
+        if progress_cb:
+            progress_cb(45)
         
         if process.returncode != 0:
             print(f"Warning: TotalSegmentator (appendicular_bones) returned code {process.returncode}")
@@ -137,6 +154,9 @@ def run_totalseg(ct_dir: str, seg_dir: str, custom_roi: list):
     # Clean up unwanted masks - keep only the ones in custom ROI
     print("Cleaning up unwanted masks...")
     rois_to_keep = {f'{bone}.nii.gz' for bone in bones_to_segment}
+
+    if progress_cb:
+        progress_cb(50)
     
     for f in os.listdir(seg_dir):
         if f not in rois_to_keep:
@@ -148,6 +168,8 @@ def run_totalseg(ct_dir: str, seg_dir: str, custom_roi: list):
                 shutil.rmtree(file_path)
                 print(f"Removed unwanted directory: {f}")
     
+    if progress_cb:
+        progress_cb(60)
     # Verify original CT directory is untouched
     if not os.path.exists(ct_dir):
         raise Exception(f"CRITICAL ERROR: Original CT directory was deleted! {ct_dir}")
@@ -271,7 +293,7 @@ def refine_mask_adaptive_otsu(mask_path: str, ct_path: str, output_path: str,
     print(f"Hybrid Otsu-adaptive refined mask saved to: {output_path}")
 
 
-def run_complete_segmentation(ct_dir: str, seg_dir: str, custom_roi: list = None):
+def run_complete_segmentation(ct_dir: str, seg_dir: str, custom_roi: list = None, status_cb = None, progress_cb = None):
     """
     Complete segmentation pipeline: TotalSegmentator + Otsu refinement
     Original CT directory is never modified - only read from.
@@ -280,12 +302,16 @@ def run_complete_segmentation(ct_dir: str, seg_dir: str, custom_roi: list = None
         ct_dir: Path to CT directory (READ ONLY)
         seg_dir: Output directory for refined masks (WRITE ONLY)
         custom_roi: List of bones to segment (REQUIRED - if None, will raise error)
+        status_cb: The callback to show the status
+        progress_cb: The callback to show the progress
         
     Returns:
         bool: True if successful, False otherwise
     """
     try:
         print(f"Segmentation pipeline: {ct_dir} (READ) -> {seg_dir} (WRITE)")
+
+        total = len(custom_roi)
         
         # Verify original CT exists before starting
         if not os.path.exists(ct_dir):
@@ -293,18 +319,31 @@ def run_complete_segmentation(ct_dir: str, seg_dir: str, custom_roi: list = None
             return False
         
         # Validate custom ROI input (required now since we removed default roi)
-        if not custom_roi or len(custom_roi) == 0:
+        if not custom_roi or total == 0:
             print("ERROR: Custom ROI cannot be empty. Please select at least one bone to segment.")
             return False
             
         print(f"Custom ROI: {custom_roi}")
+
+        if status_cb:
+            status_cb("Running TotalSegmentator…")
+
+        if progress_cb:
+            progress_cb(0)
+
         
         # Step 1: Run TotalSegmentator (only reads from ct_dir) with custom ROI
-        run_totalseg(ct_dir, seg_dir, custom_roi)
+        run_totalseg(ct_dir, seg_dir, custom_roi, status_cb, progress_cb)
+
+        if progress_cb:
+            progress_cb(90)
         
         # Step 2: Apply Otsu refinement (only works in seg_dir)
         print("Applying Otsu refinement...")
-        for mask_name in custom_roi:  # Use custom_roi instead of the removed roi variable
+        for i, mask_name in enumerate(custom_roi):  # Use custom_roi instead of the removed roi variable
+            if status_cb:
+                status_cb(f"Refining {mask_name} ({i+1}/{total})")
+
             original_mask = os.path.join(seg_dir, f"{mask_name}.nii.gz")
             refined_mask = os.path.join(seg_dir, f"{mask_name}_otsu.nii.gz")
             
@@ -314,10 +353,17 @@ def run_complete_segmentation(ct_dir: str, seg_dir: str, custom_roi: list = None
                 # Remove only the original mask in seg_dir
                 os.remove(original_mask)
         
+            if progress_cb:
+                stage_progress = 70 + int((i + 1) / total * 30)
+                progress_cb(stage_progress)
+
         # Final verification that original CT is untouched
         if not os.path.exists(ct_dir):
             raise Exception(f"Critical: Original CT directory was deleted: {ct_dir}")
         
+        if progress_cb:
+            progress_cb(100)
+
         print("Segmentation completed!")
         return True
         

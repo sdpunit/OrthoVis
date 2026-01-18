@@ -9,11 +9,14 @@ from seg.embedding import create_vtk_pipeline, add_masks_to_pipeline, update_int
 from seg.totalseg import load_ct, get_all_available_bones
 from classes.objects import SingletonPatient, Context
 from classes.utils import ProgressDialogMixin
+
 import os
 
 
 class SegmentationWorker(QThread):
     """Worker thread for running segmentation"""
+    progress = Signal(object)
+    status = Signal(str)
     finished = Signal(bool)
     
     def __init__(self, context, custom_roi):
@@ -22,8 +25,8 @@ class SegmentationWorker(QThread):
         self.custom_roi = custom_roi
     
     def run(self):
-        # Pass custom ROI to the context for processing
-        success = self.context.request_process(self.custom_roi)
+        params = (self.custom_roi, self.status.emit, self.progress.emit)
+        success = self.context.request_process(params)
         self.finished.emit(success)
 
 
@@ -599,8 +602,13 @@ class Segmentation(QWidget, ProgressDialogMixin):
         
         # Start segmentation worker with custom ROI
         self.segmentation_worker = SegmentationWorker(self.context, self.selected_roi)
+        self.segmentation_worker.progress.connect(self.update_progress)
+        self.segmentation_worker.status.connect(self.update_status)
+
         self.segmentation_worker.finished.connect(self.on_segmentation_finished)
         self.segmentation_worker.start()
+
+
 
     def on_segmentation_finished(self, success):
         """Handle segmentation completion"""

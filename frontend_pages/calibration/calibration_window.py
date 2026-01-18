@@ -637,7 +637,7 @@ class Calibration(QWidget):
 
         # Create context and set to SegmentState
         singleton = SingletonPatient.get_instance()
-        context = Context(singleton._state, singleton)
+        context = singleton._state.context
         completed = context.request_process((path, self.adj_x, self.adj_y))
 
         if completed:
