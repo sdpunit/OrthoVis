@@ -53,7 +53,7 @@ STANDARD_SIZE = 512
 SEARCH_WINDOW = 7
 
 # Perspective projection: source-detector distance
-DEFAULT_D1 = 2000.0
+DEFAULT_D1 = 1200.0
 
 # Control sensitivity
 SCALE_SCROLL_FACTOR = 1.005   # Very slow: 0.5% per scroll step
@@ -145,7 +145,9 @@ def create_3d_bead_grid(bead_spacing: float, layer_separation: float) -> np.ndar
             for j in range(GRID_SIZE):
                 x = (i - 3) * bead_spacing  # Relative to optical axis
                 y = (j - 3) * bead_spacing
-                z = k * layer_separation
+
+                z = (1 - k) * layer_separation
+
                 coords[idx] = [x, y, z, 1]
                 idx += 1
     
@@ -378,7 +380,7 @@ class Calibration(QWidget):
         # Pose parameters
         self.tx, self.ty = 0.0, 0.0
         self.rx, self.ry, self.rz = 0.0, 0.0, 0.0
-        self.scale = 1.5
+        self.scale = 1.0
         
         # Correction
         self.ax, self.ay = None, None
@@ -490,6 +492,13 @@ class Calibration(QWidget):
             self.scale /= SCALE_SCROLL_FACTOR
         
         self.scale = np.clip(self.scale, 0.1, 20.0)
+
+        # if delta > 0:
+        #     self.d1 *= SCALE_SCROLL_FACTOR
+        # else:
+        #     self.d1 /= SCALE_SCROLL_FACTOR
+
+        # self.d1 = np.clip(self.d1, 500.0, 3000.0)
         
         self._update_grid()
         self._draw_overlay()
@@ -578,7 +587,7 @@ class Calibration(QWidget):
         # Reset pose
         self.tx, self.ty = 0.0, 0.0
         self.rx, self.ry, self.rz = 0.0, 0.0, 0.0
-        self.scale = 1.5
+        self.scale = 1.0
         self.d1 = DEFAULT_D1
         
         self._update_grid()
@@ -658,7 +667,7 @@ class Calibration(QWidget):
         self.missing = None
         self.tx = self.ty = 0.0
         self.rx = self.ry = self.rz = 0.0
-        self.scale = 1.5
+        self.scale = 1.0
         self.d1 = DEFAULT_D1
         self.ax = self.ay = None
         self.adj_x = self.adj_y = None
