@@ -55,6 +55,9 @@ SEARCH_WINDOW = 7
 # Perspective projection: source-detector distance
 DEFAULT_D1 = 1200.0
 
+# Source-knee distance
+DEFAULT_D2 = 960.0
+
 # Control sensitivity
 SCALE_SCROLL_FACTOR = 1.005   # Very slow: 0.5% per scroll step
 ROTATION_SENSITIVITY = 0.05   # Degrees per pixel of drag (very slow for right-drag)
@@ -146,7 +149,7 @@ def create_3d_bead_grid(bead_spacing: float, layer_separation: float) -> np.ndar
                 x = (i - 3) * bead_spacing  # Relative to optical axis
                 y = (j - 3) * bead_spacing
 
-                z = (1 - k) * layer_separation
+                z = k * layer_separation
 
                 coords[idx] = [x, y, z, 1]
                 idx += 1
@@ -154,7 +157,7 @@ def create_3d_bead_grid(bead_spacing: float, layer_separation: float) -> np.ndar
     return coords
 
 
-def apply_perspective_projection(coords_3d: np.ndarray, d1: float, 
+def apply_perspective_projection(coords_3d: np.ndarray, d1: float, d2: float,
                                   image_center: float) -> np.ndarray:
     """
     Project 3D to 2D using conical X-ray projection.
@@ -167,7 +170,7 @@ def apply_perspective_projection(coords_3d: np.ndarray, d1: float,
     
     for i in range(coords_3d.shape[0]):
         x, y, z = coords_3d[i, :3]
-        mag = d1 / (d1 - z)
+        mag = d1 / (d2 + z)
         coords_2d[i, 0] = x * mag + image_center
         coords_2d[i, 1] = y * mag + image_center
     
@@ -188,7 +191,7 @@ def make_rotation_matrix(rx_deg: float, ry_deg: float, rz_deg: float) -> np.ndar
 def transform_and_project(coords_3d: np.ndarray, 
                           tx: float, ty: float,
                           rx: float, ry: float, rz: float,
-                          scale: float, d1: float,
+                          scale: float, d1: float, d2: float,
                           image_center: float) -> np.ndarray:
     """
     Apply pose transformation and perspective projection.
@@ -205,7 +208,7 @@ def transform_and_project(coords_3d: np.ndarray,
     
     # Perspective projection
     coords_rotated = np.column_stack([xyz_rotated, np.ones(len(xyz_rotated))])
-    coords_2d = apply_perspective_projection(coords_rotated, d1, image_center)
+    coords_2d = apply_perspective_projection(coords_rotated, d1, d2, image_center)
     
     # 2D scale around center
     coords_2d = (coords_2d - image_center) * scale + image_center
@@ -358,6 +361,7 @@ class Calibration(QWidget):
         # Parameters
         self.layer_separation_mm = DEFAULT_LAYER_SEPARATION_MM
         self.d1 = DEFAULT_D1
+        self.d2 = DEFAULT_D2
         
         # State
         self.img_original: Optional[np.ndarray] = None
@@ -518,7 +522,7 @@ class Calibration(QWidget):
             self.coords_3d,
             self.tx, self.ty,
             self.rx, self.ry, self.rz,
-            self.scale, self.d1,
+            self.scale, self.d1, self.d2,
             center
         )
         
@@ -669,6 +673,7 @@ class Calibration(QWidget):
         self.rx = self.ry = self.rz = 0.0
         self.scale = 1.0
         self.d1 = DEFAULT_D1
+        self.d2 = DEFAULT_D2
         self.ax = self.ay = None
         self.adj_x = self.adj_y = None
         self.overlay_items.clear()
