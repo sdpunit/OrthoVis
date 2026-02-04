@@ -31,7 +31,7 @@ from PySide6.QtCore import Qt, QRectF
 from PySide6.QtGui import QImage, QPixmap, QPen, QBrush, QColor, QAction
 from PySide6.QtWidgets import (
     QWidget, QFileDialog, QGraphicsScene, QGraphicsPixmapItem, 
-    QGraphicsEllipseItem, QMessageBox, QGraphicsView, QInputDialog
+    QGraphicsEllipseItem, QMessageBox, QGraphicsView, QDialog, QFormLayout, QDoubleSpinBox, QDialogButtonBox
 )
 
 from frontend_pages.calibration.ui_calibration_window import Ui_Form
@@ -577,14 +577,53 @@ class Calibration(QWidget):
             QMessageBox.information(self, "No Image", "Load calibration grid first.")
             return
         
-        sep, ok = QInputDialog.getDouble(
-            self, "Layer Separation",
-            "Physical separation between layers (mm):",
-            self.layer_separation_mm, 10, 500, 1
+        # sep, ok = QInputDialog.getDouble(
+        #     self, "Layer Separation",
+        #     "Physical separation between layers (mm):",
+        #     self.layer_separation_mm, 10, 500, 1
+        # )
+        # if not ok:
+        #     return
+
+        dlg = QDialog(self)
+        dlg.setWindowTitle("Calibration Parameters")
+
+        layout = QFormLayout(dlg)
+
+        sep_spin = QDoubleSpinBox()
+        sep_spin.setRange(10, 500)
+        sep_spin.setDecimals(1)
+        sep_spin.setValue(self.layer_separation_mm)
+
+        d1_spin = QDoubleSpinBox()
+        d1_spin.setRange(0, 10000)
+        d1_spin.setDecimals(1)
+        d1_spin.setValue(self.d1)
+
+        d2_spin = QDoubleSpinBox()
+        d2_spin.setRange(0, 10000)
+        d2_spin.setDecimals(1)
+        d2_spin.setValue(self.d2)
+
+        layout.addRow("Layer separation (mm):", sep_spin)
+        layout.addRow("Source to II (mm):", d1_spin)
+        layout.addRow("Source to knee (mm):", d2_spin)
+
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.Ok | QDialogButtonBox.Cancel
         )
-        if not ok:
+        buttons.accepted.connect(dlg.accept)
+        buttons.rejected.connect(dlg.reject)
+
+        layout.addWidget(buttons)
+        # --- end dialog ---
+
+        if not dlg.exec():
             return
-        self.layer_separation_mm = sep
+
+        self.layer_separation_mm = sep_spin.value()
+        self.d1 = d1_spin.value()
+        self.d2 = d2_spin.value()
         
         self.coords_3d = create_3d_bead_grid(BEAD_SPACING_MM, self.layer_separation_mm)
         
