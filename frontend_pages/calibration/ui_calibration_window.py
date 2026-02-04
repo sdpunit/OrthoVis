@@ -157,6 +157,17 @@ font-size: 12pt;
 
         self.verticalLayout_2.addWidget(self.pushButton_5)
 
+        self.pushButton_6 = QPushButton(self.details)
+        self.pushButton_6.setObjectName(u"pushButton_6")
+        sizePolicy3.setHeightForWidth(self.pushButton_6.sizePolicy().hasHeightForWidth())
+        self.pushButton_6.setSizePolicy(sizePolicy3)
+        self.pushButton_6.setMinimumSize(QSize(160, 40))
+        self.pushButton_6.setMaximumSize(QSize(16777215, 90))
+        self.pushButton_6.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
+        self.pushButton_6.setStyleSheet(button_style)
+
+        self.verticalLayout_2.addWidget(self.pushButton_6)
+
         # Spacer between buttons and help text
         self.verticalSpacer = QSpacerItem(20, 20, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed)
         self.verticalLayout_2.addItem(self.verticalSpacer)
@@ -203,6 +214,7 @@ font-size: 12pt;
         self.pushButton_3.setText(QCoreApplication.translate("Form", u"Overlay Square Grid", None))
         self.pushButton_4.setText(QCoreApplication.translate("Form", u"Snap to Beads", None))
         self.pushButton_5.setText(QCoreApplication.translate("Form", u"Correct Distortion", None))
+        self.pushButton_6.setText(QCoreApplication.translate("Form", u"Save Calibration", None))
         
         # Controls and workflow help text
         self.controls_label.setText(QCoreApplication.translate("Form", u"""<b>Controls</b><br>

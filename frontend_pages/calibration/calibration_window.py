@@ -404,6 +404,7 @@ class Calibration(QWidget):
         self.ui.pushButton_3.clicked.connect(self.overlay_square_grid)
         self.ui.pushButton_4.clicked.connect(self.snap_to_beads)
         self.ui.pushButton_5.clicked.connect(self.correct_distortion)
+        self.ui.pushButton_6.clicked.connect(self.save_correction)
         
         save_action = QAction("Save", self)
         save_action.setShortcut("Ctrl+S")
