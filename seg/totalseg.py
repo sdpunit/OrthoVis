@@ -5,6 +5,7 @@ import os
 import subprocess
 import shutil
 import sys
+import time
 
 # pip install TotalSegmentator 
 
@@ -113,7 +114,7 @@ def run_totalseg(ct_dir: str, seg_dir: str, custom_roi: list, status_cb = None, 
     needs_appendicular = any(bone in appendicular for bone in bones_to_segment)
 
     if progress_cb:
-        progress_cb(15)
+        progress_cb(10)
     
     print(f"Tasks needed - Total: {needs_total}, Appendicular: {needs_appendicular}")
     
@@ -124,14 +125,25 @@ def run_totalseg(ct_dir: str, seg_dir: str, custom_roi: list, status_cb = None, 
         print(f"Command: {' '.join(command_total)}")
 
         if progress_cb:
-            progress_cb(30)
+            progress_cb(15)
         
-        # Run without capturing output to show terminal messages
-        process = subprocess.Popen(command_total, stdout=None, stderr=None)
-        process.wait()
+        # Run and show progress while executing
+        process = subprocess.Popen(command_total, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        
+        # Animate progress while waiting
+        progress_start = 15
+        progress_end = 60
+        progress_step = (progress_end - progress_start) / 10  # Update 10 times while running
+        current_progress = progress_start
+        
+        while process.poll() is None:
+            time.sleep(4*60/10)
+            current_progress = min(current_progress + progress_step, progress_end - 1)
+            if progress_cb:
+                progress_cb(int(current_progress))
         
         if progress_cb:
-            progress_cb(40)
+            progress_cb(60)  # Total segmentation takes most time
 
         if process.returncode != 0:
             print(f"Warning: TotalSegmentator (total) returned code {process.returncode}")
@@ -141,12 +153,23 @@ def run_totalseg(ct_dir: str, seg_dir: str, custom_roi: list, status_cb = None, 
         print("Running TotalSegmentator (appendicular_bones)...")
         print(f"Command: {' '.join(command_appendicular)}")
         
-        # Run without capturing output to show terminal messages
-        process = subprocess.Popen(command_appendicular, stdout=None, stderr=None)
-        process.wait()
+        # Run and show progress while executing
+        process = subprocess.Popen(command_appendicular, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        
+        # Animate progress while waiting
+        progress_start = 60
+        progress_end = 70
+        progress_step = (progress_end - progress_start) / 10  # Update 10 times while running
+        current_progress = progress_start
+        
+        while process.poll() is None:
+            time.sleep(2*60/10)
+            current_progress = min(current_progress + progress_step, progress_end - 1)
+            if progress_cb:
+                progress_cb(int(current_progress))
 
         if progress_cb:
-            progress_cb(45)
+            progress_cb(70)  # Appendicular bones also takes significant time
         
         if process.returncode != 0:
             print(f"Warning: TotalSegmentator (appendicular_bones) returned code {process.returncode}")
@@ -154,9 +177,6 @@ def run_totalseg(ct_dir: str, seg_dir: str, custom_roi: list, status_cb = None, 
     # Clean up unwanted masks - keep only the ones in custom ROI
     print("Cleaning up unwanted masks...")
     rois_to_keep = {f'{bone}.nii.gz' for bone in bones_to_segment}
-
-    if progress_cb:
-        progress_cb(50)
     
     for f in os.listdir(seg_dir):
         if f not in rois_to_keep:
@@ -167,9 +187,6 @@ def run_totalseg(ct_dir: str, seg_dir: str, custom_roi: list, status_cb = None, 
             elif os.path.isdir(file_path):
                 shutil.rmtree(file_path)
                 print(f"Removed unwanted directory: {f}")
-    
-    if progress_cb:
-        progress_cb(60)
     # Verify original CT directory is untouched
     if not os.path.exists(ct_dir):
         raise Exception(f"CRITICAL ERROR: Original CT directory was deleted! {ct_dir}")
@@ -326,7 +343,7 @@ def run_complete_segmentation(ct_dir: str, seg_dir: str, custom_roi: list = None
         print(f"Custom ROI: {custom_roi}")
 
         if status_cb:
-            status_cb("Running TotalSegmentator…")
+            status_cb("Running TotalSegmentator … this will take a while")
 
         if progress_cb:
             progress_cb(0)
@@ -334,13 +351,14 @@ def run_complete_segmentation(ct_dir: str, seg_dir: str, custom_roi: list = None
         
         # Step 1: Run TotalSegmentator (only reads from ct_dir) with custom ROI
         run_totalseg(ct_dir, seg_dir, custom_roi, status_cb, progress_cb)
-
+        
+        # Ensure we start Otsu refinement at 70% (after TotalSegmentator completes)
         if progress_cb:
-            progress_cb(90)
+            progress_cb(70)
         
         # Step 2: Apply Otsu refinement (only works in seg_dir)
         print("Applying Otsu refinement...")
-        for i, mask_name in enumerate(custom_roi):  # Use custom_roi instead of the removed roi variable
+        for i, mask_name in enumerate(custom_roi):
             if status_cb:
                 status_cb(f"Refining {mask_name} ({i+1}/{total})")
 
@@ -354,6 +372,7 @@ def run_complete_segmentation(ct_dir: str, seg_dir: str, custom_roi: list = None
                 os.remove(original_mask)
         
             if progress_cb:
+                # Progress from 70% to 100% during Otsu refinement
                 stage_progress = 70 + int((i + 1) / total * 30)
                 progress_cb(stage_progress)
 

@@ -363,10 +363,12 @@ class Segmentation(QWidget, ProgressDialogMixin):
                 print("Found existing masks - loading CT with masks in EDIT mode...")
                 self.set_editing_mode(True)  # Enable editing when masks exist
                 self.show_progress_dialog("Loading Project", "Loading CT data and segmentation masks in EDIT mode...")
+                self.update_progress(5)
             else:
                 print("No existing masks - loading CT only in BROWSE mode...")
                 self.set_editing_mode(False)  # Browse-only when no masks
                 self.show_progress_dialog("Loading Project", "Loading CT data in BROWSE mode...")
+                self.update_progress(5)
             
             # Initialize VTK with delay to allow UI to update
             QTimer.singleShot(100, self.initialize_vtk_with_backend_paths)
@@ -413,6 +415,8 @@ class Segmentation(QWidget, ProgressDialogMixin):
         """Initialize VTK pipeline with backend paths and auto-load masks if available"""
         print("=== Initializing VTK with backend paths ===")
         print(f"Editing enabled: {self.editing_enabled}")
+
+        self.update_progress(15)
         
         if not self.ct_dir or not os.path.exists(self.ct_dir):
             print(f"ERROR: Invalid CT directory: {self.ct_dir}")
@@ -428,6 +432,7 @@ class Segmentation(QWidget, ProgressDialogMixin):
                 return
             
             print(f"Using DICOM directory: {ct_path_to_use}")
+            self.update_progress(25)
             
             # Set up VTK with OFF-SCREEN rendering during initialization
             import vtk
@@ -441,15 +446,19 @@ class Segmentation(QWidget, ProgressDialogMixin):
             
             # Clear existing renderers
             render_window.GetRenderers().RemoveAllItems()
+            self.update_progress(35)
             
             # Check for masks - include existing masks from loaded projects
             mask_dir_for_display = None
             if self.mask_dir and os.path.exists(self.mask_dir):
+                self.update_progress(40)
                 mask_files = [f for f in os.listdir(self.mask_dir) 
                              if f.endswith(('.nii.gz', '.nii'))]
                 if mask_files:
                     mask_dir_for_display = self.mask_dir
                     print(f"Will display {len(mask_files)} existing mask files")
+
+            self.update_progress(50)
             
             # Create VTK pipeline with off-screen rendering and editing capability
             print(f"Creating VTK pipeline (off-screen) with editing={self.editing_enabled}...")
@@ -465,9 +474,11 @@ class Segmentation(QWidget, ProgressDialogMixin):
                 # Store references
                 self.viewers = self.interactor_style.viewers
                 self.ct_img = load_ct(ct_path_to_use)
+                self.update_progress(60)
                 
                 # Store editing-related references if editing is enabled
                 if self.editing_enabled and hasattr(self.interactor_style, 'editable_masks'):
+                    self.update_progress(65)
                     self.editable_masks = self.interactor_style.editable_masks
                     self.label_actors = getattr(self.interactor_style, 'label_actors', None)
                     self.mode_button = getattr(self.interactor_style, 'mode_button', None)
@@ -477,9 +488,11 @@ class Segmentation(QWidget, ProgressDialogMixin):
                 # Set interactor style
                 interactor = render_window.GetInteractor()
                 interactor.SetInteractorStyle(self.interactor_style)
+                self.update_progress(75)
                 
                 # Now turn ON on-screen rendering and initialize
                 render_window.SetOffScreenRendering(False)
+                self.update_progress(85)
                 
                 # Initialize VTK and complete after delay
                 QTimer.singleShot(50, self._initialize_vtk_final)
@@ -505,6 +518,7 @@ class Segmentation(QWidget, ProgressDialogMixin):
             print("Final VTK initialization...")
             self.ui.VTK_display.Initialize()
             self._vtk_initialized = True
+            self.update_progress(90)
             
             # Render and then complete loading after successful render
             QTimer.singleShot(100, self._render_and_complete)
@@ -521,6 +535,9 @@ class Segmentation(QWidget, ProgressDialogMixin):
             rw = self.ui.VTK_display.GetRenderWindow()
             rw.Render()
             print("VTK rendering completed")
+            
+            # Update progress to 100% to indicate completion
+            self.update_progress(100)
             
             # Complete loading process after successful render
             QTimer.singleShot(200, self.complete_loading_process)

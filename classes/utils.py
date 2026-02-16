@@ -24,6 +24,7 @@ class ProgressDialogMixin:
         self.progress_dialog = QMessageBox(self)
         self.progress_dialog.setWindowTitle(title)
         self.progress_dialog.setStandardButtons(QMessageBox.NoButton)
+        self.progress_dialog.setFixedSize(500, 200)
         self.progress_dialog.setModal(True)
         self.progress_dialog.setWindowIcon(QIcon("assets/logo_small.png"))
 
@@ -39,14 +40,15 @@ class ProgressDialogMixin:
         self._status_label.setStyleSheet(
             "font: 12pt 'Segoe UI'; color: #333333;"
         )
-        main_layout.addWidget(self._status_label)
+        main_layout.addWidget(self._status_label, alignment=Qt.AlignCenter)
 
         # Progress bar
         self._progress_bar = QProgressBar()
         self._progress_bar.setTextVisible(True)
         self._progress_bar.setMinimum(0)
         self._progress_bar.setMaximum(0)  # indeterminate by default
-        main_layout.addWidget(self._progress_bar)
+        self._progress_bar.setFixedSize(300, 25)
+        main_layout.addWidget(self._progress_bar, alignment=Qt.AlignCenter)
 
         # Inject into QMessageBox layout
         self.progress_dialog.layout().addWidget(
