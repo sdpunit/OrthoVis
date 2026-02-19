@@ -3,7 +3,7 @@
 Welcome to **OrthoVis 2.0**, a joint motion assessment toolkit for accurate 3D analysis using CT and fluoroscopy data.
 
 ---
-
+## IMPORTANT: Please read through the State-of-project pdf file to see what has been done and what needs to be done next
 ## 📦 Required Dependencies
 
 Ensure the following Python packages are installed:
