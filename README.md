@@ -252,9 +252,8 @@ There’s a section in this paper that might be really helpful to understand the
 #### Overview
 
 We have completed the development of the network-based calibration model, which accurately performs bead detection, manual verification, and layer-by-layer alignment.
-***However, the 3D reconstruction has not been integrated into the Calibration GUI page in OrthoVis yet.***
-All current progress and working functions are contained within the Draft.py interface under the class file, which serves as the current prototype of the calibration module.
-The following content only describes the work we have completed.
+***Although the 3D reconstruction has been integrated into the Calibration GUI page in OrthoVis, this is an independent stand-alone program where you can test and play around to understand calibration more.***
+The functions of the stand-alone program are contained within the Draft.py interface under the class file, which served as the prototype of the calibration module.
 
 ---
 
