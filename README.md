@@ -3,7 +3,7 @@
 Welcome to **OrthoVis 2.0**, a joint motion assessment toolkit for accurate 3D analysis using CT and fluoroscopy data.
 
 ---
-
+## IMPORTANT: Please read through the State-of-project pdf file to see what has been done and what needs to be done next
 ## 📦 Required Dependencies
 
 Ensure the following Python packages are installed:
@@ -239,58 +239,32 @@ Additionally, the user may use the following controls to edit segmentation masks
 
 #### Purpose
 
-The Calibration module is designed to provide accurate geometric correction for fluoroscopy and X-ray images using an AutoAlign grid-based method. It aims to eliminate image distortion caused by projection
+The Calibration module is designed to provide accurate geometric correction for fluoroscopy and X-ray images using an AutoAlign grid-based method. It aims to eliminate image distortion caused by diffraction from the light source. 
 
 ---
 
 #### How It Works
 
-There’s a section in this paper that might be really helpful to understand the technicality - https://onlinelibrary.wiley.com/doi/full/10.1002/jor.21003. But to explain this in simpler words – Flouro images are warped, the way the beams land on an object creates distortion (which means a cube isn’t a proper cube anymore). So we need to fix this distortion, and the way we do that is by taking a fluoroscopy shot of a calibration cube (or square grid) with beads placed on it in the front (red beads) and back (blue beads). You detect where those beads land in the distorted image and fit a mapping (an overlay grid) that pulls them back to their true evenly spaced positions. This mapping/corrected distance is then used to apply to every frame of your flouro to undistort it and use is correctly for the purposes of projection.
+The theory section in ![this paper](https://onlinelibrary.wiley.com/doi/full/10.1002/jor.21003) is helpful to understand the technicality. To explain this in simpler words: fluoro images are warped, since diffraction from the light source creates distortion of the resulting object's image. To fix this, we take a fluoroscopy shot of a calibration cube (or square grid) with beads placed on it in the front (red beads) and back (blue beads). You detect where those beads land in the distorted image and fit a mapping (an overlay grid) that projects them back to their true evenly spaced positions. This mapping is then applied to every frame of your fluoro to correct for distortion effects.
 
 ---
 
-#### Overview
+#### Workflow 
+1. Import calibration grid: click `Load Calibration Grid` button and select appropriate fluoroscopy file.
+2. Invert grid (_optional_) Ideally, the beads in the calibration grid should have high contrast with the background. This usually means white beads (high intensity) against grey background, but the `Invert Grid` option exists to invert pixel intensity if the user prefers this display mode.  
+3. Click on `Overlay Square Grid` button to initiate alignment of grid layers with beads. Please double-check the default calibration parameters generated in the pop-up window, modifying values if your setup is different.
+4. Use the grid controls in the navigation sidebar (also included below for reference) to manually align both the front (red) and back (blue) square grid with beads **within a margin of about 10 pixels. **
 
-We have completed the development of the network-based calibration model, which accurately performs bead detection, manual verification, and layer-by-layer alignment.
-***However, the 3D reconstruction has not been integrated into the Calibration GUI page in OrthoVis yet.***
-All current progress and working functions are contained within the Draft.py interface under the class file, which serves as the current prototype of the calibration module.
-The following content only describes the work we have completed.
+_This crucial to get right before running next step's snapping algorithm, which has a hard search radius of 14 pixels. Staying within 10 pixels ensures reliable sub-pixel centroid accuracy and avoids any risk of snapping to a neighbouring bead._
+
+6. When satisfied with alignment, click `Snap to Beads` for algorithm to auto-adjust the grid layers to centre of detected beads. Double-check that the snapping is valid and satisfactory before proceeding to the next step. If unhappy, repeat steps 4-5.
+7. When satisfied with snapped positions, click `Correct Distortion` for the matrix projection algorithm to correct for image distortion.
+8. Click `Save Correction` or `Ctrl + S` to save corrections as `pkl` file.
+_The image should visibly sharpen and straighten, particularly at the edges. The overlay circles will reproject onto the corrected image; bead alignment should improve relative to the pre-correction state._
 
 ---
 
-#### How to Run
-
-To run the Calibration module independently, use the following command in your terminal:
-
-```bash
-python3 Draft.py --dcm <path_to_dicom> [--outdir out]
-```
-
-| Argument         | Description                              | Default        |
-| ---------------- | ---------------------------------------- | -------------- |
-| `--dcm`          | Path to input DICOM file                 | **(Required)** |
-| `--outdir`       | Output directory                         | `out`          |
-| `--bead-mm`      | Distance between beads in one layer (mm) | `20.0`         |
-| `--face-mm`      | Distance between layers (mm)             | `200.0`        |
-| `--plane-offset` | Offset between layers (in grid units)    | `"0.5,0.5"`    |
-
-for example:
-
-```bash
-python3 Draft.py --dcm Data/DICOM/P0000001/ST000002/SE000003/IN000001
-```
-
-During execution, a Matplotlib window appears for interactive adjustment.
-
-🖱 Mouse Controls (Point Addition Stage)
-
-Left click: Add a new point.
-
-If near a candidate (< snap_dist), it will snap automatically.
-
-Enter / Right click: End point addition and continue to merge window and you can operate by keyboard.
-
-⌨️ Keyboard Controls (Alignment Stage)
+⌨️ Grid Layer Controls
 
 | Key       | Action                                        |
 | --------- | --------------------------------------------- |
@@ -300,49 +274,11 @@ Enter / Right click: End point addition and continue to merge window and you can
 | `Enter`   | Confirm current layer and continue.           |
 | `Esc / Q` | Exit current layer.                           |
 
-🔵 Color Legend
-
-| Color     | Meaning                                     |
-| --------- | ------------------------------------------- |
-| 🔴 Red    | Observed points (detected + manually added) |
-| 🟡 Yellow | Previous layer (display only)               |
-| 🔵 Blue   | Current unsnapped model points              |
-| 🟢 Green  | Snapped model points                        |
-
-▼ Parameters
-
-| Parameter      | Function                    | Default |
-| -------------- | --------------------------- | ------- |
-| `attach_px`    | Snapping threshold (pixels) | `5.0`   |
-| `detach_px`    | Detach threshold            | `8.0`   |
-| `step_move`    | Translation step (pixels)   | `1.0`   |
-| `step_rot_deg` | Rotation step (degrees)     | `1.0`   |
-| `step_scale`   | Scaling step                | `1.01`  |
-
----
-
-#### Workflow
-
-![Calibration Workflow](assets/calibration.gif)
-
-1. Run the Draft.py script with the required DICOM path.
-2. The Matplotlib interactive window will open.
-3. The first stage is point addition:
-4. Left-click to add points on detected bead candidates.
-5. Right-click or press Enter to finish point addition.
-6. The second stage is alignment:
-7. Use keyboard controls to adjust the model to fit the observed points.
-8. Press Enter to confirm the current layer and proceed to the next.
-9. Repeat steps 4-8 for each layer.
-10. After completing all layers, the results will be saved in the specified output directory.
-
 ---
 
 #### Future Improvements
 
-1. Integrate the interactive window into the PySide6 calibration GUI.
-2. Accurate 3D reconstruction of the bead-grid phantom from 2D DICOM images through precise geometric calibration.
-3. Testing and Debugging of the complete calibration module within the OrthoVis application.
+1. Testing and debugging of the complete calibration module within the OrthoVis application. 
 
 ### Module 4: Define Axes
 
