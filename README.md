@@ -245,7 +245,7 @@ The Calibration module is designed to provide accurate geometric correction for 
 
 #### How It Works
 
-The theory section in ![this paper](https://onlinelibrary.wiley.com/doi/full/10.1002/jor.21003) is helpful to understand the technicality. To explain this in simpler words: fluoro images are warped, since diffraction from the light source creates distortion of the resulting object's image. To fix this, we take a fluoroscopy shot of a calibration cube (or square grid) with beads placed on it in the front (red beads) and back (blue beads). You detect where those beads land in the distorted image and fit a mapping (an overlay grid) that projects them back to their true evenly spaced positions. This mapping is then applied to every frame of your fluoro to correct for distortion effects.
+The theory section in [this paper](https://onlinelibrary.wiley.com/doi/full/10.1002/jor.21003) is helpful to understand the technicality. To explain this in simpler words: fluoro images are warped, since diffraction from the light source creates distortion of the resulting object's image. To fix this, we take a fluoroscopy shot of a calibration cube (or square grid) with beads placed on it in the front (red beads) and back (blue beads). You detect where those beads land in the distorted image and fit a mapping (an overlay grid) that projects them back to their true evenly spaced positions. This mapping is then applied to every frame of your fluoro to correct for distortion effects.
 
 ---
 
@@ -253,8 +253,7 @@ The theory section in ![this paper](https://onlinelibrary.wiley.com/doi/full/10.
 1. Import calibration grid: click `Load Calibration Grid` button and select appropriate fluoroscopy file.
 2. Invert grid (_optional_) Ideally, the beads in the calibration grid should have high contrast with the background. This usually means white beads (high intensity) against grey background, but the `Invert Grid` option exists to invert pixel intensity if the user prefers this display mode.  
 3. Click on `Overlay Square Grid` button to initiate alignment of grid layers with beads. Please double-check the default calibration parameters generated in the pop-up window, modifying values if your setup is different.
-4. Use the grid controls in the navigation sidebar (also included below for reference) to manually align both the front (red) and back (blue) square grid with beads **within a margin of about 10 pixels. **
-
+4. Use the grid controls in the navigation sidebar (also included below for reference) to manually align both the front (red) and back (blue) square grid with beads **within a margin of about 10 pixels.**
 _This crucial to get right before running next step's snapping algorithm, which has a hard search radius of 14 pixels. Staying within 10 pixels ensures reliable sub-pixel centroid accuracy and avoids any risk of snapping to a neighbouring bead._
 
 6. When satisfied with alignment, click `Snap to Beads` for algorithm to auto-adjust the grid layers to centre of detected beads. Double-check that the snapping is valid and satisfactory before proceeding to the next step. If unhappy, repeat steps 4-5.
@@ -266,19 +265,20 @@ _The image should visibly sharpen and straighten, particularly at the edges. The
 
 ⌨️ Grid Layer Controls
 
-| Key       | Action                                        |
+| Controls  | Action                                        |
 | --------- | --------------------------------------------- |
-| `← ↑ ↓ →` | Translate model (use **Shift** for ×5 speed). |
-| `A / D`   | Rotate counterclockwise / clockwise.          |
-| `- / =`   | Scale down / up.                              |
-| `Enter`   | Confirm current layer and continue.           |
-| `Esc / Q` | Exit current layer.                           |
+| Mouse scroll | Scale grids (both front and back) |
+| Left-drag from centre  | Translate in-plane (Rz) |
+| Left-drag from edge |  Rotate in-plane (Rz) |
+| Right-drag  | Tilt in X/Y (Rx or Ry) |
+| Ctrl + S | Save correction |
 
 ---
 
 #### Future Improvements
 
-1. Testing and debugging of the complete calibration module within the OrthoVis application. 
+1. Bead-snapping algorithm to be tweaked: some points may snap to neighbouring beads. 
+2. Testing and debugging of the complete calibration module within the OrthoVis application. 
 
 ### Module 4: Define Axes
 
